@@ -1,15 +1,31 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>AR.js Example</title>
+    <title>AR.js NFT Example</title>
     <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
-    <script src="https://rawgit.com/jeromeetienne/AR.js/master/aframe/build/aframe-ar.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar-nft.js"></script>
   </head>
   <body style="margin: 0; overflow: hidden;">
     <a-scene embedded arjs="trackingMethod: best; sourceType: webcam;">
-      <a-marker type='pattern' url='assets/pattern-marker.patt'>
-        <a-box position='0 0.5 0' material='color: red;'></a-box>
-      </a-marker>
+      <a-assets>
+        <a-asset-item id="tree-model" src="https://cdn.aframe.io/test-models/models/tree/scene.gltf"></a-asset-item>
+      </a-assets>
+
+      <a-nft
+        type="nft"
+        url="assets/100-2"
+        smooth="true"
+        smoothCount="10"
+        smoothTolerance="0.01"
+        smoothThreshold="5">
+        <a-entity
+          gltf-model="#tree-model"
+          scale="5 5 5"
+          position="50 150 -500"
+          rotation="0 180 0">
+        </a-entity>
+      </a-nft>
+
       <a-entity camera></a-entity>
     </a-scene>
   </body>
