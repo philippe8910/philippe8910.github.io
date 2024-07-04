@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>AR.js NFT Example</title>
+    <title>AR.js FBX Example</title>
     <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar-nft.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/110/three.min.js"></script>
+    <script src="https://cdn.rawgit.com/mrdoob/three.js/r110/examples/js/loaders/FBXLoader.js"></script>
   </head>
   <body style="margin: 0; overflow: hidden;">
     <a-scene embedded arjs="trackingMethod: best; sourceType: webcam;">
@@ -14,9 +16,33 @@
         smoothCount="10"
         smoothTolerance="0.01"
         smoothThreshold="5">
-        <a-box position="0 0.5 0" scale = "10 10 10" material="color: red;"></a-box>
+        <a-entity id="fbx-model" position="0 0 0" scale="0.01 0.01 0.01"></a-entity>
       </a-nft>
       <a-entity camera></a-entity>
     </a-scene>
+    <script>
+      AFRAME.registerComponent('load-fbx', {
+        init: function () {
+          var loader = new THREE.FBXLoader();
+          var el = this.el;
+          
+          loader.load('assets/Swing Dancing.fbx', function (object) {
+            object.mixer = new THREE.AnimationMixer(object);
+            var action = object.mixer.clipAction(object.animations[0]);
+            action.play();
+            
+            el.setObject3D('mesh', object);
+            el.object3D.mixer = object.mixer;
+          });
+        },
+        tick: function (time, timeDelta) {
+          if (this.el.object3D.mixer) {
+            this.el.object3D.mixer.update(timeDelta / 1000);
+          }
+        }
+      });
+      
+      document.querySelector('#fbx-model').setAttribute('load-fbx', '');
+    </script>
   </body>
 </html>
