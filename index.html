@@ -32,8 +32,8 @@
     <a-assets>
       <img id="image1" src="assets/Image/Forward.jpg" />
       <img id="image2" src="assets/Image/Back.jpg" />
-      <audio id="audio1" src="assets/Audio/music.mp3"></audio>
-      <audio id="audio2" src="assets/Audio/music.mp3"></audio>
+      <audio id="audio1" src="assets/Audio/music.mp3" crossorigin="anonymous"></audio>
+      <audio id="audio2" src="assets/Audio/music.mp3" crossorigin="anonymous"></audio>
     </a-assets>
 
     <!-- First NFT marker -->
@@ -63,12 +63,33 @@
         schema: { type: 'selector' },
         init: function () {
           var audio = this.data;
-          this.el.addEventListener('arjs-nft-loaded', function () {
-            logMessage('NFT detected, playing audio.');
-            if (audio && !audio.playing) {
-              audio.play();
-              audio.playing = true; // Custom property to track playing state
+          var playing = false;
+
+          var playAudio = function() {
+            logMessage('Attempting to play audio.');
+            if (audio && !playing) {
+              audio.play().then(() => {
+                logMessage('Audio playing.');
+                playing = true;
+              }).catch((error) => {
+                logMessage('Audio play failed: ' + error);
+              });
             }
+          };
+
+          this.el.addEventListener('markerFound', function () {
+            logMessage('Marker found, playing audio.');
+            playAudio();
+          });
+
+          this.el.addEventListener('arjs-nft-loaded', function () {
+            logMessage('NFT loaded, playing audio.');
+            playAudio();
+          });
+
+          this.el.addEventListener('arjs-nft-loaded', function () {
+            logMessage('NFT loaded, playing audio.');
+            playAudio();
           });
         }
       });
