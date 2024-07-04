@@ -1,15 +1,15 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>AR.js FBX Example</title>
+    <title>AR.js MP4 Example</title>
     <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar-nft.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/110/three.min.js"></script>
-    <script src="https://cdn.rawgit.com/mrdoob/three.js/r110/examples/js/loaders/FBXLoader.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/1.0.6/pako.min.js"></script>
   </head>
   <body style="margin: 0; overflow: hidden;">
     <a-scene embedded arjs="trackingMethod: best; sourceType: webcam;">
+      <a-assets>
+        <video id="video" src="assets/RickRolled.mp4" autoplay loop="true" crossorigin="anonymous"></video>
+      </a-assets>
       <a-nft
         type="nft"
         url="assets/100-1"
@@ -17,39 +17,9 @@
         smoothCount="10"
         smoothTolerance="0.01"
         smoothThreshold="5">
-        <a-entity id="fbx-model" position="0 0 0" scale="0.01 0.01 0.01"></a-entity>
+        <a-video src="assets/RickRolled.mp4" width="1" height="0.75" position="0 0.5 0"></a-video>
       </a-nft>
       <a-entity camera></a-entity>
     </a-scene>
-    <script>
-      AFRAME.registerComponent('load-fbx', {
-        init: function () {
-          var loader = new THREE.FBXLoader();
-          var el = this.el;
-
-          console.log('Loading FBX model...');
-          
-          loader.load('assets/Swing Dancing.fbx', function (object) {
-            console.log('FBX model loaded successfully.');
-
-            object.mixer = new THREE.AnimationMixer(object);
-            var action = object.mixer.clipAction(object.animations[0]);
-            action.play();
-            
-            el.setObject3D('mesh', object);
-            el.object3D.mixer = object.mixer;
-          }, undefined, function (error) {
-            console.error('An error happened while loading the FBX model.', error);
-          });
-        },
-        tick: function (time, timeDelta) {
-          if (this.el.object3D.mixer) {
-            this.el.object3D.mixer.update(timeDelta / 1000);
-          }
-        }
-      });
-      
-      document.querySelector('#fbx-model').setAttribute('load-fbx', '');
-    </script>
   </body>
 </html>
