@@ -6,13 +6,14 @@
   <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
   <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar-nft.js"></script>
   <script src="https://rawgit.com/donmccurdy/aframe-extras/master/dist/aframe-extras.loaders.min.js"></script>
+  <script src="https://cdn.rawgit.com/jeromeetienne/AR.js/1.7.5/aframe/build/aframe-ar.js"></script>
 </head>
 
 <body style="margin: 0; overflow: hidden;">
   <a-scene embedded arjs="trackingMethod: best; sourceType: webcam;">
     <a-nft type="nft" url="assets/100-1" smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
       <a-box color="red" width="10" height="10" depth="10" position="0 5 0"></a-box>
-      <a-entity gltf-model="url(assets/SwingDancing.gltf)" scale="0.01 0.01 0.01" position="0 10 0"></a-entity>
+      <a-entity position='0 0 0' rotation="-20 0 0" gltf-model="url(assets/SwingDancing.gltf)"></a-entity>
     </a-nft>
     <a-entity camera></a-entity>
   </a-scene>
