@@ -32,18 +32,19 @@
     <a-assets>
       <img id="image1" src="assets/Image/Forward.jpg" />
       <img id="image2" src="assets/Image/Back.jpg" />
+
       <audio id="audio1" src="assets/Audio/music.mp3"></audio>
       <audio id="audio2" src="assets/Audio/music.mp3"></audio>
     </a-assets>
 
     <!-- First NFT marker -->
     <a-nft type="nft" url="assets/Track/NTD/100-1" smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
-      <a-plane id="detected-image1" src="#image1" position="0 0 0" rotation="-90 0 0" width="120" height="300"></a-plane>
+      <a-plane id="detected-image1" src="#image1" position="0 0 0" rotation="-90 0 0" width="150" height="300"></a-plane>
     </a-nft>
 
     <!-- Second NFT marker -->
     <a-nft type="nft" url="assets/Track/USD/100-1" smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
-      <a-plane id="detected-image2" src="#image2" position="0 0 0" rotation="-90 0 0" width="120" height="300"></a-plane>
+      <a-plane id="detected-image2" src="#image2" position="0 0 0" rotation="-90 0 0" width="150" height="300"></a-plane>
     </a-nft>
 
     <a-entity camera></a-entity>
