@@ -32,19 +32,18 @@
     <a-assets>
       <img id="image1" src="assets/Image/Forward.jpg" />
       <img id="image2" src="assets/Image/Back.jpg" />
-
       <audio id="audio1" src="assets/Audio/music.mp3"></audio>
       <audio id="audio2" src="assets/Audio/music.mp3"></audio>
     </a-assets>
 
     <!-- First NFT marker -->
     <a-nft type="nft" url="assets/Track/NTD/100-1" smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
-      <a-plane id="detected-image1" src="#image1" position="60 60 -60" rotation="-90 0 0" width="130" height="250"></a-plane>
+      <a-plane id="detected-image1" src="#image1" position="60 60 -60" rotation="-90 0 0" width="180" height="300"></a-plane>
     </a-nft>
 
     <!-- Second NFT marker -->
     <a-nft type="nft" url="assets/Track/USD/100-1" smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
-      <a-plane id="detected-image2" src="#image2" position="60 60 -60" rotation="-90 0 0" width="130" height="250"></a-plane>
+      <a-plane id="detected-image2" src="#image2" position="60 60 -60" rotation="-90 0 0" width="180" height="300"></a-plane>
     </a-nft>
 
     <a-entity camera></a-entity>
@@ -64,12 +63,11 @@
         schema: { type: 'selector' },
         init: function () {
           var audio = this.data;
-          var playing = false;
           this.el.addEventListener('arjs-nft-loaded', function () {
             logMessage('NFT detected, playing audio.');
-            if (!playing) {
+            if (audio && !audio.playing) {
               audio.play();
-              playing = true;
+              audio.playing = true; // Custom property to track playing state
             }
           });
         }
@@ -92,6 +90,35 @@
         logMessage('NFT2 not found');
       }
     });
+
+    // Additional logging to check if assets and elements are loaded
+    window.onload = function() {
+      logMessage('Window loaded, checking assets...');
+      var audio1 = document.getElementById('audio1');
+      var audio2 = document.getElementById('audio2');
+      if (audio1) {
+        logMessage('Audio1 loaded: ' + audio1.src);
+      } else {
+        logMessage('Audio1 not found');
+      }
+      if (audio2) {
+        logMessage('Audio2 loaded: ' + audio2.src);
+      } else {
+        logMessage('Audio2 not found');
+      }
+      var image1 = document.getElementById('image1');
+      var image2 = document.getElementById('image2');
+      if (image1) {
+        logMessage('Image1 loaded: ' + image1.src);
+      } else {
+        logMessage('Image1 not found');
+      }
+      if (image2) {
+        logMessage('Image2 loaded: ' + image2.src);
+      } else {
+        logMessage('Image2 not found');
+      }
+    };
   </script>
 </body>
 
