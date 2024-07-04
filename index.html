@@ -18,19 +18,18 @@
     <a-assets>
       <img id="image1" src="assets/Image/Forward.jpg" />
       <img id="image2" src="assets/Image/Back.jpg" />
-
       <audio id="audio1" src="assets/Audio/music.mp3"></audio>
       <audio id="audio2" src="assets/Audio/music.mp3"></audio>
     </a-assets>
 
     <!-- First NFT marker -->
     <a-nft type="nft" url="assets/Track/NTD/100-1" smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
-      <a-plane id="detected-image1" src="#image1" position="0 0 0" rotation="0 0 0" width="225" height="300"></a-plane>
+      <a-plane id="detected-image1" src="#image1" position="0 0 0" rotation="-90 0 0" width="1" height="0.75"></a-plane>
     </a-nft>
 
     <!-- Second NFT marker -->
     <a-nft type="nft" url="assets/Track/USD/100-1" smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
-      <a-plane id="detected-image2" src="#image2" position="0 0 0" rotation="-90 0 0" width="225" height="300"></a-plane>
+      <a-plane id="detected-image2" src="#image2" position="0 0 0" rotation="-90 0 0" width="1" height="0.75"></a-plane>
     </a-nft>
 
     <a-entity camera></a-entity>
@@ -42,15 +41,33 @@
         schema: { type: 'selector' },
         init: function () {
           var audio = this.data;
+          var playing = false;
           this.el.addEventListener('arjs-nft-loaded', function () {
             console.log('NFT detected, playing audio.');
-            audio.play();
+            if (!playing) {
+              audio.play();
+              playing = true;
+            }
           });
         }
       });
 
-      document.querySelector('a-nft[url="assets/Track/NTD/100-1"]').setAttribute('play-audio-on-detect', '#audio1');
-      document.querySelector('a-nft[url="assets/Track/USD/100-1"]').setAttribute('play-audio-on-detect', '#audio2');
+      var nft1 = document.querySelector('a-nft[url="assets/Track/NTD/100-1"]');
+      var nft2 = document.querySelector('a-nft[url="assets/Track/USD/100-1"]');
+
+      if (nft1) {
+        nft1.setAttribute('play-audio-on-detect', '#audio1');
+        console.log('Component attached to NFT1');
+      } else {
+        console.log('NFT1 not found');
+      }
+
+      if (nft2) {
+        nft2.setAttribute('play-audio-on-detect', '#audio2');
+        console.log('Component attached to NFT2');
+      } else {
+        console.log('NFT2 not found');
+      }
     });
   </script>
 </body>
