@@ -38,19 +38,21 @@
   </a-scene>
 
   <script>
-    AFRAME.registerComponent('play-audio-on-detect', {
-      schema: { type: 'selector' },
-      init: function () {
-        var audio = this.data;
-        this.el.addEventListener('arjs-nft-loaded', function () {
-          console.log('NFT detected, playing audio.');
-          audio.play();
-        });
-      }
-    });
+    document.addEventListener('DOMContentLoaded', function () {
+      AFRAME.registerComponent('play-audio-on-detect', {
+        schema: { type: 'selector' },
+        init: function () {
+          var audio = this.data;
+          this.el.addEventListener('arjs-nft-loaded', function () {
+            console.log('NFT detected, playing audio.');
+            audio.play();
+          });
+        }
+      });
 
-    document.querySelector('a-nft[url="assets/Track/NTD/100-1"]').setAttribute('play-audio-on-detect', '#audio1');
-    document.querySelector('a-nft[url="assets/Track/NTD/100-2"]').setAttribute('play-audio-on-detect', '#audio2');
+      document.querySelector('a-nft[url="assets/Track/NTD/100-1"]').setAttribute('play-audio-on-detect', '#audio1');
+      document.querySelector('a-nft[url="assets/Track/USD/100-1"]').setAttribute('play-audio-on-detect', '#audio2');
+    });
   </script>
 </body>
 
