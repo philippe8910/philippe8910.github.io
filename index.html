@@ -53,59 +53,69 @@
   const input = document.getElementById('commandInput');
 
   const commands = {
-  help: `Available commands:
-  /about     - Who is ZHE
-  /works     - List my works
-  /skills    - Show my skills
-  /exp       - My past experiences
-  /awards    - Awards and honors
-  /clear     - Clear terminal`,
+  help: `-- // HELP MENU
+** Available commands:
+>> /about     - Who is ZHE
+>> /works     - List my works
+>> /skills    - Show my skills
+>> /exp       - My past experiences
+>> /awards    - Awards and honors
+>> /clear     - Clear terminal`,
 
-  "/about": `Skilled at using geometric shapes to create games because I can't draw.
-Skilled at using Unity to develop games because I don't know Unreal.
-Skilled at making VR games because I'm tired of making PC games.`,
+  "/about": `-- // ABOUT ZHE
+** Skilled at using geometric shapes to create games
+   >> because I can't draw.
+** Skilled at using Unity to develop games
+   >> because I don't know Unreal.
+** Skilled at making VR games
+   >> because I'm tired of making PC games.`,
 
   "/exp": `-- // EXPERIENCE
-  * 2022 – Present  Independent Game Developer
-  * 2021 – 2022     VR Research Assistant at NTU
-  * 2020 – 2021     Unity Freelance Developer`,
+** 2022 – Present
+   >> Independent Game Developer
+** 2021 – 2022
+   >> VR Research Assistant at NTU
+** 2020 – 2021
+   >> Unity Freelance Developer`,
 
   "/awards": `-- // AWARDS
-  ** 2025 Taipei Game Show
-     >> Indie Game Award Best Student Game (Final List)
+** 2025 Taipei Game Show
+   >> Indie Game Award – Best Student Game (Final List)
 
-  ** 2022 Vision Get Wild
-     >> Alternative Game Category – Gold Award
-     >> XR Award – Gold Award`,
+** 2022 Vision Get Wild
+   >> Alternative Game Category – Gold Award
+   >> XR Award – Gold Award`,
 
   "/works": `-- // PROJECTS
 
 ** Path without faith **
-"Path of the Godless" is a Souls-like action-adventure game that combines challenging combat and psychological storytelling. Players struggle for survival in a world where gods have perished and faith has crumbled.
+>> "Path of the Godless" is a Souls-like action-adventure game
+>> with challenging combat and psychological storytelling.
+>> Set in a world where gods have perished and faith has crumbled.
 
 -- Features
-  >> Hardcore Combat System
-     - Emphasizes precise dodging, parrying, and attack timing.
-  >> Domain Expansion
-     - Second-phase bosses reshape the arena with buffs/debuffs.
-  >> Domain Plundering
-     - Absorb defeated enemies' powers to gain new abilities.
+>> Hardcore Combat System
+   - Precise dodging, parrying, and attack timing.
+>> Domain Expansion
+   - Boss phase 2 transforms arena with buffs/debuffs.
+>> Domain Plundering
+   - Gain powers by seizing defeated enemies' domains.
 
 --------------------------------------------------
 
 ** Mediator **
-"The Mediator" is a third-person VR puzzle-adventure game where players explore an immersive world and solve intricate time-based puzzles while uncovering heartfelt stories.
+>> "The Mediator" is a third-person VR puzzle-adventure game
+>> combining immersive exploration with time-based mechanics.
 
 -- Features
-  >> Exploration Elements
-     - Find hidden objects in the environment.
-  >> Time Control
-     - Manipulate time to stack objects and activate mechanisms.
-  >> Dual Gameplay
-     - Manage 3D space and side-scroll mechanics simultaneously.`,
+>> Exploration Elements
+   - Find hidden objects in the environment.
+>> Time Control
+   - Manipulate time to stack objects and trigger mechanisms.
+>> Dual Gameplay
+   - Control both 3D movement and side-scrolling puzzle character.`,
 
-  "/skills": `
--- // ZHE's SKILLS
+  "/skills": `-- // ZHE's SKILLS
 ${renderSkills({
     "Unity (VR/AR)": 90,
     "Unreal Engine": 60,
@@ -113,7 +123,8 @@ ${renderSkills({
     "Shader Graph": 70,
     "Three.js": 60,
     "Narrative Design": 80,
-    "UX/UI Design": 75
+    "UX/UI Design": 75,
+    "Idea":100
   })}`,
 
   "/clear": "clear"
