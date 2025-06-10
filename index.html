@@ -64,6 +64,15 @@
       object-fit: cover;
       border: none;
       margin: 0 auto;
+      position: relative;
+      transition: transform 0.3s ease;
+    }
+
+    img.terminal-img:hover {
+      transform: scale(1.5);
+      z-index: 10;
+      width: 400px;
+      height: 200px;
     }
 
     .image-frame {
@@ -76,7 +85,6 @@
   </style>
 </head>
 <body class="theme-default">
-
   <div id="terminal">
     <div id="output">-- // WELCOME TO ZHE'S TERMINAL INTERFACE type /help to open help menu</div>
     <div class="input-line">
@@ -89,72 +97,71 @@
     const input = document.getElementById('commandInput');
 
     const commands = {
-      "/help": `-- // HELP MENU
-** Available commands:
->> /about               - Who is ZHE (shows image)
->> /works               - List my works
->> /skills              - Show my skills
->> /exp                 - My past experiences
->> /awards              - Awards and honors
->> /Game                - Play ASCII alien invasion
->> /theme switch <name> - Switch terminal theme (blue/gray/green/default)
->> /clear               - Clear terminal`,
+      "/help": `-- // HELP MENU\n** Available commands:\n>> /about               - Who is ZHE (shows image)\n>> /works               - List my works\n>> /skills              - Show my skills\n>> /exp                 - My past experiences\n>> /awards              - Awards and honors\n>> /Game                - Play ASCII alien invasion\n>> /theme switch <name> - Switch terminal theme (blue/gray/green/default)\n>> /clear               - Clear terminal`,
 
-      "/exp": `-- // EXPERIENCE
-** 2022 – Present
-   >> Independent Game Developer
-** 2021 – 2022
-   >> VR Research Assistant at NTU
-** 2020 – 2021
-   >> Unity Freelance Developer`,
+      "/exp": `-- // EXPERIENCE\n** 2022 – Present\n   >> Independent Game Developer\n** 2021 – 2022\n   >> VR Research Assistant at NTU\n** 2020 – 2021\n   >> Unity Freelance Developer`,
 
-      "/awards": `-- // AWARDS
-** 2025 Taipei Game Show
-   >> Indie Game Award – Best Student Game (Final List)
+      "/awards": `-- // AWARDS\n** 2025 Taipei Game Show\n   >> Indie Game Award – Best Student Game (Final List)\n\n** 2022 Vision Get Wild\n   >> Alternative Game Category – Gold Award\n   >> XR Award – Gold Award`,
 
-** 2022 Vision Get Wild
-   >> Alternative Game Category – Gold Award
-   >> XR Award – Gold Award`,
+      "/works": () => {
+        const text = `-- // PROJECTS\n\n** Path without faith **\n>> "Path of the Godless" is a Souls-like action-adventure game\n>> with challenging combat and psychological storytelling.\n>> Set in a world where gods have perished and faith has crumbled.\n\n-- Features\n>> Hardcore Combat System\n   - Precise dodging, parrying, and attack timing.\n>> Domain Expansion\n   - Boss phase 2 transforms arena with buffs/debuffs.\n>> Domain Plundering\n   - Gain powers by seizing defeated enemies' domains. \n video link : https://youtu.be/n8wvtlnDUkg \n`;
 
-      "/works": `-- // PROJECTS
+        const text2 = `\n\n** Mediator **\n>> "The Mediator" is a third-person VR puzzle-adventure game\n>> combining immersive exploration with time-based mechanics.\n\n-- Features\n>> Exploration Elements\n   - Find hidden objects in the environment.\n>> Time Control\n   - Manipulate time to stack objects and trigger mechanisms.\n>> Dual Gameplay\n   - Control both 3D movement and side-scrolling puzzle character. \n video link : https://www.youtube.com/watch?v=uu7Aot0tblM \n`;
 
-** Path without faith **
->> "Path of the Godless" is a Souls-like action-adventure game
->> with challenging combat and psychological storytelling.
->> Set in a world where gods have perished and faith has crumbled.
+        typeText(text, () => {
+          for (let i = 0; i <= 3; i++) {
+            const img = document.createElement("img");
+            img.src = `image/${i}.jpg`;
+            img.alt = `work ${i}`;
+            img.className = "terminal-img";
 
--- Features
->> Hardcore Combat System
-   - Precise dodging, parrying, and attack timing.
->> Domain Expansion
-   - Boss phase 2 transforms arena with buffs/debuffs.
->> Domain Plundering
-   - Gain powers by seizing defeated enemies' domains.
+            const frame = document.createElement("div");
+            frame.className = "image-frame";
+            frame.innerHTML = "**********************<br>";
+            frame.appendChild(img);
+            frame.innerHTML += "**********************<br>";
+            output.appendChild(frame);
+          }
+          typeText(text2, () => {
+            for (let i = 4; i <= 7; i++) {
+              const img = document.createElement("img");
+              img.src = `image/${i}.png`;
+              img.alt = `work ${i}`;
+              img.className = "terminal-img";
 
---------------------------------------------------
+              const frame = document.createElement("div");
+              frame.className = "image-frame";
+              frame.innerHTML = "**********************<br>";
+              frame.appendChild(img);
+              frame.innerHTML += "**********************<br>";
+              output.appendChild(frame);
+            }
+            output.innerHTML += "\n";
+          });
+        });
+        return null;
+      },
 
-** Mediator **
->> "The Mediator" is a third-person VR puzzle-adventure game
->> combining immersive exploration with time-based mechanics.
-
--- Features
->> Exploration Elements
-   - Find hidden objects in the environment.
->> Time Control
-   - Manipulate time to stack objects and trigger mechanisms.
->> Dual Gameplay
-   - Control both 3D movement and side-scrolling puzzle character.`,
-
-      "/skills": `-- // ZHE's SKILLS
-${renderSkills({
-        "Unity (VR/AR)": 90,
-        "Unreal Engine": 60,
-        "C#": 85,
-        "Shader Graph": 70,
-        "Three.js": 60,
-        "Narrative Design": 80,
-        "UX/UI Design": 75
-      })}`,
+      "/skills": () => {
+        const skills = {
+          "Unity (VR/AR)": 90,
+          "Unreal Engine": 60,
+          "C#": 85,
+          "Shader Graph": 70,
+          "Three.js": 60,
+          "Narrative Design": 80,
+          "UX/UI Design": 75
+        };
+        let html = `-- // ZHE's SKILLS\n`;
+        for (const skill in skills) {
+          const val = skills[skill];
+          html += `${skill.padEnd(18)} [${'■'.repeat(val / 10)}${' '.repeat(10 - val / 10)}] ${val}%\n`;
+        }
+        typeText(html, () => {
+          output.innerHTML += "\n";
+        });
+        return null;
+      },
 
       "/clear": "clear"
     };
@@ -165,42 +172,45 @@ ${renderSkills({
         output.innerHTML += `\n> ${cmd}`;
 
         if (cmd === "/about") {
-          const aboutText = `-- // ABOUT ZHE
+  const aboutText = `-- // ABOUT ZHE
 ** Skilled at using geometric shapes to create games
    >> because I can't draw.
 ** Skilled at using Unity to develop games
    >> because I don't know Unreal.
 ** Skilled at making VR games
-   >> because I'm tired of making PC games.\n`;
+   >> because I'm tired of making PC games.
 
-          typeText(aboutText, () => {
-            const frame = document.createElement("div");
-            frame.className = "image-frame";
-            frame.innerHTML =
-              "**********************<br>";
+-- // EDUCATION
+** Bachelor of Science
+   >> Southern Taiwan University of Science and Technology, Dept. of Multimedia and Computer Entertainment Science
+** Master of Design
+   >> National Taipei University of Technology, Dept. of Interaction Design
+`;
 
-            const img = document.createElement("img");
-            img.src = "image/about.png";
-            img.alt = "About Image";
-            img.className = "terminal-img";
+  typeText(aboutText, () => {
+    const frame = document.createElement("div");
+    frame.className = "image-frame";
+    frame.innerHTML = "**********************<br>";
 
-            frame.appendChild(img);
-            frame.innerHTML += "**********************<br>" + "-- // ZHE'S IMAGE";
-            output.appendChild(frame);
-            output.innerHTML += "\n";
-          });
+    const img = document.createElement("img");
+    img.src = "image/about.png";
+    img.alt = "About Image";
+    img.className = "terminal-img";
 
-          input.value = "";
-          return;
-        }
+    frame.appendChild(img);
+    frame.innerHTML += "**********************<br>-- // ZHE'S IMAGE";
+    output.appendChild(frame);
+    output.innerHTML += "\n";
+  });
 
-        if (cmd === "/Game") {
-          startGame();
-          input.value = "";
-          return;
-        }
+  input.value = "";
+  return;
+}
 
-        if (commands[cmd]) {
+
+        if (typeof commands[cmd] === "function") {
+          commands[cmd]();
+        } else if (commands[cmd]) {
           if (commands[cmd] === "clear") {
             output.innerHTML = "";
           } else {
@@ -234,15 +244,6 @@ ${renderSkills({
       }, 20);
     }
 
-    function renderSkills(skillMap) {
-      let html = '';
-      for (const skill in skillMap) {
-        const val = skillMap[skill];
-        html += `${skill.padEnd(18)} [${'■'.repeat(val / 10)}${' '.repeat(10 - val / 10)}] ${val}%\n`;
-      }
-      return html;
-    }
-
     function switchTheme(theme) {
       const validThemes = ['default', 'blue', 'gray', 'green'];
       if (!validThemes.includes(theme)) {
@@ -255,78 +256,6 @@ ${renderSkills({
       typeText(`-- // Theme switched to '${theme}'`, () => {
         output.innerHTML += "\n";
       });
-    }
-
-    function startGame() {
-      output.innerHTML = "\n-- // GAME STARTED: ASCII ALIEN INVASION --\n";
-      const width = 20;
-      const height = 10;
-      let playerPos = Math.floor(width / 2);
-      let aliens = Array.from({ length: 5 }, (_, i) => i * 4 + 2);
-      let bullets = [];
-      let alienDirection = 1;
-      let alienY = 0;
-      let gameOver = false;
-
-      const render = () => {
-        let frame = "";
-        for (let y = 0; y < height; y++) {
-          for (let x = 0; x < width; x++) {
-            const isAlien = aliens.includes(x) && y === alienY;
-            const isBullet = bullets.some(b => b.x === x && b.y === y);
-            const isPlayer = y === height - 1 && x === playerPos;
-            frame += isAlien ? "👾" : isBullet ? "|" : isPlayer ? "▲" : " ";
-          }
-          frame += "\n";
-        }
-        output.innerHTML = "-- // ASCII ALIEN INVASION --\n" + frame;
-      };
-
-      const gameLoop = setInterval(() => {
-        if (gameOver) return;
-
-        bullets = bullets.map(b => ({ x: b.x, y: b.y - 1 })).filter(b => b.y >= 0);
-        bullets.forEach(b => {
-          if (b.y === alienY && aliens.includes(b.x)) {
-            aliens = aliens.filter(a => a !== b.x);
-          }
-        });
-
-        if (Math.random() < 0.2) {
-          const edge = alienDirection === 1 ? Math.max(...aliens) : Math.min(...aliens);
-          if ((alienDirection === 1 && edge + 1 >= width) || (alienDirection === -1 && edge - 1 < 0)) {
-            alienDirection *= -1;
-            alienY++;
-          } else {
-            aliens = aliens.map(x => x + alienDirection);
-          }
-        }
-
-        render();
-
-        if (aliens.length === 0) {
-          clearInterval(gameLoop);
-          gameOver = true;
-          document.removeEventListener("keydown", onGameKey);
-          typeText("🎉 You Win!\n", () => typeText(commands["/help"]));
-        }
-
-        if (alienY >= height - 1) {
-          clearInterval(gameLoop);
-          gameOver = true;
-          document.removeEventListener("keydown", onGameKey);
-          typeText("💀 Game Over\n", () => typeText(commands["/help"]));
-        }
-      }, 300);
-
-      const onGameKey = e => {
-        if (gameOver) return;
-        if (e.key === "ArrowLeft") playerPos = Math.max(0, playerPos - 1);
-        else if (e.key === "ArrowRight") playerPos = Math.min(width - 1, playerPos + 1);
-        else if (e.key === " ") bullets.push({ x: playerPos, y: height - 2 });
-      };
-
-      document.addEventListener("keydown", onGameKey);
     }
   </script>
 </body>
