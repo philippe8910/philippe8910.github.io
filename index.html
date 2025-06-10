@@ -57,8 +57,21 @@
       width: 100%;
     }
 
-    .skill-bar {
-      margin: 0.3rem 0;
+    img.terminal-img {
+      display: block;
+      width: 200px;
+      height: 200px;
+      object-fit: cover;
+      border: none;
+      margin: 0 auto;
+    }
+
+    .image-frame {
+      display: inline-block;
+      font-family: 'Courier New', monospace;
+      line-height: 1.2;
+      text-align: center;
+      margin-top: 1rem;
     }
   </style>
 </head>
@@ -78,7 +91,7 @@
     const commands = {
       "/help": `-- // HELP MENU
 ** Available commands:
->> /about               - Who is ZHE
+>> /about               - Who is ZHE (shows image)
 >> /works               - List my works
 >> /skills              - Show my skills
 >> /exp                 - My past experiences
@@ -86,14 +99,6 @@
 >> /Game                - Play ASCII alien invasion
 >> /theme switch <name> - Switch terminal theme (blue/gray/green/default)
 >> /clear               - Clear terminal`,
-
-      "/about": `-- // ABOUT ZHE
-** Skilled at using geometric shapes to create games
-   >> because I can't draw.
-** Skilled at using Unity to develop games
-   >> because I don't know Unreal.
-** Skilled at making VR games
-   >> because I'm tired of making PC games.`,
 
       "/exp": `-- // EXPERIENCE
 ** 2022 – Present
@@ -158,6 +163,36 @@ ${renderSkills({
       if (event.key === "Enter") {
         const cmd = input.value.trim();
         output.innerHTML += `\n> ${cmd}`;
+
+        if (cmd === "/about") {
+          const aboutText = `-- // ABOUT ZHE
+** Skilled at using geometric shapes to create games
+   >> because I can't draw.
+** Skilled at using Unity to develop games
+   >> because I don't know Unreal.
+** Skilled at making VR games
+   >> because I'm tired of making PC games.\n`;
+
+          typeText(aboutText, () => {
+            const frame = document.createElement("div");
+            frame.className = "image-frame";
+            frame.innerHTML =
+              "**********************<br>";
+
+            const img = document.createElement("img");
+            img.src = "image/about.png";
+            img.alt = "About Image";
+            img.className = "terminal-img";
+
+            frame.appendChild(img);
+            frame.innerHTML += "**********************<br>" + "-- // ZHE'S IMAGE";
+            output.appendChild(frame);
+            output.innerHTML += "\n";
+          });
+
+          input.value = "";
+          return;
+        }
 
         if (cmd === "/Game") {
           startGame();
