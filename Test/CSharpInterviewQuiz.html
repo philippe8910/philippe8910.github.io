@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>C# 面試 200 題｜手機完美版</title>
+<meta name="theme-color" content="#6366f1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="data:application/manifest+json,{
+  \"name\":\"C# 面試速刷神器\",
+  \"short_name\":\"C#200題\",
+  \"start_url\":\".\",
+  \"display\":\"standalone\",
+  \"background_color\":\"#6366f1\",
+  \"theme_color\":\"#6366f1\",
+  \"icons\":[{\"src\":\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%3C/text%3E%3C/svg%3E\",\"sizes\":\"any\"}]
+}">
+
+<style>
+  :root {
+    --primary: #6366f1;
+    --success: #10b981;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+    --dark: #1e293b;
+    --light: #f8fafc;
+    --gray: #64748b;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    color: #333;
+  }
+  .container {
+    max-width: 100vw;
+    margin: 0 auto;
+    padding: 15px;
+  }
+  .card {
+    background: white;
+    border-radius: 24px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+  header {
+    background: linear-gradient(120deg, var(--primary), #8b5cf6);
+    color: white;
+    text-align: center;
+    padding: 40px 20px;
+  }
+  h1 {
+    font-size: 2.4em;
+    font-weight: 800;
+    margin: 0;
+    text-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  }
+  .subtitle {
+    font-size: 1.2em;
+    opacity: 0.95;
+    margin-top: 8px;
+  }
+
+  .setup {
+    padding: 30px 20px;
+    text-align: center;
+    background: #f8f9ff;
+  }
+  select {
+    width: 100%;
+    padding: 18px;
+    font-size: 1.3em;
+    border-radius: 16px;
+    border: 3px solid #e0e0e0;
+    margin: 20px 0;
+    background: white;
+  }
+  .btn {
+    width: 100%;
+    padding: 18px;
+    font-size: 1.4em;
+    border-radius: 16px;
+    border: none;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    margin: 10px 0;
+    transition: all 0.3s;
+  }
+  .btn-primary { background: var(--primary); }
+  .btn-danger { background: var(--danger); }
+  .btn-success { background: var(--success); }
+  .btn:hover { transform: translateY(-4px); box-shadow: 0 15px 30px rgba(0,0,0,0.3); }
+
+  #quiz { display: none; padding: 20px; }
+  .progress-container {
+    height: 12px;
+    background: #e0e0e0;
+    border-radius: 6px;
+    overflow: hidden;
+    margin: 20px 0;
+  }
+  .progress {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), #8b5cf6);
+    width: 0%;
+    transition: width 0.5s ease;
+    border-radius: 6px;
+  }
+  .progress-text {
+    text-align: center;
+    font-size: 1.3em;
+    font-weight: bold;
+    margin: 15px 0;
+    color: var(--dark);
+  }
+
+  .question {
+    font-size: 1.4em;
+    line-height: 1.6;
+    margin: 25px 0;
+    padding: 20px;
+    background: #f8f9ff;
+    border-radius: 16px;
+    border-left: 6px solid var(--primary);
+    white-space: pre-wrap;
+  }
+  .options label {
+    display: block;
+    margin: 15px 0;
+    padding: 20px;
+    background: #f8f9ff;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.3s;
+    border: 3px solid transparent;
+    font-size: 1.25em;
+    position: relative;
+  }
+  .options label:hover {
+    background: #e0e7ff;
+    transform: translateX(10px);
+    border-color: var(--primary);
+  }
+  .options input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+  }
+  .options .checkmark {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 28px;
+    height: 28px;
+    border: 3px solid #ddd;
+    border-radius: 50%;
+  }
+  .options input:checked ~ .checkmark {
+    background: var(--primary);
+    border-color: var(--primary);
+  }
+  .options input:checked ~ .checkmark::after {
+    content: "";
+    position: absolute;
+    left: 6px;
+    top: 2px;
+    width: 10px;
+    height: 16px;
+    border: solid white;
+    border-width: 0 4px 4px 0;
+    transform: rotate(45deg);
+  }
+
+  .nav {
+    display: flex;
+    gap: 15px;
+    margin: 30px 0;
+  }
+  .nav button {
+    flex: 1;
+    padding: 16px;
+    font-size: 1.2em;
+  }
+
+  .result {
+    padding: 30px 20px;
+    text-align: center;
+    display: none;
+  }
+  .score-big {
+    font-size: 5em;
+    font-weight: 900;
+    background: linear-gradient(120deg, var(--success), #34d399);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin: 20px 0;
+  }
+  .explanation {
+    background: #fffbeb;
+    padding: 20px;
+    border-radius: 16px;
+    margin: 20px 0;
+    border-left: 6px solid var(--warning);
+    text-align: left;
+    font-size: 1.1em;
+    line-height: 1.7;
+  }
+  .final-btn {
+    padding: 20px;
+    font-size: 1.6em;
+    margin-top: 30px;
+  }
+
+  @media (min-width: 768px) {
+    .container { max-width: 600px; }
+    h1 { font-size: 3em; }
+    .question { font-size: 1.6em; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="card">
+    <header>
+      <h1>C# 200題</h1>
+      <p class="subtitle">手機完美版｜隨時隨地刷題</p>
+    </header>
+
+    <div class="setup">
+      <p style="font-size:1.4em;margin:20px 0;">選擇題數開始練習</p>
+      <select id="numQuestions">
+        <option value="20">20 題（快速熱身）</option>
+        <option value="50" selected>50 題（推薦）</option>
+        <option value="100">100 題（進階訓練）</option>
+        <option value="150">150 題（極限挑戰）</option>
+        <option value="200">200 題（全刷！）</option>
+      </select>
+      <button class="btn btn-primary" onclick="startQuiz()">開始測驗</button>
+    </div>
+
+    <div id="quiz">
+      <div class="progress-container">
+        <div class="progress" id="progress"></div>
+      </div>
+      <div class="progress-text">
+        第 <span id="current">1</span> 題 / <span id="total">50</span>
+      </div>
+      <div class="question" id="questionText"></div>
+      <div class="options" id="options"></div>
+
+      <div class="nav">
+        <button class="btn btn-primary" onclick="prevQuestion()" id="prevBtn">上一題</button>
+        <button class="btn btn-primary" onclick="nextQuestion()" id="nextBtn">下一題</button>
+        <button class="btn btn-danger" onclick="submitQuiz()" id="submitBtn" style="display:none;">交卷結算</button>
+      </div>
+    </div>
+
+    <div id="result" class="result"></div>
+  </div>
+</div>
+
+<script>
+// ==================== 完整 200 題（已全部四選一）===================
+const questions = [
+  // 1-20: 基礎型別與 OOP
+  {q:"下列哪個是 C# 的參考型別（Reference Type）？",options:["int","string","char","bool"],answer:1,exp:"正確答案：B. string\nstring、class、interface、delegate、array 都是參考型別，放在堆上。int、bool、char 等是值型別，放在堆疊上。"},
+  {q:"struct 和 class 的最大差別是？",options:["struct 不能有建構子","struct 是值型別，class 是參考型別","struct 不能繼承介面","struct 一定比較快"],answer:1,exp:"正確答案：B. struct 是值型別，class 是參考型別\nstruct 傳值（stack），class 傳參考（heap），struct 可以繼承介面但不能被繼承。"},
+  {q:"string s1 = \"Hello\"; string s2 = \"Hello\"; object.ReferenceEquals(s1,s2) 結果？",options:["False","True","編譯錯誤","執行期例外"],answer:1,exp:"正確答案：B. True\n相同字面量的 string 會被 CLR 字串常駐（interning），指向同一物件。但 new String(\"Hello\") 就不一樣。"},
+  {q:"什麼情況最容易發生 StackOverflowException？",options:["無限遞迴","記憶體不足","陣列索引越界","null 參考"],answer:0,exp:"正確答案：A. 無限遞迴\n無限遞迴會不斷推入呼叫堆疊導致溢位。記憶體不足是 OutOfMemoryException。"},
+  {q:"哪個關鍵字可讓方法接受不定數量參數？",options:["out","ref","params","dynamic"],answer:2,exp:"正確答案：C. params\nparams int[] nums 允許 0~多個 int 參數。"},
+  {q:"async void 最安全的用法是？",options:["任何非同步方法","只有事件處理程序（如 Button.Click）","永遠不要用","Library 內部方法"],answer:1,exp:"正確答案：B. 只有事件處理程序（如 Button.Click）\nasync void 無法 await，例外直接崩 App，只適合頂層事件。其他用 async Task。"},
+  {q:"IEnumerable<T> 和 IQueryable<T> 最大差別？",options:["IQueryable 可被轉成 SQL","IEnumerable 比較快","兩者完全一樣","IQueryable 不能用 LINQ"],answer:0,exp:"正確答案：A. IQueryable 可被轉成 SQL\nIQueryable 建 Expression Tree，EF 可翻 SQL 遠端執行；IEnumerable 本機執行。"},
+  {q:"using 語句的主要作用是？",options:["引入命名空間","自動呼叫 Dispose()","宣告變數","處理例外"],answer:1,exp:"正確答案：B. 自動呼叫 Dispose()\n確保 IDisposable 物件離開區塊時釋放資源，如檔案連線。"},
+  {q:"boxing 發生在什麼情況？",options:["值型別放入 object 或非泛型集合","使用 async/await","使用 LINQ","使用 ref"],answer:0,exp:"正確答案：A. 值型別放入 object 或非泛型集合\nint i = 5; object o = i; 分配 heap，影響效能。用泛型避免。"},
+  {q:"sealed class 的作用？",options:["防止被繼承","防止方法被 override","宣告靜態類別","提升執行效能"],answer:0,exp:"正確答案：A. 防止被繼承\nsealed class 不能被繼承，string 就是 sealed，提升 JIT 優化。"},
+  {q:"var 的型別是在什麼時候決定？",options:["編譯時期","執行時期","永遠是 object","隨機決定"],answer:0,exp:"正確答案：A. 編譯時期\nvar 編譯時推斷型別，只是語法糖。"},
+  {q:"const 和 readonly 的差別？",options:["const 編譯時決定，readonly 可執行時決定","兩者一樣","const 只能是值型別","readonly 不能用在 static"],answer:0,exp:"正確答案：A. const 編譯時決定，readonly 可執行時決定\nconst 宣告時賦值，readonly 可在建構子賦值。"},
+  {q:"ref 和 out 的最大差別？",options:["ref 必須初始化，out 不必但方法內必須賦值","out 必須初始化","兩者完全一樣","ref 不能用在 async"],answer:0,exp:"正確答案：A. ref 必須初始化，out 不必但方法內必須賦值\nout 適合回傳多值。"},
+  {q:"yield return 的作用？",options:["延遲執行產生 IEnumerable","立即執行所有資料","產生 Task","產生 async stream"],answer:0,exp:"正確答案：A. 延遲執行產生 IEnumerable\n產生狀態機，節省記憶體，大資料分批。"},
+  {q:"extension method 的定義方式？",options:["靜態類別 + this 參數","實例方法","抽象方法","虛擬方法"],answer:0,exp:"正確答案：A. 靜態類別 + this 參數\npublic static int Count(this string s) 擴充 string。"},
+  {q:"什麼是 covariance？",options:["IEnumerable<out T> 可將子型別轉父型別","IEnumerable<in T>","兩者一樣","都不支援"],answer:0,exp:"正確答案：A. IEnumerable<out T> 可將子型別轉父型別\nIEnumerable<Dog> 可指派給 IEnumerable<Animal>。"},
+  {q:"Task.WhenAll 和 Task.WhenAny 的差別？",options:["WhenAll 等全部完成，WhenAny 等第一個完成","WhenAll 比較快","兩者一樣","WhenAll 會取消其他"],answer:0,exp:"正確答案：A. WhenAll 等全部完成，WhenAny 等第一個完成\nWhenAny 適合競爭場景。"},
+  {q:"ConfigureAwait(false) 的用途？",options:["避免死結，提升效能（Library 用）","捕捉同步上下文","強制在 UI 執行緒","取消 Task"],answer:0,exp:"正確答案：A. 避免死結，提升效能（Library 用）\n非 UI 程式用，避免 Context 切換死鎖。"},
+  {q:"Span<T> 最大的優勢？",options:["零分配、高效能、stack-only","取代 string","只能用在 .NET Core","一定比陣列慢"],answer:0,exp:"正確答案：A. 零分配、高效能、stack-only\nC# 7.2+，適合 IO/解析。"},
+  {q:"record 的主要特點？",options:["immutable + 值相等比較","完全可變","一定繼承 class","不能有方法"],answer:0,exp:"正確答案：A. immutable + 值相等比較\nC# 9，適合 DTO，with 語法複製。"},
+
+  // 21-40: 進階 OOP 與繼承
+  {q:"抽象類別和介面的最大差別？",options:["抽象類別可有實作，介面 C# 8 前無","介面可多重繼承，抽象類別不可","兩者完全相同","抽象類別不能有建構子"],answer:0,exp:"正確答案：A. 抽象類別可有實作，介面 C# 8 前無\n介面 C# 8+ 可 default 實作，支援多重繼承。"},
+  {q:"static class 的特性？",options:["所有成員靜態，不能實例化","可繼承其他類別","可有實例成員","必須實作 IDisposable"],answer:0,exp:"正確答案：A. 所有成員靜態，不能實例化\n如 Math 類，不能 new。"},
+  {q:"物件初始化器的語法？",options:["new MyClass { Prop = value }","new MyClass(Prop: value)","兩者皆可","都不行"],answer:0,exp:"正確答案：A. new MyClass { Prop = value }\nC# 3.0，呼叫無參建構子後設值。"},
+  {q:"建構子呼叫順序（繼承鏈）？",options:["基類先，衍生類後","衍生類先，基類後","平行執行","無固定順序"],answer:0,exp:"正確答案：A. 基類先，衍生類後\n:base() 呼叫基類。"},
+  {q:"運算子過載的語法？",options:["public static operator + (Type a, Type b)","private operator +","virtual operator +","abstract operator +"],answer:0,exp:"正確答案：A. public static operator + (Type a, Type b)\n需成對如 == 和 !=。"},
+  {q:"索引子的語法？",options:["public int this[int i] { get; set; }","public int Index[int i] { get; set; }","兩者一樣","都不支援"],answer:0,exp:"正確答案：A. public int this[int i] { get; set; }\n讓類別像陣列 obj[0]。"},
+  {q:"partial class 用於？",options:["分割類別定義多檔案","部分實作介面","生成程式碼","匿名類別"],answer:0,exp:"正確答案：A. 分割類別定義多檔案\nWinForms 設計器常用。"},
+  {q:"多型如何實現？",options:["virtual/override 或介面","static 方法","new 關鍵字","sealed 方法"],answer:0,exp:"正確答案：A. virtual/override 或介面\n運行時多型。"},
+  {q:"屬性 backing field 如何簡化？",options:["auto-property { get; set; }","private field","public 方法","介面"],answer:0,exp:"正確答案：A. auto-property { get; set; }\nCLR 自動產生 field。"},
+  {q:"C# 支援多重繼承嗎？",options:["不支援類別，但支援介面","支援類別和介面","完全不支援","只支援類別"],answer:0,exp:"正確答案：A. 不支援類別，但支援介面\n避免鑽石問題。"},
+  {q:"什麼是 new 關鍵字在繼承中？",options:["隱藏基類成員（編譯時多型）","覆寫基類方法","防止繼承","抽象方法"],answer:0,exp:"正確答案：A. 隱藏基類成員（編譯時多型）\nnew Foo() 隱藏 virtual。"},
+  {q:"interface 成員預設修飾詞？",options:["public abstract","private","static","virtual"],answer:0,exp:"正確答案：A. public abstract\nC# 8+ 可 default 實作。"},
+  {q:"什麼是 explicit interface implementation？",options:["介面方法用介面.方法名隱藏","隱式實作","兩者一樣","不支援"],answer:0,exp:"正確答案：A. 介面方法用介面.方法名隱藏\n解決衝突。"},
+  {q:"base 關鍵字用於？",options:["呼叫基類成員","呼叫靜態成員","呼叫 this","呼叫 static"],answer:0,exp:"正確答案：A. 呼叫基類成員\nbase.Foo() 或 :base()。"},
+  {q:"this 關鍵字在建構子？",options:["呼叫同一類別其他建構子","呼叫基類","呼叫靜態","不支援"],answer:0,exp:"正確答案：A. 呼叫同一類別其他建構子\n:this(args)。"},
+  {q:"什麼是 static constructor？",options:["類別首次存取時執行，無參數","實例建構子","有參數","永不執行"],answer:0,exp:"正確答案：A. 類別首次存取時執行，無參數\n初始化靜態成員。"},
+  {q:"C# 中，類別預設存取修飾詞？",options:["internal","private","public","protected"],answer:0,exp:"正確答案：A. internal\n組件內可見。"},
+  {q:"什麼是 nested class？",options:["類別內定義類別","多重繼承","partial class","abstract class"],answer:0,exp:"正確答案：A. 類別內定義類別\n可 private/protected。"},
+  {q:"override 必須搭配？",options:["virtual 或 abstract","static","new","sealed"],answer:0,exp:"正確答案：A. virtual 或 abstract\n覆寫基類。"},
+  {q:"sealed method 用於？",options:["防止進一步 override","防止繼承","宣告靜態","隱藏"],answer:0,exp:"正確答案：A. 防止進一步 override\n效能優化。"},
+
+  // 41-60: 異常處理與資源
+  {q:"try-catch-finally 執行順序？",options:["try → catch (若例外) → finally","finally 先","catch 可選無 finally","無固定"],answer:0,exp:"正確答案：A. try → catch (若例外) → finally\nfinally 總執行，用於清理。"},
+  {q:"AggregateException 何時拋出？",options:["Task 並行多例外包裝","單一例外","GC 錯誤","陣列錯誤"],answer:0,exp:"正確答案：A. Task 並行多例外包裝\nTask.WhenAll() 時，用 Flatten() 展開。"},
+  {q:"自訂例外應繼承？",options:["Exception","SystemError","RuntimeException","BaseException"],answer:0,exp:"正確答案：A. Exception\n建構子呼叫 base(msg)，[Serializable]。"},
+  {q:"IDisposable 介面作用？",options:["釋放非受控資源","序列化","比較物件","列舉"],answer:0,exp:"正確答案：A. 釋放非受控資源\nDispose() + using。"},
+  {q:"finally 中拋例外如何？",options:["取代 try/catch 例外","忽略","合併","編譯錯誤"],answer:0,exp:"正確答案：A. 取代 try/catch 例外\n避免在 finally 拋出。"},
+  {q:"checked/unchecked 作用？",options:["檢查/忽略整數溢位","鎖定/解鎖","編譯/執行","有/無簽名"],answer:0,exp:"正確答案：A. 檢查/忽略整數溢位\nchecked 拋 OverflowException。"},
+  {q:"out var 語法是哪個版本？",options:["C# 7.0","C# 6.0","C# 8.0","C# 5.0"],answer:0,exp:"正確答案：A. C# 7.0\nif (int.TryParse(s, out var i)) 簡化宣告。"},
+  {q:"不該用 try-catch 的情況？",options:["控制流程","錯誤恢復","記錄 log","效能優化"],answer:0,exp:"正確答案：A. 控制流程\n昂貴，用 if 預防；try-catch 用於恢復。"},
+  {q:"StackTrace 提供什麼？",options:["呼叫堆疊資訊（方法、檔案、行號）","記憶體使用","執行時間","檔案路徑"],answer:0,exp:"正確答案：A. 呼叫堆疊資訊（方法、檔案、行號）\nException.StackTrace 用於除錯。"},
+  {q:"rethrow 正確方式？",options:["throw; (保留原堆疊)","throw ex; (重設堆疊)","兩者一樣","不支援"],answer:0,exp:"正確答案：A. throw; (保留原堆疊)\nthrow ex; 誤導除錯。"},
+  {q:"什麼是 ApplicationException？",options:["應用程式自訂例外基類","系統例外","CLR 例外","不常用"],answer:0,exp:"正確答案：A. 應用程式自訂例外基類\n繼承 Exception，自訂用。"},
+  {q:"SystemException 包含什麼？",options:["CLR 拋出的所有例外","自訂例外","ArgumentException 等","所有以上"],answer:2,exp:"正確答案：C. ArgumentException 等\n如 NullReferenceException。"},
+  {q:"using 靜態引入（using static）？",options:["C# 6.0，直接用類別靜態成員","C# 5.0","C# 7.0","不支援"],answer:0,exp:"正確答案：A. C# 6.0，直接用類別靜態成員\nusing static Math; Math.Sin → Sin。"},
+  {q:"什麼是 throw new NotImplementedException()？",options:["佔位符，提醒實作","終止程式","記錄 log","忽略錯誤"],answer:0,exp:"正確答案：A. 佔位符，提醒實作\n抽象方法暫時用。"},
+  {q:"Exception.Filter 用於？",options:["C# 6+，條件 catch","排序例外","合併例外","不支援"],answer:0,exp:"正確答案：A. C# 6+，條件 catch\ncatch (e when e is ArgEx && cond) { }。"},
+  {q:"什麼是 SuppressFinalize？",options:["GC.SuppressFinalize(this) 後無需 Finalizer","呼叫 Finalizer","忽略 GC","不支援"],answer:0,exp:"正確答案：A. GC.SuppressFinalize(this) 後無需 Finalizer\nDispose 後呼叫，避免雙重釋放。"},
+  {q:"Finalizer (~Class) 何時執行？",options:["GC 回收時，非確定性","確定性","建構時","不執行"],answer:0,exp:"正確答案：A. GC 回收時，非確定性\n用於非受控資源，但避免依賴。"},
+  {q:"什麼是 ArgumentNullException？",options:["參數為 null 時拋出","陣列越界","型別轉換失敗","檔案不存在"],answer:0,exp:"正確答案：A. 參數為 null 時拋出\n如 Guard.ArgumentNotNull(obj, \"obj\")。"},
+  {q:"InvalidOperationException 用於？",options:["物件狀態無效時","null 參考","溢位","IO 錯誤"],answer:0,exp:"正確答案：A. 物件狀態無效時\n如集合已讀取。"},
+  {q:"什麼是 FormatException？",options:["字串格式錯誤","數學錯誤","記憶體錯誤","網路錯誤"],answer:0,exp:"正確答案：A. 字串格式錯誤\n如 DateTime.Parse 失敗。"},
+
+  // 61-80: 泛型與集合
+  {q:"泛型的主要優點？",options:["型別安全、無 boxing 效能好","簡化程式碼","支援多型","所有以上"],answer:3,exp:"正確答案：D. 所有以上\nC# 2.0 引入，where T : class 約束。"},
+  {q:"List<T> vs ArrayList？",options:["List<T> 泛型型別安全，無 boxing","ArrayList 更快","兩者相同","List<T> 非動態"],answer:0,exp:"正確答案：A. List<T> 泛型型別安全，無 boxing\nArrayList 用 object 需 cast。"},
+  {q:"Dictionary<TKey, TValue> 內部？",options:["雜湊表，hash code + equals","二元樹","鏈結串列","陣列"],answer:0,exp:"正確答案：A. 雜湊表，hash code + equals\n碰撞用鏈結。"},
+  {q:"ICollection<T> 方法？",options:["Add, Remove, Contains, Count","只 ReadOnly","排序","序列化"],answer:0,exp:"正確答案：A. Add, Remove, Contains, Count\nList<T> 實作。"},
+  {q:"ConcurrentDictionary 用途？",options:["執行緒安全 Dictionary","更快非並行","只讀","非泛型"],answer:0,exp:"正確答案：A. 執行緒安全 Dictionary\nSystem.Collections.Concurrent。"},
+  {q:"HashSet<T> vs List<T>？",options:["HashSet 無重複 O(1) 查詢","List 有序可重複","兩者相同","HashSet 排序"],answer:0,exp:"正確答案：A. HashSet 無重複 O(1) 查詢\nList 用索引。"},
+  {q:"foreach 底層迭代？",options:["IEnumerable.GetEnumerator()","直接陣列","LINQ","async"],answer:0,exp:"正確答案：A. IEnumerable.GetEnumerator()\nyield 優化狀態機。"},
+  {q:"contravariance 用於？",options:["IComparer<in T> 父轉子","IEnumerable<out T>","兩者一樣","不支援"],answer:0,exp:"正確答案：A. IComparer<in T> 父轉子\nIComparer<Animal> 可指派 IComparer<Dog>。"},
+  {q:"什麼是 generic constraint？",options:["where T : class, new() 等","無約束","只支援 class","只支援 struct"],answer:0,exp:"正確答案：A. where T : class, new() 等\n確保 T 有建構子。"},
+  {q:"Queue<T> 的 FIFO 意味？",options:["First In First Out","Last In First Out","隨機","排序"],answer:0,exp:"正確答案：A. First In First Out\nEnqueue/Dequeue，任務排程。"},
+  {q:"Stack<T> 的 LIFO？",options:["Last In First Out","First In First Out","無序","排序"],answer:0,exp:"正確答案：A. Last In First Out\nPush/Pop，遞迴 undo。"},
+  {q:"SortedDictionary vs Dictionary？",options:["Sorted 有序鍵，二元樹","Dictionary 更快雜湊","兩者相同","Sorted 非泛型"],answer:0,exp:"正確答案：A. Sorted 有序鍵，二元樹\nO(log n) vs O(1)。"},
+  {q:"什麼是 LinkedList<T>？",options:["雙向鏈結，插入刪除 O(1)","陣列","雜湊","樹"],answer:0,exp:"正確答案：A. 雙向鏈結，插入刪除 O(1)\n無隨機存取，記憶體高。"},
+  {q:"ObservableCollection<T> 用於？",options:["WPF 資料繫結，自動通知變更","普通 List","非泛型","只讀"],answer:0,exp:"正確答案：A. WPF 資料繫結，自動通知變更\nINotifyCollectionChanged。"},
+  {q:"什麼是 ReadOnlyCollection<T>？",options:["包裝集合，只讀視圖","可寫","取代 List","非泛型"],answer:0,exp:"正確答案：A. 包裝集合，只讀視圖\nnew ReadOnlyCollection<T>(list)。"},
+  {q:"ImmutableList<T> 在哪？",options:["System.Collections.Immutable NuGet","內建",".NET Core 只","不支援"],answer:0,exp:"正確答案：A. System.Collections.Immutable NuGet\n執行緒安全 immutable。"},
+  {q:"什麼是 BitArray？",options:["位元陣列，非泛型","泛型 bit","取代 byte[]","不支援"],answer:0,exp:"正確答案：A. 位元陣列，非泛型\nbool 壓縮。"},
+  {q:"PriorityQueue<T> 是哪個版本？",options:[".NET 6",".NET 5",".NET 7","內建無"],answer:0,exp:"正確答案：A. .NET 6\n優先級任務。"},
+  {q:"什麼是 ArraySegment<T>？",options:["陣列片段視圖","完整陣列","動態","不支援"],answer:0,exp:"正確答案：A. 陣列片段視圖\nnew ArraySegment<int>(arr, 1, 3)。"},
+  {q:"KeyValuePair<TKey, TValue> 用於？",options:["Dictionary 迭代器","建構子","屬性","不常用"],answer:0,exp:"正確答案：A. Dictionary 迭代器\nforeach (var kvp in dict) { kvp.Key }。"},
+
+  // 81-100: LINQ
+  {q:"LINQ 全名與版本？",options:["Language Integrated Query, C# 3.0","LINQ to SQL, C# 2.0","兩者一樣","不支援"],answer:0,exp:"正確答案：A. Language Integrated Query, C# 3.0\n方法/查詢語法。"},
+  {q:"Select 的作用？",options:["投影轉換元素","過濾","排序","群組"],answer:0,exp:"正確答案：A. 投影轉換元素\nnumbers.Select(n => n*2)，延遲執行。"},
+  {q:"Where 用於？",options:["過濾元素，predicate","投影","排序","聯結"],answer:0,exp:"正確答案：A. 過濾元素，predicate\nnumbers.Where(n => n > 5)。"},
+  {q:"GroupBy 輸出？",options:["IGrouping<TKey, TElement> 群組","單一元素","排序列表","聯結結果"],answer:0,exp:"正確答案：A. IGrouping<TKey, TElement> 群組\npersons.GroupBy(p => p.Age)。"},
+  {q:"Join 在 LINQ？",options:["等值聯結如 SQL INNER JOIN","左聯結","全聯結","不支援"],answer:0,exp:"正確答案：A. 等值聯結如 SQL INNER JOIN\ncustomers.Join(orders, c=>c.Id, o=>o.CustId, ...)。"},
+  {q:"OrderBy vs OrderByDescending？",options:["升序 vs 降序","兩者一樣","OrderBy 降序","不支援"],answer:0,exp:"正確答案：A. 升序 vs 降序\nThenBy 鏈結多欄。"},
+  {q:"Any() 和 All() 差別？",options:["存在 vs 全符合，短路","Any 全檢查","兩者一樣","不支援"],answer:0,exp:"正確答案：A. 存在 vs 全符合，短路\nlist.Any(x > 0)。"},
+  {q:"FirstOrDefault() 預設？",options:["default(T)","null","第一個","拋例外"],answer:0,exp:"正確答案：A. default(T)\n空集合 int 回 0，class 回 null。"},
+  {q:"ToList() vs ToArray()？",options:["ToList 動態可加，ToArray 固定","兩者相同","ToArray 更快","ToList 只讀"],answer:0,exp:"正確答案：A. ToList 動態可加，ToArray 固定\n強迫執行。"},
+  {q:"Deferred Execution 觸發？",options:["列舉時如 foreach/ToList","建構時","永不","只一次"],answer:0,exp:"正確答案：A. 列舉時如 foreach/ToList\n優化多次呼叫。"},
+  {q:"什麼是 LINQ to Objects？",options:["記憶體中集合 LINQ","資料庫","XML","Entity Framework"],answer:0,exp:"正確答案：A. 記憶體中集合 LINQ\nList/Array 等。"},
+  {q:"Aggregate 的作用？",options:["累積計算如 Sum","過濾","排序","投影"],answer:0,exp:"正確答案：A. 累積計算如 Sum\nlist.Aggregate(0, (acc, x) => acc + x)。"},
+  {q:"TakeWhile 用於？",options:["取直到條件不符","取所有","取最後","不支援"],answer:0,exp:"正確答案：A. 取直到條件不符\nlist.TakeWhile(x => x > 0)。"},
+  {q:"Zip 的作用？",options:["兩個序列配對","單一序列","群組","聯結"],answer:0,exp:"正確答案：A. 兩個序列配對\nlist1.Zip(list2, (a,b) => a + b)。"},
+  {q:"什麼是 IGrouping？",options:["GroupBy 結果","單元素","排序","不支援"],answer:0,exp:"正確答案：A. GroupBy 結果\nforeach (var g in groups) { g.Key }。"},
+  {q:"AsEnumerable() 用於？",options:["轉 IQueryable 為 IEnumerable","轉 List","排序","不變"],answer:0,exp:"正確答案：A. 轉 IQueryable 為 IEnumerable\n停止 SQL 翻譯。"},
+  {q:"什麼是 Let 在查詢語法？",options:["引入臨時變數","排序","過濾","群組"],answer:0,exp:"正確答案：A. 引入臨時變數\nfrom x in xs let y = x*2 select y。"},
+  {q:"Distinct() 如何？",options:["移除重複，需 IEqualityComparer","保留重複","排序","不支援"],answer:0,exp:"正確答案：A. 移除重複，需 IEqualityComparer\ndistinct 依 Equals/HashCode。"},
+  {q:"Union vs Concat？",options:["Union 去重，Concat 保留","兩者一樣","Union 排序","Concat 去重"],answer:0,exp:"正確答案：A. Union 去重，Concat 保留\n集合操作。"},
+  {q:"Average() 適用？",options:["數值型別平均","字串","物件","所有"],answer:0,exp:"正確答案：A. 數值型別平均\nlist.Average()。"},
+
+  // 101-120: 非同步與多執行緒
+  {q:"async/await 底層？",options:["Task 狀態機","直接執行緒","同步","不支援"],answer:0,exp:"正確答案：A. Task 狀態機\n編譯器產生，await 不阻塞。"},
+  {q:"Task.Run() 適合？",options:["CPU-bound 工作","IO-bound","所有","不推薦"],answer:0,exp:"正確答案：A. CPU-bound 工作\n移到 ThreadPool。"},
+  {q:"CancellationToken 如何？",options:["cts.Token.ThrowIfCancellationRequested()","無需檢查","自動取消","只 sync"],answer:0,exp:"正確答案：A. cts.Token.ThrowIfCancellationRequested()\n傳遞取消。"},
+  {q:"Parallel.ForEach vs foreach？",options:["並行迭代，注意執行緒安全","同步","相同","不支援"],answer:0,exp:"正確答案：A. 並行迭代，注意執行緒安全\nPLINQ AsParallel()。"},
+  {q:"SemaphoreSlim 用途？",options:["限流控制同時存取數","鎖定整個 app","比 lock 慢","只 sync"],answer:0,exp:"正確答案：A. 限流控制同時存取數\nawait WaitAsync()。"},
+  {q:"lock 等同？",options:["Monitor.Enter/Exit","Mutex","原子操作","不鎖"],answer:0,exp:"正確答案：A. Monitor.Enter/Exit\n執行緒安全。"},
+  {q:"Deadlock 原因？",options:["互等鎖","單執行緒","無 lock","GC"],answer:0,exp:"正確答案：A. 互等鎖\n避免巢狀，用 Timeout。"},
+  {q:"什麼是 ThreadLocal<T>？",options:["每個執行緒獨立實例","全域共享","static","不支援"],answer:0,exp:"正確答案：A. 每個執行緒獨立實例\n避免爭用。"},
+  {q:"Interlocked 優點？",options:["原子操作無阻塞","比 lock 慢","只 int","有阻塞"],answer:0,exp:"正確答案：A. 原子操作無阻塞\nIncrement 等。"},
+  {q:"什麼是 ReaderWriterLockSlim？",options:["讀多寫少鎖","單一鎖","無鎖","只寫"],answer:0,exp:"正確答案：A. 讀多寫少鎖\n允許多讀一寫。"},
+  {q:"async void 風險？",options:["無法 await，例外崩 App","效能好","推薦用","無風險"],answer:0,exp:"正確答案：A. 無法 await，例外崩 App\n只事件用。"},
+  {q:"ValueTask<T> vs Task<T>？",options:["ValueTask 同步無分配","ValueTask 慢","相同","只 async"],answer:0,exp:"正確答案：A. ValueTask 同步無分配\nC# 7+ 高頻用。"},
+  {q:"什麼是 Semaphore？",options:["跨進程限流","只同一進程","比 Slim 輕","無 async"],answer:0,exp:"正確答案：A. 跨進程限流\nWaitOne()。"},
+  {q:"Monitor.TryEnter 用於？",options:["嘗試鎖定，有 timeout","永久鎖","無鎖","只釋放"],answer:0,exp:"正確答案：A. 嘗試鎖定，有 timeout\n避免死鎖。"},
+  {q:"什麼是 Barrier？",options:["多執行緒同步點","單執行緒","鎖","計數器"],answer:0,exp:"正確答案：A. 多執行緒同步點\nParallel 階段。"},
+  {q:"CountdownEvent 用於？",options:["計數到 0 釋放執行緒","遞增","鎖定","無"],answer:0,exp:"正確答案：A. 計數到 0 釋放執行緒\nTask.WaitAll 替代。"},
+  {q:"什麼是 ManualResetEventSlim？",options:["手動重設事件，輕量","自動重設","跨進程","無"],answer:0,exp:"正確答案：A. 手動重設事件，輕量\nWait/Set/Reset。"},
+  {q:"SpinLock 適合？",options:["短暫鎖，低爭用","長鎖","高爭用","跨進程"],answer:0,exp:"正確答案：A. 短暫鎖，低爭用\n無 kernel 轉換。"},
+  {q:"什麼是 AsyncLocal<T>？",options:["async 流中執行緒本地","全域","static","無"],answer:0,exp:"正確答案：A. async 流中執行緒本地\nContext 傳遞。"},
+  {q:"TaskCreationOptions 用於？",options:["指定 Task 排程如 LongRunning","預設","取消","不支援"],answer:0,exp:"正確答案：A. 指定 Task 排程如 LongRunning\nTask.Run(() => {}, TaskCreationOptions.LongRunning)。"},
+
+  // 121-140: .NET 內部與記憶體
+  {q:"CLR 全名？",options:["Common Language Runtime","C# Language Runtime",".NET Runtime","CLR 不存在"],answer:0,exp:"正確答案：A. Common Language Runtime\nJIT、GC、安全。"},
+  {q:"GC 世代？",options:["0,1,2 Gen0 短命","1,2,3","無世代","只 Gen0"],answer:0,exp:"正確答案：A. 0,1,2 Gen0 短命\nLOH >85KB 單獨。"},
+  {q:"WeakReference 用途？",options:["允許 GC 回收但可檢查","強參考","永不回收","快取無用"],answer:0,exp:"正確答案：A. 允許 GC 回收但可檢查\n快取避免洩漏。"},
+  {q:"IL 程式碼？",options:["Intermediate Language，JIT 轉 native","機器碼","C# 源碼","組譯"],answer:0,exp:"正確答案：A. Intermediate Language，JIT 轉 native\nILDASM 檢視。"},
+  {q:"AppDomain 是？",options:["邏輯應用邊界，隔離組件","單執行緒",".NET Core 無","全域"],answer:0,exp:"正確答案：A. 邏輯應用邊界，隔離組件\n.NET Core 用 AssemblyLoadContext。"},
+  {q:"反射用途與缺點？",options:["運行時檢查型別，效能低","編譯時","快","無缺點"],answer:0,exp:"正確答案：A. 運行時檢查型別，效能低\ntypeof, GetMethod，用於 DI/Serilog。"},
+  {q:"Marshal 類別？",options:["P/Invoke managed 到 unmanaged","序列化","GC","不支援"],answer:0,exp:"正確答案：A. P/Invoke managed 到 unmanaged\nAllocHGlobal 非受控記憶體。"},
+  {q:"Memory<T> vs Span<T>？",options:["Memory 可 async 跨邊界，Span 同步","相同","Span async","Memory stack only"],answer:0,exp:"正確答案：A. Memory 可 async 跨邊界，Span 同步\nIAsyncEnumerable 用 Memory。"},
+  {q:"什麼是 LOH？",options:["Large Object Heap >85KB","Gen0","stack","不回收"],answer:0,exp:"正確答案：A. Large Object Heap >85KB\n單獨回收。"},
+  {q:"Finalizer 風險？",options:["非確定性，效能低，避免用","確定性","快","無風險"],answer:0,exp:"正確答案：A. 非確定性，效能低，避免用\n用 Dispose 替代。"},
+  {q:"什麼是 pinned 物件？",options:["fixed 語句固定 GC 不移動","可移動","無用","只 array"],answer:0,exp:"正確答案：A. fixed 語句固定 GC 不移動\nP/Invoke 指標。"},
+  {q:"TypeLoadException 何時？",options:["載入組件失敗","執行失敗","編譯失敗","記憶體"],answer:0,exp:"正確答案：A. 載入組件失敗\nDLL 遺失。"},
+  {q:"什麼是 Metadata？",options:["組件型別資訊","程式碼","資料","不支援"],answer:0,exp:"正確答案：A. 組件型別資訊\n反射依賴。"},
+  {q:"JIT 編譯？",options:["Just-In-Time，方法首次呼叫轉 native","預編譯","無編譯","解釋執行"],answer:0,exp:"正確答案：A. Just-In-Time，方法首次呼叫轉 native\nNGEN 預編譯。"},
+  {q:"什麼是 Tiered Compilation？",options:[".NET Core 兩階段 JIT 優化","單階段","無 JIT","只 debug"],answer:0,exp:"正確答案：A. .NET Core 兩階段 JIT 優化\nTier 0 快啟動，Tier 1 優化。"},
+  {q:"AppContext 用於？",options:["設定運行時行為如 switch","記錄","DI","不支援"],answer:0,exp:"正確答案：A. 設定運行時行為如 switch\nAppContext.SetSwitch(\"SwitchName\", true)。"},
+  {q:"什麼是 RyuJIT？",options:["現代 x64 JIT 編譯器","舊版","ARM","無"],answer:0,exp:"正確答案：A. 現代 x64 JIT 編譯器\n.NET Core 預設。"},
+  {q:"CoreCLR vs Mono？",options:["CoreCLR 微軟跨平台，Mono 開源","相同","Mono 舊","CoreCLR 只 Windows"],answer:0,exp:"正確答案：A. CoreCLR 微軟跨平台，Mono 開源\nUnity 用 Mono。"},
+  {q:"什麼是 Assembly？",options:["DLL/EXE 單位，包含 IL + metadata","單一檔案","源碼","不支援"],answer:0,exp:"正確答案：A. DLL/EXE 單位，包含 IL + metadata\nLoadFrom 載入。"},
+  {q:"Strong Name 是？",options:["數位簽名確保組件完整","弱名","無名","只 debug"],answer:0,exp:"正確答案：A. 數位簽名確保組件完整\nGAC 安裝。"},
+
+  // 141-160: 設計模式與最佳實務
+  {q:"Singleton 實現？",options:["私有建構 + 靜態實例，Lazy<T> 安全","public 建構","無單例","多實例"],answer:0,exp:"正確答案：A. 私有建構 + 靜態實例，Lazy<T> 安全\n執行緒安全。"},
+  {q:"Factory 模式？",options:["封裝物件建立邏輯","繼承","組合","觀察"],answer:0,exp:"正確答案：A. 封裝物件建立邏輯\nDI 容器用。"},
+  {q:"Observer 在 C#？",options:["事件 + delegate","屬性","介面","不支援"],answer:0,exp:"正確答案：A. 事件 + delegate\n+= 訂閱，INotifyPropertyChanged。"},
+  {q:"DI 好處？",options:["鬆耦合、可測試","緊耦合","難測試","無好處"],answer:0,exp:"正確答案：A. 鬆耦合、可測試\nIServiceCollection Scoped/Transient/Singleton。"},
+  {q:"SOLID S 原則？",options:["Single Responsibility","Open Closed","Liskov Substitution","Interface Segregation"],answer:0,exp:"正確答案：A. Single Responsibility\n一類一責。"},
+  {q:"RAII 在 C#？",options:["using 語句，資源取得即初始化","無 RAII","try finally","不支援"],answer:0,exp:"正確答案：A. using 語句，資源取得即初始化\n自動 Dispose。"},
+  {q:"Immutable 物件好處？",options:["執行緒安全、無副作用","可變好","bug 多","效能低"],answer:0,exp:"正確答案：A. 執行緒安全、無副作用\nstring, ReadOnlyDictionary。"},
+  {q:"Guard Clause？",options:["早期 return 驗證輸入","晚期驗證","無驗證","try catch"],answer:0,exp:"正確答案：A. 早期 return 驗證輸入\nif (x == null) throw; 簡化。"},
+  {q:"Code Contract？",options:["預/後條件，NuGet","無","只 log","不支援"],answer:0,exp:"正確答案：A. 預/後條件，NuGet\nContract.Requires(x > 0)。"},
+  {q:"什麼是 Repository 模式？",options:["抽象資料存取","Controller","View","Model"],answer:0,exp:"正確答案：A. 抽象資料存取\n解耦 EF/資料庫。"},
+  {q:"MVC 模式？",options:["Model View Controller","Model View Presenter","兩者","無"],answer:0,exp:"正確答案：A. Model View Controller\nASP.NET Core 用。"},
+  {q:"什麼是 Mediator 模式？",options:["物件間中介通訊","直接通訊","無中介","鎖定"],answer:0,exp:"正確答案：A. 物件間中介通訊\nMediatR NuGet。"},
+  {q:"Strategy 模式？",options:["演算法封裝，可替換","固定演算法","繼承演算法","無"],answer:0,exp:"正確答案：A. 演算法封裝，可替換\nDI 注入。"},
+  {q:"Decorator 模式？",options:["動態添加責任","移除責任","繼承","組合"],answer:0,exp:"正確答案：A. 動態添加責任\nStreamReader 裝飾 Stream。"},
+  {q:"什麼是 Command 模式？",options:["封裝請求為物件","直接呼叫","無封裝","只 log"],answer:0,exp:"正確答案：A. 封裝請求為物件\nUndo/Redo。"},
+  {q:"Adapter 模式？",options:["轉換介面相容","相同介面","無轉換","繼承"],answer:0,exp:"正確答案：A. 轉換介面相容\n舊 API 包裝。"},
+  {q:"Proxy 模式？",options:["代理控制存取","直接存取","無代理","鎖定"],answer:0,exp:"正確答案：A. 代理控制存取\nCastle DynamicProxy。"},
+  {q:"什麼是 Builder 模式？",options:["逐步建構複雜物件","單建構子","無建構","靜態"],answer:0,exp:"正確答案：A. 逐步建構複雜物件\nStringBuilder。"},
+  {q:"Template Method？",options:["骨架演算法，子類實作步驟","全實作","無骨架","抽象"],answer:0,exp:"正確答案：A. 骨架演算法，子類實作步驟\nvirtual 方法。"},
+  {q:"什麼是 State 模式？",options:["物件依狀態變行為","固定行為","無狀態","繼承"],answer:0,exp:"正確答案：A. 物件依狀態變行為\nFSM 有限狀態機。"},
+
+  // 161-180: 演算法與資料結構
+  {q:"二元搜尋複雜度？",options:["O(log n)","O(n)","O(1)","O(n^2)"],answer:0,exp:"正確答案：A. O(log n)\n需排序，中點比較。"},
+  {q:"Bubble Sort 缺點？",options:["O(n^2) 不穩定","O(n log n)","穩定快","無缺點"],answer:0,exp:"正確答案：A. O(n^2) 不穩定\n相鄰交換，簡單慢。"},
+  {q:"Hash Table 碰撞解決？",options:["鏈結或開放定址","二元樹","無碰撞","排序"],answer:0,exp:"正確答案：A. 鏈結或開放定址\nC# Dictionary 用鏈結。"},
+  {q:"Recursion vs Iteration？",options:["遞迴優雅但堆疊風險","Iteration 總優","相同","無遞迴"],answer:0,exp:"正確答案：A. 遞迴優雅但堆疊風險\n尾遞迴 C# 未優化。"},
+  {q:"Big O 表示？",options:["最壞情況時間/空間","最佳情況","平均","所有"],answer:0,exp:"正確答案：A. 最壞情況時間/空間\nO(1) 常數。"},
+  {q:"Binary Tree 定義？",options:["每個節點最多兩子","單鏈","多鏈","無樹"],answer:0,exp:"正確答案：A. 每個節點最多兩子\nBST O(log n) 搜尋。"},
+  {q:"Dijkstra 用於？",options:["最短路徑，貪婪優先佇列","排序","搜尋","無"],answer:0,exp:"正確答案：A. 最短路徑，貪婪優先佇列\n圖形。"},
+  {q:"什麼是 Heap？",options:["完全二元樹，父子順序","平衡樹","鏈結","陣列"],answer:0,exp:"正確答案：A. 完全二元樹，父子順序\nPriority Queue 用。"},
+  {q:"Quick Sort 平均複雜度？",options:["O(n log n)","O(n^2)","O(n)","O(log n)"],answer:0,exp:"正確答案：A. O(n log n)\n最壞 O(n^2)，pivot 關鍵。"},
+  {q:"什麼是 Trie？",options:["前綴樹，字串搜尋","二元樹","雜湊","無"],answer:0,exp:"正確答案：A. 前綴樹，字串搜尋\n自動完成功能。"},
+  {q:"BFS vs DFS？",options:["廣度優先層級，深度優先路徑","相同","BFS 深度","DFS 廣度"],answer:0,exp:"正確答案：A. 廣度優先層級，深度優先路徑\n圖遍歷。"},
+  {q:"什麼是 AVL Tree？",options:["自平衡 BST，高度差 <=1","不平衡","雜湊","鏈結"],answer:0,exp:"正確答案：A. 自平衡 BST，高度差 <=1\nO(log n) 保證。"},
+  {q:"Merge Sort 優點？",options:["穩定 O(n log n)","不穩定","in-place","無"],answer:0,exp:"正確答案：A. 穩定 O(n log n)\n分治合併。"},
+  {q:"什麼是 Sliding Window？",options:["固定大小視窗優化子陣列","全陣列","排序","無"],answer:0,exp:"正確答案：A. 固定大小視窗優化子陣列\nLeetCode 常見。"},
+  {q:"Topological Sort 用於？",options:["有向無環圖，依賴順序","循環圖","無向","排序數字"],answer:0,exp:"正確答案：A. 有向無環圖，依賴順序\nKahn 演算法。"},
+  {q:"什麼是 Union-Find？",options:["集合合併查詢，路徑壓縮","排序","搜尋","無"],answer:0,exp:"正確答案：A. 集合合併查詢，路徑壓縮\nKruskal MST。"},
+  {q:"Knapsack 問題？",options:["0/1 背包 DP","貪婪","遞迴無限","無"],answer:0,exp:"正確答案：A. 0/1 背包 DP\n動態規劃。"},
+  {q:"什麼是 LRU Cache？",options:["最近最少用，Hash + DLL","FIFO","無快取","排序"],answer:0,exp:"正確答案：A. 最近最少用，Hash + DLL\nO(1) get/put。"},
+  {q:"Bellman-Ford 演算法？",options:["處理負權最短路徑","正權","無負","Dijkstra"],answer:0,exp:"正確答案：A. 處理負權最短路徑\n偵測負環。"},
+  {q:"什麼是 KMP 字串匹配？",options:["有限自動機預處理 next 陣列","暴力","雜湊","無"],answer:0,exp:"正確答案：A. 有限自動機預處理 next 陣列\nO(n+m)。"},
+
+  // 181-200: 框架與進階
+  {q:"EF DbContext 作用？",options:["單位工作，追蹤變更 SaveChanges","單查詢","無追蹤","只讀"],answer:0,exp:"正確答案：A. 單位工作，追蹤變更 SaveChanges\nAsNoTracking 效能。"},
+  {q:"ASP.NET Core Middleware？",options:["請求管線，順序重要","路由","Controller","View"],answer:0,exp:"正確答案：A. 請求管線，順序重要\nUseAuthentication 前驗證。"},
+  {q:"SignalR 用途？",options:["即時通訊 WebSocket","HTTP","REST","無"],answer:0,exp:"正確答案：A. 即時通訊 WebSocket\nHub 廣播。"},
+  {q:"xUnit vs NUnit？",options:["xUnit 無 TestFixture，事實導向","相同","NUnit 更好","無差"],answer:0,exp:"正確答案：A. xUnit 無 TestFixture，事實導向\n[Theory] InlineData 參數化。"},
+  {q:"Moq 用途？",options:["Mock 物件驗證互動","真物件","無 mock","只 verify"],answer:0,exp:"正確答案：A. Mock 物件驗證互動\nmock.Setup().Returns()。"},
+  {q:"Serilog 是？",options:["結構化記錄 JSON","普通 Console","無 log","只 error"],answer:0,exp:"正確答案：A. 結構化記錄 JSON\nLog.Information(\"User {Id}\", id)。"},
+  {q:"Dapper vs EF？",options:["Dapper 輕 SQL 快，EF ORM","相同","EF 更快","Dapper ORM"],answer:0,exp:"正確答案：A. Dapper 輕 SQL 快，EF ORM\nDapper 手寫 SQL。"},
+  {q:"gRPC 在 .NET？",options:["高性能 RPC Protocol Buffers HTTP/2","REST","SOAP","無"],answer:0,exp:"正確答案：A. 高性能 RPC Protocol Buffers HTTP/2\n跨語言。"},
+  {q:"Blazor 模式？",options:["Server SignalR vs WASM client","只 Server","只 WASM","無"],answer:0,exp:"正確答案：A. Server SignalR vs WASM client\nWASM 下載 runtime。"},
+  {q:"Azure Functions 觸發？",options:["HTTP Timer Queue 等 Serverless","只 HTTP","有狀態","無"],answer:0,exp:"正確答案：A. HTTP Timer Queue 等 Serverless\n無狀態。"},
+  {q:"SQL Injection 防範？",options:["參數化，EF/Dapper 自動","字串拼接","無防","硬碼"],answer:0,exp:"正確答案：A. 參數化，EF/Dapper 自動\n避免 string.Format(sql, input)。"},
+  {q:"XSS 防範？",options:["Html.Encode 輸出","@Html.Raw 所有","無防","字串"],answer:0,exp:"正確答案：A. Html.Encode 輸出\nAntiXss 庫。"},
+  {q:"JWT 認證？",options:["JSON Web Token 無狀態 Header.Payload.Signature","有狀態","無 JWT","只 cookie"],answer:0,exp:"正確答案：A. JSON Web Token 無狀態 Header.Payload.Signature\n[Authorize]。"},
+  {q:"Race Condition？",options:["多執行緒競爭共享資源","單執行緒","無競爭","GC"],answer:0,exp:"正確答案：A. 多執行緒競爭共享資源\nlock 或 volatile。"},
+  {q:"BenchmarkDotNet 用於？",options:["微基準測試 [Benchmark]","普通 test","無","慢"],answer:0,exp:"正確答案：A. 微基準測試 [Benchmark]\n統計時間。"},
+  {q:"CI/CD 在 .NET？",options:["Azure DevOps GitHub Actions","無自動","手動","只 build"],answer:0,exp:"正確答案：A. Azure DevOps GitHub Actions\n建置測試部署。"},
+  {q:"Docker 在 .NET？",options:["Dockerfile 建置映像","無容器","只 Windows","Kubernetes 無"],answer:0,exp:"正確答案：A. Dockerfile 建置映像\n.NET dockerize。"},
+  {q:"Microservices 優缺？",options:["獨立部署，分散難追蹤","單體簡單","無優","大單體"],answer:0,exp:"正確答案：A. 獨立部署，分散難追蹤\nAPI Gateway Saga。"},
+  {q:"什麼是 CQRS？",options:["Command Query Responsibility Segregation","單一模型","無分離","只 query"],answer:0,exp:"正確答案：A. Command Query Responsibility Segregation\n讀寫分離。"},
+  {q:"Event Sourcing？",options:["事件為狀態來源，不可變 log","狀態快照","無事件","只 command"],answer:0,exp:"正確答案：A. 事件為狀態來源，不可變 log\nAxon Framework。"}
+];
+
+let selectedQuestions = [], currentIndex = 0, answers = [];
+
+function startQuiz() {
+  const num = parseInt(document.getElementById("numQuestions").value);
+  selectedQuestions = [...questions].sort(() => Math.random() - 0.5).slice(0, num);
+  answers = new Array(selectedQuestions.length).fill(-1);
+  currentIndex = 0;
+  document.querySelector(".setup").style.display = "none";
+  document.getElementById("quiz").style.display = "block";
+  document.getElementById("total").textContent = selectedQuestions.length;
+  showQuestion();
+}
+
+function showQuestion() {
+  const q = selectedQuestions[currentIndex];
+  document.getElementById("current").textContent = currentIndex + 1;
+  document.getElementById("questionText").textContent = q.q;
+  document.getElementById("progress").style.width = `${((currentIndex + 1) / selectedQuestions.length) * 100}%`;
+
+  const opts = document.getElementById("options");
+  opts.innerHTML = "";
+  q.options.forEach((opt, i) => {
+    const label = document.createElement("label");
+    label.innerHTML = `
+      <input type="radio" name="q" value="${i}" ${answers[currentIndex] === i ? "checked" : ""}>
+      <span>${String.fromCharCode(65 + i)}. ${opt}</span>
+      <div class="checkmark"></div>
+    `;
+    opts.appendChild(label);
+  });
+
+  document.getElementById("prevBtn").style.display = currentIndex === 0 ? "none" : "flex";
+  document.getElementById("submitBtn").style.display = currentIndex === selectedQuestions.length - 1 ? "flex" : "none";
+
+  opts.querySelectorAll("input").forEach(r => r.onchange = () => {
+    answers[currentIndex] = parseInt(r.value);
+  });
+}
+
+function prevQuestion() { if (currentIndex > 0) { currentIndex--; showQuestion(); } }
+function nextQuestion() { if (currentIndex < selectedQuestions.length - 1) { currentIndex++; showQuestion(); } else submitQuiz(); }
+
+function submitQuiz() {
+  let correct = 0;
+  let html = `<div class="score-big">${correct}/${selectedQuestions.length}</div><h2 style="margin:20px 0;">詳細解析</h2><div style="max-width:100%;overflow-x:auto;">`;
+
+  selectedQuestions.forEach((q, i) => {
+    const user = answers[i];
+    const correctLetter = String.fromCharCode(65 + q.answer);
+    const correctText = q.options[q.answer];
+    const isCorrect = user === q.answer;
+    if (isCorrect) correct++;
+
+    html += `<div style="margin:25px 0;padding:20px;background:#f8f9ff;border-radius:16px;">`;
+    html += `<div style="font-weight:bold;font-size:1.3em;margin-bottom:15px;">${q.q}</div>`;
+    if (isCorrect) {
+      html += `<p style="color:#16a34a;font-size:1.5em;font-weight:bold;">正確！</p>`;
+    } else {
+      html += `<p style="color:#dc2626;font-size:1.3em;">
+        你的答案：${user === -1 ? "未作答" : String.fromCharCode(65 + user) + ". " + q.options[user]}<br>
+        <strong style="color:#d97706">正確答案：${correctLetter}. ${correctText}</strong>
+      </p>`;
+    }
+    html += `<div class="explanation">${q.exp}</div></div><hr style="border:1px dashed #ddd;">`;
+  });
+
+  html = html.replace(`>${correct - 1}/`, `>${correct}/`);
+  html += `</div><div style="font-size:2em;font-weight:bold;color:${correct / selectedQuestions.length >= 0.8 ? '#10b981' : '#f59e0b'}">
+    正確率：${Math.round((correct / selectedQuestions.length) * 100)}%
+  </div>`;
+  html += `<button class="btn btn-success final-btn" onclick="location.reload()">再刷一輪！</button>`;
+
+  document.getElementById("quiz").style.display = "none";
+  document.getElementById("result").innerHTML = html;
+  document.getElementById("result").style.display = "block";
+}
+</script>
+</body>
+</html>
