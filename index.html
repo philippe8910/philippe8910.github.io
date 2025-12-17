@@ -277,7 +277,7 @@
         </div>
     </div>
 
-    <div id="msg">按下 SPACE 進入深淵<br><span style="font-size:16px; color:#aaa;">(點擊畫面開始)</span></div>
+    <div id="msg">按下 SPACE 或 攻擊鍵 進入深淵<br><span style="font-size:16px; color:#aaa;">(點擊畫面開始)</span></div>
     <div class="controls">移動: WASD | 跳躍: K | 攻擊: J | 衝刺: L | 回血(按住): Q</div>
 
     <!-- 手機版警告 -->
@@ -321,7 +321,14 @@
             if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
             if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
             if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'KeyK') { if (!keys.up) player.jump(); keys.up = true; }
-            if (e.code === 'KeyJ') { if (!keys.atk) player.attack(); keys.atk = true; }
+            if (e.code === 'KeyJ') {
+                if (!gameRunning) {
+                    if (gameOver) resetGame(); else startGame();
+                } else {
+                    if (!keys.atk) player.attack();
+                }
+                keys.atk = true;
+            }
             if (e.code === 'KeyL' || e.code === 'ShiftLeft') { if (!keys.dash) player.dashMove(); keys.dash = true; }
             if (e.code === 'KeyQ') keys.heal = true;
             if (e.code === 'Space' && gameOver) resetGame();
@@ -421,7 +428,13 @@
         };
 
         setupBtn('btn-jump', 'up', false, () => player.jump());
-        setupBtn('btn-atk', 'atk', false, () => player.attack());
+        setupBtn('btn-atk', 'atk', false, () => {
+            if (!gameRunning) {
+                if (gameOver) resetGame(); else startGame();
+            } else {
+                player.attack();
+            }
+        });
         setupBtn('btn-dash', 'dash', false, () => player.dashMove());
         setupBtn('btn-heal', 'heal', true); // Heal 僅需偵測按住
 
@@ -593,7 +606,7 @@
                 this.w = 30; this.h = 50; this.x = 100; this.y = GROUND_Y - 50; this.vx = 0; this.vy = 0; this.facing = 1;
                 this.hp = 100; this.maxHp = 100; this.heals = 3; this.healTimer = 0; this.healTimeMax = 90;
                 this.jumps = 0; this.dashing = false; this.dashTime = 0; this.dashCooldown = 0;
-                this.atkCooldown = 0; this.invincible = 0; this.updateHealUI();
+                this.atkCooldown = 0; this.invincible = 60; this.updateHealUI();
             }
             jump() { if (this.jumps < 2) { this.vy = -13; this.jumps++; spawnParticles(this.x + 15, this.y + 50, '#555', 5, 4); } }
             dashMove() { if (this.dashCooldown <= 0 && !this.dashing) { this.dashing = true; this.dashTime = 12; this.dashCooldown = 50; this.vx = this.facing * 22; this.vy = 0; spawnParticles(this.x, this.y + 25, 'cyan', 10, 3); } }
@@ -638,7 +651,7 @@
         function checkRectCollide(r1, r2) { return (r1.x < r2.x + r2.w && r1.x + r1.w > r2.x && r1.y < r2.y + r2.h && r1.y + r1.h > r2.y); }
         function spawnParticles(x, y, c, cnt, sz) { for (let i = 0; i < cnt; i++)particles.push(new Particle(x, y, c, 8, sz)); }
         function resetGame() { player = new Player(); boss = new Boss(); projectiles = []; particles = []; slashes = []; gameOver = false; gameRunning = true; document.getElementById('msg').style.display = 'none'; document.getElementById('boss-hp').style.width = '100%'; bg = new Background(); loop(); }
-        function endGame(win) { gameRunning = false; gameOver = true; const msg = document.getElementById('msg'); msg.style.display = 'block'; msg.innerHTML = win ? "<span style='color:gold'>古王已逝</span><br><span style='font-size:20px'>按 SPACE 再戰</span>" : "<span style='color:red'>容器破碎</span><br><span style='font-size:20px'>按 SPACE 重試</span>"; }
+        function endGame(win) { gameRunning = false; gameOver = true; const msg = document.getElementById('msg'); msg.style.display = 'block'; msg.innerHTML = win ? "<span style='color:gold'>古王已逝</span><br><span style='font-size:20px'>按 攻擊鍵 再戰</span>" : "<span style='color:red'>容器破碎</span><br><span style='font-size:20px'>按 攻擊鍵 重試</span>"; }
 
         let player = new Player(), boss = new Boss(), bg = new Background();
 
@@ -667,7 +680,7 @@
             ctx.restore();
         }
         ctx.fillStyle = 'white'; ctx.font = '20px Courier New';
-        ctx.fillText("按 SPACE 或點擊開始", canvas.width / 2 - 120, 300);
+        ctx.fillText("按 攻擊鍵(⚔) 開始", canvas.width / 2 - 100, 300);
     </script>
 </body>
 
