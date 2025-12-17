@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Hollow Slayer - Abyssal Ruins</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #050508;
+            /* 更深邃的背景色 */
+            font-family: 'Courier New', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        canvas {
+            /* 讓畫布邊緣發光，像是在看一個發光的洞穴 */
+            box-shadow: 0 0 100px rgba(50, 50, 100, 0.3);
+            background: linear-gradient(to bottom, #0d0d12 0%, #15151a 80%, #0a0a0d 100%);
+        }
+
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 800px;
+            color: white;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .bar-wrap {
+            width: 100%;
+            background: #222;
+            height: 15px;
+            border: 2px solid #444;
+            margin-bottom: 5px;
+            position: relative;
+            box-shadow: 0 2px 5px black;
+        }
+
+        .bar-fill {
+            height: 100%;
+            transition: width 0.1s;
+        }
+
+        #boss-hp {
+            background: linear-gradient(to right, #900, #d00);
+            width: 100%;
+            box-shadow: 0 0 10px #d00;
+        }
+
+        #player-hp {
+            background: linear-gradient(to right, #ccc, #fff);
+            width: 100%;
+            box-shadow: 0 0 10px #eee;
+        }
+
+        #heals {
+            display: flex;
+            gap: 10px;
+            margin-top: 5px;
+        }
+
+        .heal-orb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            background: transparent;
+        }
+
+        .heal-orb.filled {
+            background: white;
+            box-shadow: 0 0 15px white, inset 0 0 10px #aaf;
+            border-color: white;
+        }
+
+        #msg {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            font-size: 30px;
+            color: white;
+            text-shadow: 0 0 20px white;
+            display: none;
+            z-index: 20;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            color: #777;
+            font-size: 12px;
+            z-index: 10;
+            text-shadow: 1px 1px 2px black;
+        }
+
+        /* --- 手機版適配 CSS --- */
+        @media (max-width: 1024px) {
+            #ui {
+                width: 95%;
+                top: 10px;
+            }
+
+            canvas {
+                width: 100vw;
+                height: 100vh;
+                object-fit: contain;
+            }
+
+            .controls {
+                display: none;
+            }
+        }
+
+        #rotate-warning {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #050508;
+            z-index: 9999;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            color: white;
+        }
+
+        @media screen and (orientation: portrait) and (max-width: 1024px) {
+            #rotate-warning {
+                display: flex;
+            }
+        }
+
+        #mobile-controls {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 100;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        @media (pointer: coarse) {
+            #mobile-controls {
+                display: block;
+            }
+        }
+
+        .joystick-zone {
+            position: absolute;
+            bottom: 40px;
+            left: 40px;
+            width: 160px;
+            height: 160px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            pointer-events: auto;
+            touch-action: none;
+        }
+
+        #joystick-knob {
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            position: absolute;
+            left: 50px;
+            top: 50px;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+            pointer-events: none;
+            transform: translate(0, 0);
+            transition: 0.1s;
+        }
+
+        .action-zone {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            pointer-events: auto;
+        }
+
+        .m-btn {
+            width: 70px;
+            height: 70px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid #555;
+            border-radius: 50%;
+            color: #ddd;
+            font-size: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(4px);
+            touch-action: manipulation;
+        }
+
+        .m-btn:active {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(0.9);
+            border-color: white;
+        }
+
+        #btn-atk {
+            grid-column: 2;
+            grid-row: 1;
+            width: 90px;
+            height: 90px;
+            border-color: #ff5555;
+            background: rgba(100, 0, 0, 0.2);
+            font-size: 30px;
+            margin-top: -20px;
+        }
+
+        #btn-jump {
+            grid-column: 3;
+            grid-row: 2;
+            border-color: #5555ff;
+        }
+
+        #btn-dash {
+            grid-column: 1;
+            grid-row: 2;
+            border-color: #55ff55;
+        }
+
+        #btn-heal {
+            grid-column: 2;
+            grid-row: 3;
+            width: 60px;
+            height: 60px;
+            border-color: #ffff55;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="ui">
+        <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+            <div>
+                <span style="font-size: 20px; text-shadow: 0 0 5px white;">VESSEL</span>
+                <div id="heals">
+                    <div class="heal-orb filled"></div>
+                    <div class="heal-orb filled"></div>
+                    <div class="heal-orb filled"></div>
+                </div>
+            </div>
+            <span style="font-size: 24px; color: #ff4444; text-shadow: 0 0 15px red;">THE CORRUPTED KING</span>
+        </div>
+        <div class="bar-wrap" style="width: 30%; float:left; margin-top:5px;">
+            <div id="player-hp" class="bar-fill"></div>
+        </div>
+        <div class="bar-wrap" style="width: 65%; float:right; margin-top:5px;">
+            <div id="boss-hp" class="bar-fill"></div>
+        </div>
+    </div>
+
+    <div id="msg">按下 SPACE 或 攻擊鍵 進入深淵<br><span style="font-size:16px; color:#aaa;">(點擊畫面開始)</span></div>
+    <div class="controls">移動: WASD | 跳躍: K | 攻擊: J | 衝刺: L | 回血(按住): Q</div>
+
+    <!-- 手機版警告 -->
+    <div id="rotate-warning">
+        <div style="font-size: 40px; margin-bottom: 20px;">📱</div>
+        <h2>請轉動您的裝置</h2>
+        <p>為了最佳體驗，請使用橫向模式遊玩</p>
+    </div>
+
+    <!-- 手機版控制器 -->
+    <div id="mobile-controls">
+        <div class="joystick-zone" id="joystick">
+            <div id="joystick-knob"></div>
+        </div>
+        <div class="action-zone">
+            <div class="m-btn" id="btn-dash">↝</div>
+            <div class="m-btn" id="btn-atk">⚔</div>
+            <div class="m-btn" id="btn-jump">⇪</div>
+            <div class="m-btn" id="btn-heal">+</div>
+        </div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 1000;
+        canvas.height = 600;
+
+        // --- 遊戲常數調整 ---
+        const WORLD_WIDTH = 4000;
+        const GROUND_Y = 550;
+
+        // 遊戲狀態與相機
+        let camera = { x: 0, y: 0 };
+        let bossActive = false;
+
+        // 物件陣列
+        let particles = [], projectiles = [], slashes = [];
+        let platforms = [], dummies = [], spikes = [], texts = [];
+        let screenShake = 0, hitStop = 0;
+        let frame = 0, gameRunning = false, gameOver = false;
+
+        const keys = { left: false, right: false, up: false, atk: false, dash: false, heal: false };
+
+        // --- 鍵盤輸入 ---
+        document.addEventListener('keydown', e => {
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
+            if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'KeyK') { if (!keys.up) player.jump(); keys.up = true; }
+            if (e.code === 'KeyJ') {
+                if (!gameRunning) {
+                    if (gameOver) resetGame(); else startGame();
+                } else {
+                    if (!keys.atk) player.attack();
+                }
+                keys.atk = true;
+            }
+            if (e.code === 'KeyL' || e.code === 'ShiftLeft') { if (!keys.dash) player.dashMove(); keys.dash = true; }
+            if (e.code === 'KeyQ') keys.heal = true;
+            if (e.code === 'Space' && gameOver) resetGame();
+            if (e.code === 'Space' && !gameRunning) startGame();
+        });
+        document.addEventListener('keyup', e => {
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
+            if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'KeyK') keys.up = false;
+            if (e.code === 'KeyJ') keys.atk = false;
+            if (e.code === 'KeyL' || e.code === 'ShiftLeft') keys.dash = false;
+            if (e.code === 'KeyQ') keys.heal = false;
+        });
+
+        // 點擊畫面也可開始遊戲 (適配手機)
+        document.addEventListener('click', () => {
+            if (!gameRunning && !gameOver) startGame();
+        });
+
+        function startGame() {
+            gameRunning = true;
+            document.getElementById('msg').style.display = 'none';
+
+            // 嘗試進入全螢幕
+            if (document.documentElement.requestFullscreen) {
+                document.documentElement.requestFullscreen().catch(err => { });
+            }
+            loop();
+        }
+
+        // --- 虛擬搖桿邏輯 ---
+        const joystick = document.getElementById('joystick');
+        const knob = document.getElementById('joystick-knob');
+        let touchId = null;
+        let joyStartX = 0, joyStartY = 0;
+
+        joystick.addEventListener('touchstart', e => {
+            e.preventDefault();
+            const touch = e.changedTouches[0];
+            touchId = touch.identifier;
+            joyStartX = touch.clientX;
+            joyStartY = touch.clientY;
+            knob.style.transition = '0s';
+        }, { passive: false });
+
+        joystick.addEventListener('touchmove', e => {
+            e.preventDefault();
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                if (e.changedTouches[i].identifier === touchId) {
+                    const touch = e.changedTouches[i];
+                    let dx = touch.clientX - joyStartX;
+                    let dy = touch.clientY - joyStartY;
+                    const dist = Math.min(Math.sqrt(dx * dx + dy * dy), 60); // 限制移動半徑
+                    const angle = Math.atan2(dy, dx);
+
+                    const moveX = Math.cos(angle) * dist;
+                    const moveY = Math.sin(angle) * dist;
+
+                    knob.style.transform = `translate(${moveX}px, ${moveY}px)`;
+
+                    // 判斷方向
+                    keys.left = dx < -20;
+                    keys.right = dx > 20;
+
+                    // 向上推判定為跳躍 (選擇性)
+                    // if(dy < -40) { if(!keys.up) player.jump(); keys.up = true; } else { keys.up = false; }
+                }
+            }
+        }, { passive: false });
+
+        joystick.addEventListener('touchend', e => {
+            e.preventDefault();
+            touchId = null;
+            knob.style.transition = '0.2s';
+            knob.style.transform = `translate(0px, 0px)`;
+            keys.left = false;
+            keys.right = false;
+            keys.up = false;
+        });
+
+        // --- 虛擬按鈕邏輯 ---
+        const setupBtn = (id, keyName, autoRepeat = false, actionFunc = null) => {
+            const btn = document.getElementById(id);
+            btn.addEventListener('touchstart', e => {
+                e.preventDefault();
+                if (actionFunc) actionFunc();
+                if (!keys[keyName] && actionFunc && keyName === 'atk') { /* attack logic in actionFunc */ }
+                // 若為單次觸發 (如 Jump)，邏輯需微調。這裡統一按下為 true
+                keys[keyName] = true;
+                btn.style.background = 'rgba(255,255,255,0.4)';
+            }, { passive: false });
+            btn.addEventListener('touchend', e => {
+                e.preventDefault();
+                keys[keyName] = false;
+                btn.style.background = '';
+            });
+        };
+
+        setupBtn('btn-jump', 'up', false, () => player.jump());
+        setupBtn('btn-atk', 'atk', false, () => {
+            if (!gameRunning) {
+                if (gameOver) resetGame(); else startGame();
+            } else {
+                player.attack();
+            }
+        });
+        setupBtn('btn-dash', 'dash', false, () => player.dashMove());
+        setupBtn('btn-heal', 'heal', true); // Heal 僅需偵測按住
+
+
+
+        // --- 全新設計的場景類別 (支援捲動) ---
+        class Background {
+            constructor() {
+                // 1. 遠景 (視差係數 0.2)
+                this.distantRuins = [];
+                for (let i = 0; i < 30; i++) { // 增加數量覆蓋長地圖
+                    this.distantRuins.push({
+                        x: i * 150 - 50,
+                        w: 80 + Math.random() * 60,
+                        h: 200 + Math.random() * 150,
+                        offsetY: Math.random() * 20
+                    });
+                }
+
+                // 2. 中景 (視差係數 0.5)
+                this.pillars = [];
+                for (let i = 0; i < 20; i++) {
+                    this.pillars.push({ x: i * 280 + 50, w: 100 + Math.random() * 40, cracks: Math.random() > 0.5 });
+                }
+
+                // 3. 前景 (視差係數 1.2)
+                this.foregroundObjects = [];
+                for (let i = 0; i < 40; i++) {
+                    this.foregroundObjects.push({
+                        x: Math.random() * WORLD_WIDTH,
+                        h: 50 + Math.random() * 150,
+                        type: Math.random() > 0.7 ? 'chain' : 'vine'
+                    });
+                }
+
+                // 4. 粒子 (視窗空間)
+                this.dust = [];
+                for (let i = 0; i < 30; i++) {
+                    this.dust.push({
+                        x: Math.random() * canvas.width, y: Math.random() * canvas.height,
+                        size: Math.random() * 2.5, speed: Math.random() * 0.4 + 0.1, alpha: Math.random() * 0.5 + 0.2
+                    });
+                }
+            }
+
+            // 繪製最遠的背景
+            drawBack(ctx) {
+                const slowMove = Math.sin(frame * 0.02) * 10;
+
+                // 視差計算: 物件位置 - (相機位置 * 係數)
+                // 1. 遠景
+                ctx.fillStyle = '#08080c';
+                this.distantRuins.forEach(r => {
+                    let rx = r.x - camera.x * 0.2;
+                    if (rx > -200 && rx < canvas.width + 200) // 只畫視野內
+                        ctx.fillRect(rx, 150 + r.offsetY + slowMove * 0.5, r.w, GROUND_Y);
+                });
+
+                // 2. 中景
+                this.pillars.forEach(p => {
+                    let px = p.x - camera.x * 0.5;
+                    if (px > -200 && px < canvas.width + 200) {
+                        ctx.fillStyle = '#121218';
+                        ctx.fillRect(px, 80 + slowMove, p.w, GROUND_Y - 80);
+                        if (p.cracks) {
+                            ctx.save();
+                            ctx.shadowBlur = 15; ctx.shadowColor = '#4444ff';
+                            ctx.strokeStyle = '#222255'; ctx.lineWidth = 2;
+                            ctx.beginPath();
+                            ctx.moveTo(px + 10, 100 + slowMove);
+                            ctx.lineTo(px + p.w - 20, 250 + slowMove);
+                            ctx.lineTo(px + 30, 400 + slowMove);
+                            ctx.stroke();
+                            ctx.restore();
+                        }
+                    }
+                });
+            }
+
+            // 繪製場景物件 (平台、地板) -> 這些跟隨世界座標，不套視差，但受 camera.x 影響 (在外部 transform 下繪製)
+            drawWorld(ctx) {
+                // 地板
+                ctx.fillStyle = '#0a0a0d';
+                // 由於地板現在有坑洞，我們需要繪製具體的平台
+                platforms.forEach(p => {
+                    ctx.fillStyle = p.type === 'wall' ? '#08080a' : '#0a0a0d';
+                    ctx.fillRect(p.x, p.y, p.w, p.h);
+                    // 平台邊緣裝飾
+                    ctx.fillStyle = '#1a1a22';
+                    for (let i = p.x; i < p.x + p.w; i += 40) {
+                        let h = Math.random() * 15;
+                        ctx.beginPath(); ctx.moveTo(i, p.y); ctx.lineTo(i + 20, p.y - h); ctx.lineTo(i + 40, p.y); ctx.fill();
+                    }
+                    ctx.strokeStyle = '#222233'; ctx.lineWidth = 2;
+                    ctx.beginPath(); ctx.moveTo(p.x, p.y + 1); ctx.lineTo(p.x + p.w, p.y + 1); ctx.stroke();
+                });
+
+                // 尖刺
+                ctx.fillStyle = '#555';
+                spikes.forEach(s => {
+                    ctx.beginPath();
+                    ctx.moveTo(s.x, s.y + s.h);
+                    ctx.lineTo(s.x + s.w / 2, s.y);
+                    ctx.lineTo(s.x + s.w, s.y + s.h);
+                    ctx.fill();
+                });
+
+                // 教學文字
+                ctx.fillStyle = 'rgba(255,255,255,0.7)';
+                ctx.font = '20px Courier New';
+                ctx.textAlign = 'center';
+                texts.forEach(t => {
+                    ctx.fillText(t.str, t.x, t.y);
+                });
+                ctx.textAlign = 'left';
+            }
+
+            // 繪製前景 (遮擋物和氛圍) - 視差係數 1.2
+            drawFront(ctx) {
+                const fasterMove = Math.sin(frame * 0.03) * 15;
+                ctx.fillStyle = '#040406';
+                this.foregroundObjects.forEach(o => {
+                    let ox = o.x - camera.x * 1.2;
+                    if (ox > -50 && ox < canvas.width + 50) {
+                        let sway = Math.sin(frame * 0.05 + o.x) * 5;
+                        if (o.type === 'vine') {
+                            ctx.beginPath();
+                            ctx.moveTo(ox, 0);
+                            ctx.quadraticCurveTo(ox + sway, o.h / 2, ox, o.h + fasterMove);
+                            ctx.lineTo(ox + 10, o.h + fasterMove);
+                            ctx.quadraticCurveTo(ox + sway + 10, o.h / 2, ox + 10, 0);
+                            ctx.fill();
+                        } else {
+                            ctx.fillRect(ox + sway, -20, 5, o.h + fasterMove);
+                        }
+                    }
+                });
+
+                // 4. 塵埃粒子 (增加環境光感)
+                this.dust.forEach(d => {
+                    d.y -= d.speed;
+                    if (d.y < 0) d.y = canvas.height;
+                    ctx.globalAlpha = d.alpha;
+                    ctx.fillStyle = '#aaaaff'; // 帶點藍色的塵埃
+                    ctx.beginPath(); ctx.arc(d.x, d.y, d.size, 0, Math.PI * 2); ctx.fill();
+                });
+                ctx.globalAlpha = 1;
+
+                // 5. 強烈的暗角效果 (Vignette) - 聚焦中心
+                const grad = ctx.createRadialGradient(canvas.width / 2, canvas.height / 2, 250, canvas.width / 2, canvas.height / 2, 700);
+                grad.addColorStop(0, 'transparent');
+                grad.addColorStop(0.7, 'rgba(0,0,0,0.5)');
+                grad.addColorStop(1, 'rgba(0,0,0,0.9)');
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+
+        // --- (以下為既有的遊戲邏輯類別，未做大幅修改，僅配合場景調整顏色) ---
+        class SlashAnim {
+            constructor(x, y, facing) {
+                this.x = x; this.y = y; this.facing = facing; this.life = 1.0; this.angle = facing === 1 ? -0.5 : 3.5;
+            }
+            update() { this.life -= 0.15; this.x += this.facing * 2; }
+            draw(ctx) {
+                ctx.save(); ctx.translate(this.x, this.y); ctx.scale(this.facing, 1);
+                ctx.beginPath(); ctx.arc(0, 0, 60, -0.5, 0.5 + (1 - this.life));
+                ctx.lineWidth = 20 * this.life; ctx.strokeStyle = `rgba(255, 255, 255, ${this.life})`;
+                ctx.shadowBlur = 20; ctx.shadowColor = 'cyan'; // 改為冷色調刀光
+                ctx.stroke(); ctx.restore();
+            }
+        }
+        class Particle {
+            constructor(x, y, color, speed, size) {
+                this.x = x; this.y = y; this.color = color;
+                this.vx = (Math.random() - 0.5) * speed; this.vy = (Math.random() - 0.5) * speed;
+                this.life = 1.0; this.size = size;
+            }
+            update() { this.x += this.vx; this.y += this.vy; this.life -= 0.04; this.size *= 0.95; }
+            draw(ctx) {
+                ctx.globalAlpha = this.life; ctx.fillStyle = this.color;
+                ctx.shadowBlur = 5; ctx.shadowColor = this.color;
+                ctx.fillRect(this.x, this.y, this.size, this.size);
+                ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+            }
+        }
+        class Player {
+            constructor() {
+                this.w = 30; this.h = 50; this.x = 100; this.y = GROUND_Y - 50; this.vx = 0; this.vy = 0; this.facing = 1;
+                this.hp = 100; this.maxHp = 100; this.heals = 3; this.healTimer = 0; this.healTimeMax = 90;
+                this.jumps = 0; this.dashing = false; this.dashTime = 0; this.dashCooldown = 0;
+                this.atkCooldown = 0; this.invincible = 60; this.grounded = false; this.updateHealUI();
+            }
+            jump() { if (this.jumps < 2) { this.vy = -13; this.jumps++; spawnParticles(this.x + 15, this.y + 50, '#555', 5, 4); } }
+            dashMove() { if (this.dashCooldown <= 0 && !this.dashing) { this.dashing = true; this.dashTime = 12; this.dashCooldown = 50; this.vx = this.facing * 22; this.vy = 0; spawnParticles(this.x, this.y + 25, 'cyan', 10, 3); } }
+            attack() {
+                if (this.atkCooldown <= 0) {
+                    this.atkCooldown = 20;
+                    slashes.push(new SlashAnim(this.facing === 1 ? this.x + 40 : this.x - 40, this.y + 25, this.facing));
+                    const hitBox = { x: this.facing === 1 ? this.x : this.x - 70, y: this.y - 10, w: 100, h: 70 };
+
+                    // 攻擊 Boss
+                    if (bossActive && checkRectCollide(hitBox, boss)) {
+                        boss.takeDamage(12); this.vy = Math.min(this.vy, -3); hitStop = 4; screenShake = 4; spawnParticles(boss.x + boss.w / 2, boss.y + boss.h / 2, 'orange', 15, 5);
+                    }
+                    // 攻擊 Dummy
+                    dummies.forEach((d, i) => {
+                        if (d.hp > 0 && checkRectCollide(hitBox, d)) {
+                            d.hp -= 20; hitStop = 4; screenShake = 2; spawnParticles(d.x + d.w / 2, d.y + d.h / 2, 'wheat', 10, 3);
+                            if (d.hp <= 0) spawnParticles(d.x + d.w / 2, d.y + d.h / 2, 'white', 20, 5);
+                        }
+                    });
+                }
+            }
+            healLogic() {
+                if (keys.heal && Math.abs(this.vx) < 1 && this.grounded && this.heals > 0 && this.hp < this.maxHp) {
+                    this.healTimer++; if (frame % 5 === 0) spawnParticles(this.x + Math.random() * 30, this.y + Math.random() * 50, 'white', 2, 2);
+                    if (this.healTimer >= this.healTimeMax) { this.hp = Math.min(this.hp + 34, this.maxHp); this.heals--; this.healTimer = 0; this.updateHealUI(); spawnParticles(this.x + 15, this.y + 25, 'white', 30, 5); screenShake = 5; }
+                } else { this.healTimer = 0; }
+            }
+            updateHealUI() { document.querySelectorAll('.heal-orb').forEach((orb, i) => orb.classList.toggle('filled', i < this.heals)); document.getElementById('player-hp').style.width = (this.hp / this.maxHp * 100) + '%'; }
+            takeDamage(amt) { if (this.dashing || this.invincible > 0) return; this.hp -= amt; this.invincible = 60; this.healTimer = 0; screenShake = 12; this.updateHealUI(); spawnParticles(this.x + 15, this.y + 25, 'red', 15, 6); if (this.hp <= 0) endGame(false); }
+            update() {
+                if (this.dashCooldown > 0) this.dashCooldown--; if (this.atkCooldown > 0) this.atkCooldown--; if (this.invincible > 0) this.invincible--; this.healLogic();
+
+                if (this.dashing) {
+                    this.dashTime--; this.x += this.vx;
+                    if (this.dashTime <= 0) { this.dashing = false; this.vx = 0; }
+                } else {
+                    if (this.healTimer > 0) { this.vx = 0; }
+                    else { if (keys.left) { this.vx = -6; this.facing = -1; } else if (keys.right) { this.vx = 6; this.facing = 1; } else { this.vx *= 0.8; } }
+                    this.vy += 0.6; this.x += this.vx; this.y += this.vy;
+                }
+
+                // 物理與碰撞
+                if (this.x < 0) this.x = 0;
+                if (this.x > WORLD_WIDTH - this.w) this.x = WORLD_WIDTH - this.w;
+
+                this.grounded = false;
+                // 檢查平台碰撞
+                platforms.forEach(p => {
+                    // 簡單 AABB 碰撞: 
+                    // 1. 腳在平台上
+                    // 2. 上一幀在平台之上 (避免從下往上跳卡住) -> 簡化為: 下落中且腳底部接近平台頂部
+                    if (this.vy >= 0 &&
+                        this.x + this.w > p.x && this.x < p.x + p.w &&
+                        this.y + this.h >= p.y && this.y + this.h <= p.y + 20) {
+                        this.y = p.y - this.h;
+                        this.vy = 0;
+                        this.grounded = true;
+                        this.jumps = 0;
+                    }
+                });
+
+                // 掉落深淵
+                if (this.y > canvas.height + 100) {
+                    this.hp -= 20; this.updateHealUI();
+                    this.x = 100; this.y = GROUND_Y - 100; this.vx = 0; this.vy = 0; // 重生點：回到起點 (簡化)
+                    if (this.x > 3300) { this.x = 3400; } // 若在 BOSS 戰掉落
+                    screenShake = 10;
+                    if (this.hp <= 0) endGame(false);
+                }
+
+                // 尖刺碰撞
+                spikes.forEach(s => {
+                    if (checkRectCollide(this, s) && this.invincible <= 0) {
+                        this.takeDamage(10);
+                        this.vy = -10;
+                        this.x -= this.facing * 50; // 擊退
+                    }
+                });
+            }
+            draw(ctx) {
+                if (this.invincible > 0 && frame % 4 === 0) return;
+                ctx.fillStyle = 'white'; ctx.shadowBlur = 20; ctx.shadowColor = 'white'; ctx.fillRect(this.x, this.y, this.w, this.h);
+                ctx.fillStyle = 'black'; ctx.shadowBlur = 0; ctx.fillRect(this.facing === 1 ? this.x + 18 : this.x + 4, this.y + 10, 8, 20);
+                if (this.healTimer > 0) { ctx.strokeStyle = 'white'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(this.x + 15, this.y - 20, 10, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * (this.healTimer / this.healTimeMax))); ctx.stroke(); }
+            }
+        }
+        class Dummy {
+            constructor(x, y) { this.x = x; this.y = y; this.w = 40; this.h = 60; this.hp = 60; }
+            draw(ctx) {
+                if (this.hp <= 0) return;
+                ctx.fillStyle = '#886644'; ctx.fillRect(this.x, this.y, this.w, this.h);
+                ctx.strokeStyle = '#aa8866'; ctx.strokeRect(this.x, this.y, this.w, this.h);
+                // 眼睛
+                ctx.fillStyle = 'black'; ctx.fillRect(this.x + 10, this.y + 15, 5, 5); ctx.fillRect(this.x + 25, this.y + 15, 5, 5);
+            }
+        }
+
+        class Boss {
+            constructor() { this.w = 90; this.h = 110; this.x = 3700; this.y = GROUND_Y - 110; this.hp = 1500; this.maxHp = 1500; this.state = 'IDLE'; this.timer = 0; this.moveIndex = 0; this.vx = 0; this.vy = 0; this.opacity = 1; }
+            takeDamage(amt) { const dmg = this.state === 'TIRED' ? amt * 1.5 : amt; this.hp -= dmg; document.getElementById('boss-hp').style.width = (this.hp / this.maxHp * 100) + '%'; if (this.state === 'TIRED') spawnParticles(this.x + this.w / 2, this.y + this.h / 2, 'white', 5, 3); if (this.hp <= 0) endGame(true); }
+            update() {
+                if (!bossActive) return; // 沒觸發不動
+                this.x += this.vx; this.y += this.vy;
+                // 限制在競技場範圍 3400 ~ 4000
+                if (this.x < 3400) { this.x = 3400; this.vx = 0; } if (this.x > WORLD_WIDTH - this.w) { this.x = WORLD_WIDTH - this.w; this.vx = 0; }
+                if (this.y + this.h < GROUND_Y) this.vy += 0.6; else { this.y = GROUND_Y - this.h; this.vy = 0; } this.timer--;
+                // Boss 邏輯不變... -> 使用 WORLD_WIDTH 修正
+                if (this.state === 'IDLE') { this.y += Math.sin(frame * 0.1) * 0.5; if (this.timer <= 0) { this.state = 'PREPARE'; this.timer = 50; this.moveIndex = Math.floor(Math.random() * 5); this.telegraph(); } }
+                else if (this.state === 'PREPARE') { if (player.x < this.x) this.vx = -1; else this.vx = 1; if (this.timer <= 0) { this.vx = 0; this.state = 'ATTACK'; this.executeAttack(); } }
+                else if (this.state === 'TIRED') { this.opacity = 0.5; if (this.timer <= 0) { this.state = 'IDLE'; this.opacity = 1; this.timer = 40; } }
+            }
+            telegraph() { spawnParticles(this.x + this.w / 2, this.y, 'red', 8, 5); }
+            toTired(dur) { this.state = 'TIRED'; this.timer = dur; this.vx = 0; }
+            // 修正 Attack 的範圍與產生位置
+            executeAttack() { const m = this.moveIndex; if (m === 0) { this.vx = (player.x < this.x) ? -18 : 18; this.timer = 40; setTimeout(() => { this.toTired(80); }, 800); } else if (m === 1) { this.vy = -25; const t = setInterval(() => { this.x += (player.x - this.x) * 0.15; }, 20); setTimeout(() => { clearInterval(t); this.vy = 35; setTimeout(() => { screenShake = 25; projectiles.push(new Projectile(this.x, GROUND_Y - 40, -9, 0, 40, 40)); projectiles.push(new Projectile(this.x + this.w, GROUND_Y - 40, 9, 0, 40, 40)); this.toTired(100); }, 250); }, 700); } else if (m === 2) { for (let i = -2; i <= 2; i++) { let a = Math.atan2(player.y - this.y, player.x - this.x) + (i * 0.3); projectiles.push(new Projectile(this.x + this.w / 2, this.y + this.h / 2, Math.cos(a) * 10, Math.sin(a) * 10, 25, 25)); } this.timer = 20; setTimeout(() => { this.toTired(60); }, 300); } else if (m === 3) { let c = 0; const r = setInterval(() => { let rx = Math.random() * 600 + 3400; spawnParticles(rx, 50, 'purple', 1, 2); setTimeout(() => { projectiles.push(new Projectile(rx, 0, 0, 15, 20, 100, '#a020f0')); }, 400); c++; if (c > 8) { clearInterval(r); this.toTired(70); } }, 150); } else if (m === 4) { this.opacity = 0; spawnParticles(this.x, this.y, 'red', 20, 5); setTimeout(() => { this.opacity = 1; this.x = Math.max(3400, Math.min(WORLD_WIDTH - this.w, player.x + (player.facing * -100))); this.y = GROUND_Y - this.h; screenShake = 10; if (checkRectCollide(this, player)) player.takeDamage(20); this.toTired(90); }, 600); } }
+            draw(ctx) {
+                if (this.opacity === 0) return; ctx.save(); ctx.globalAlpha = this.opacity;
+                if (this.state === 'PREPARE') { ctx.shadowBlur = 30; ctx.shadowColor = 'red'; ctx.fillStyle = '#ffaaaa'; } else if (this.state === 'TIRED') { ctx.shadowBlur = 5; ctx.shadowColor = 'gray'; ctx.fillStyle = '#550000'; } else { ctx.shadowBlur = 25; ctx.shadowColor = '#ff0000'; ctx.fillStyle = '#aa0000'; }
+                ctx.beginPath(); ctx.moveTo(this.x, this.y); ctx.lineTo(this.x + this.w, this.y); ctx.lineTo(this.x + this.w - 10, this.y + this.h); ctx.lineTo(this.x + 10, this.y + this.h); ctx.fill();
+                ctx.fillStyle = (this.state === 'TIRED') ? '#555' : 'yellow'; ctx.shadowBlur = (this.state === 'TIRED') ? 0 : 10; ctx.shadowColor = 'yellow'; ctx.beginPath(); ctx.arc(this.x + 30, this.y + 40, 8, 0, Math.PI * 2); ctx.arc(this.x + this.w - 30, this.y + 40, 8, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+            }
+        }
+        class Projectile { constructor(x, y, vx, vy, w, h, c = 'orange') { this.x = x; this.y = y; this.vx = vx; this.vy = vy; this.w = w; this.h = h; this.color = c; this.active = true; } update() { this.x += this.vx; this.y += this.vy; if (this.y > canvas.height + 200) this.active = false; if (this.active && checkRectCollide(this, player)) { player.takeDamage(15); this.active = false; } } draw(ctx) { ctx.fillStyle = this.color; ctx.shadowBlur = 15; ctx.shadowColor = this.color; ctx.beginPath(); ctx.arc(this.x + this.w / 2, this.y + this.h / 2, this.w / 2, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0; } }
+
+        function checkRectCollide(r1, r2) { return (r1.x < r2.x + r2.w && r1.x + r1.w > r2.x && r1.y < r2.y + r2.h && r1.y + r1.h > r2.y); }
+        function spawnParticles(x, y, c, cnt, sz) { for (let i = 0; i < cnt; i++)particles.push(new Particle(x, y, c, 8, sz)); }
+        function resetGame() {
+            player = new Player(); boss = new Boss(); bg = new Background();
+            projectiles = []; particles = []; slashes = [];
+            gameOver = false; gameRunning = true; bossActive = false; camera.x = 0;
+            document.getElementById('msg').style.display = 'none';
+            document.getElementById('boss-hp').style.width = '100%';
+
+            // --- 重新建立關卡資料 ---
+            platforms = [
+                // 起始平地
+                { x: 0, y: GROUND_Y, w: 1000, h: 50, type: 'ground' },
+                // 跳躍教學
+                { x: 1100, y: GROUND_Y - 70, w: 100, h: 120, type: 'wall' },
+                { x: 1200, y: GROUND_Y, w: 300, h: 50, type: 'ground' },
+                { x: 1600, y: GROUND_Y - 120, w: 100, h: 170, type: 'wall' },
+                // 衝刺教學 (必須衝過的深淵)
+                { x: 1800, y: GROUND_Y, w: 300, h: 50, type: 'ground' },
+                // 攻擊教學平台
+                { x: 2300, y: GROUND_Y, w: 600, h: 50, type: 'ground' },
+                // 尖刺陷阱
+                { x: 3000, y: GROUND_Y, w: 200, h: 50, type: 'ground' },
+                // Boss 戰場
+                { x: 3300, y: GROUND_Y, w: 700, h: 50, type: 'ground' }
+            ];
+
+            dummies = [
+                new Dummy(2600, GROUND_Y - 60)
+            ];
+
+            spikes = [
+                { x: 3050, y: GROUND_Y - 30, w: 100, h: 30 }
+            ];
+
+            texts = [
+                { str: "AD / 搖桿 移動", x: 200, y: 400 },
+                { str: "K / ⇪ 跳躍", x: 1300, y: 350 },
+                { str: "L / ↝ 衝刺", x: 1950, y: 400 },
+                { str: "J / ⚔ 攻擊", x: 2450, y: 400 },
+                { str: "按住 Q / + 回血", x: 2850, y: 300 },
+                { str: "⚠ 危險 ⚠", x: 3100, y: 250 },
+            ];
+
+            loop();
+        }
+        function endGame(win) { gameRunning = false; gameOver = true; const msg = document.getElementById('msg'); msg.style.display = 'block'; msg.innerHTML = win ? "<span style='color:gold'>古王已逝</span><br><span style='font-size:20px'>按 攻擊鍵 再戰</span>" : "<span style='color:red'>容器破碎</span><br><span style='font-size:20px'>按 攻擊鍵 重試</span>"; }
+
+        let player = new Player(), boss = new Boss(), bg = new Background();
+
+        function loop() {
+            if (!gameRunning) return; requestAnimationFrame(loop);
+            if (hitStop > 0) { hitStop--; return; } frame++;
+            let sx = 0, sy = 0; if (screenShake > 0) { sx = (Math.random() - 0.5) * screenShake; sy = (Math.random() - 0.5) * screenShake; screenShake *= 0.9; }
+
+            // --- 相機邏輯 ---
+            let targetCamX = player.x - 400; // 玩家在左側 40% 位置
+            if (bossActive) targetCamX = 3300; // Boss 房固定相機
+            // 邊界限制
+            targetCamX = Math.max(0, Math.min(WORLD_WIDTH - canvas.width, targetCamX));
+            camera.x += (targetCamX - camera.x) * 0.1; // 平滑跟隨
+
+            // 觸發 Boss
+            if (!bossActive && player.x > 3350) {
+                bossActive = true;
+                document.getElementById('ui').style.opacity = 1; // Show UI
+            }
+
+            ctx.save();
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // 清除螢幕
+
+            // 1. 背景 (使用視差，內部自己處理 camera 偏移)
+            bg.drawBack(ctx);
+
+            // 2. 遊戲世界層 (跟隨相機)
+            ctx.save();
+            ctx.translate(-camera.x + sx, 0 + sy); // 套用相機 + 震動
+
+            bg.drawWorld(ctx); // 繪製地塊、文字、陷阱
+
+            dummies.forEach(d => d.draw(ctx));
+            particles.forEach(p => p.update()); particles = particles.filter(p => p.life > 0); particles.forEach(p => p.draw(ctx));
+            player.update(); player.draw(ctx);
+            boss.update(); boss.draw(ctx);
+
+            if (bossActive && boss.state !== 'TIRED' && checkRectCollide(player, boss)) player.takeDamage(10);
+
+            projectiles.forEach(p => p.update()); projectiles = projectiles.filter(p => p.active); projectiles.forEach(p => p.draw(ctx));
+            slashes.forEach(s => s.update()); slashes = slashes.filter(s => s.life > 0); slashes.forEach(s => s.draw(ctx));
+
+            // 3. 前景 (視差)
+            ctx.restore(); // 恢復世界層 (取消 camera 偏移，但背景 drawFront 自己會算)
+            bg.drawFront(ctx);
+
+            ctx.restore(); // 恢復最外層 (針對 UI)
+        }
+        ctx.fillStyle = 'white'; ctx.font = '20px Courier New';
+        ctx.fillText("按 攻擊鍵(⚔) 開始", canvas.width / 2 - 100, 300);
+    </script>
+</body>
+
+</html>
