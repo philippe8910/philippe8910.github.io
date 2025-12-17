@@ -321,26 +321,52 @@
 
             /* Scrollable Inventory Grid */
             .inv-grid {
-                grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
-                gap: 15px;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
                 overflow-y: auto;
-                max-height: 60vh;
-                /* Ensure scrolling */
+                max-height: 75vh;
                 padding-bottom: 50px;
             }
 
             .inv-item {
-                width: 70px;
-                height: 70px;
+                width: 100%;
+                height: auto;
+                min-height: 70px;
                 font-size: 30px;
+                justify-content: flex-start;
+                padding: 0 20px;
+                gap: 20px;
             }
 
-            /* Make tooltip centered and larger on mobile */
-            .tooltip {
-                width: 200px;
-                font-size: 14px;
-                bottom: 120%;
+            /* Mobile Info Layout */
+            .item-info {
+                display: flex !important;
+                flex-direction: column;
+                align-items: flex-start;
+                text-align: left;
             }
+
+            .item-info h4 {
+                margin: 0;
+                font-size: 18px;
+                color: white;
+            }
+
+            .item-info p {
+                margin: 5px 0 0;
+                font-size: 14px;
+                color: #aaa;
+            }
+
+            .tooltip {
+                display: none !important;
+            }
+        }
+
+        /* Desktop: Hide item info inside card */
+        .item-info {
+            display: none;
         }
 
         #rotate-warning {
@@ -790,7 +816,7 @@
                     renderItemContent(div, item);
                     div.onclick = () => {
                         if (item.type === 'use') { player.useItem(item, idx); }
-                        else if (item.type === 'weapon' || item.type === 'armor') { player.equipItem(item); }
+                        else if (item.type === 'weapon' || item.type === 'armor') { player.equipItem(item, idx); }
                     };
                     grid.appendChild(div);
                 });
@@ -858,12 +884,22 @@
         }
 
         function renderItemContent(div, item) {
+            div.innerHTML = item.icon;
+
+            // Mobile Info
+            let info = `<div class="item-info">
+                 <h4>${item.name}</h4>
+                 <p>${item.desc || ''}</p>
+             </div>`;
+            div.innerHTML += info;
+
+            // Desktop Tooltip
             let extra = '';
             if (item.atk) extra = `<br><span style="color:#f88">⚔️ ${item.atk}</span>`;
             if (item.def) extra = `<br><span style="color:#88f">🛡️ ${item.def}</span>`;
             if (item.effect) extra = `<br><span style="color:#8f8">✨ ${item.val || ''}</span>`;
 
-            div.innerHTML = `${item.icon}<div class="tooltip"><b>${item.name}</b><br>${item.desc || ''}${extra}</div>`;
+            div.innerHTML += `<div class="tooltip"><b>${item.name}</b><br>${item.desc || ''}${extra}</div>`;
         }
 
         // Shop & Events logic will be added below...
@@ -1274,9 +1310,25 @@
                 }
             }
 
-            equipItem(item) {
-                if (item.type === 'weapon') this.equip.weapon = item;
-                if (item.type === 'armor') this.equip.body = item;
+            equipItem(item, idx) {
+                // Correct Swap Logic
+                if (idx !== undefined && idx >= 0) {
+                    this.inventory.splice(idx, 1);
+                }
+
+                let oldItem = null;
+                if (item.type === 'weapon') {
+                    oldItem = this.equip.weapon;
+                    this.equip.weapon = item;
+                }
+                if (item.type === 'armor') {
+                    oldItem = this.equip.body;
+                    this.equip.body = item;
+                }
+
+                if (oldItem) this.inventory.push(oldItem);
+
+                showToast(`裝備了 ${item.name}`);
 
                 // Optimized Refresh
                 if (document.getElementById('ui-inventory').style.display === 'flex') {
