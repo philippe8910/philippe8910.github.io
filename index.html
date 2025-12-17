@@ -426,6 +426,16 @@
             border-color: #ffff55;
             margin-top: 10px;
         }
+
+        #btn-bag {
+            grid-column: 3;
+            grid-row: 1;
+            width: 50px;
+            height: 50px;
+            border-color: gold;
+            margin-top: -10px;
+            margin-left: 20px;
+        }
     </style>
 </head>
 
@@ -563,6 +573,7 @@
             <div class="m-btn" id="btn-atk">⚔</div>
             <div class="m-btn" id="btn-jump">⇪</div>
             <div class="m-btn" id="btn-heal">+</div>
+            <div class="m-btn" id="btn-bag" style="font-size:24px;">🎒</div>
         </div>
     </div>
 
@@ -576,10 +587,23 @@
 
         // --- 物品與資料庫 ---
         const ITEMS = {
-            // Weapons
+            // Daggers
             dagger: { id: 'dagger', name: '匕首', type: 'weapon', atk: 5, spd: 1.5, icon: '🗡️', desc: '攻速快，傷害低', price: 30 },
+            dagger_curved: { id: 'dagger_curved', name: '彎曲匕首', type: 'weapon', atk: 7, spd: 1.6, icon: '🗡️', desc: '獨特造型，暴擊高', price: 60 },
+            dagger_fast: { id: 'dagger_fast', name: '快速匕首', type: 'weapon', atk: 6, spd: 2.2, icon: '⚡', desc: '極致攻速', price: 90 },
+            dagger_dual: { id: 'dagger_dual', name: '雙刃匕首', type: 'weapon', atk: 9, spd: 1.8, icon: '⚔️', desc: '雙倍鋒利', price: 120 },
+
+            // Swords
             sword: { id: 'sword', name: '大劍', type: 'weapon', atk: 15, spd: 0.7, icon: '⚔️', desc: '攻速慢，傷害高', price: 80 },
+            sword_ultra: { id: 'sword_ultra', name: '特大劍', type: 'weapon', atk: 25, spd: 0.5, icon: '🗡️', desc: '極度沉重，破壞力強', price: 180 },
+            sword_iron: { id: 'sword_iron', name: '鐵大劍', type: 'weapon', atk: 20, spd: 0.6, icon: '🔩', desc: '厚實的鐵塊', price: 140 },
+
+            // Bows
             bow: { id: 'bow', name: '弓箭', type: 'weapon', atk: 8, spd: 1.0, icon: '🏹', desc: '遠程攻擊', price: 50 },
+            bow_wood: { id: 'bow_wood', name: '木弓', type: 'weapon', atk: 10, spd: 1.1, icon: '🪵', desc: '精良木材製作', price: 70 },
+            bow_recurve: { id: 'bow_recurve', name: '反曲弓', type: 'weapon', atk: 14, spd: 1.2, icon: '🏹', desc: '強力射擊', price: 110 },
+            bow_silver: { id: 'bow_silver', name: '銀弓', type: 'weapon', atk: 18, spd: 1.3, icon: '✨', desc: '神聖銀光', price: 200 },
+
             bone_knife: { id: 'bone_knife', name: '骨刀', type: 'weapon', atk: 12, spd: 1.3, icon: '🦴', desc: '骨頭磨製的刀', price: 60 },
 
             // Armor
@@ -598,6 +622,7 @@
             potion_crit: { id: 'potion_crit', name: '爆擊藥水', type: 'use', effect: 'buff_crit', val: 10, icon: '🎯', desc: '本層爆擊+10%', price: 80 },
             slime_potion: { id: 'slime_potion', name: '黏液藥水', type: 'use', effect: 'slime_buff', icon: '🟢', desc: '回血+少量防禦', price: 50 },
             goblin_sack: { id: 'goblin_sack', name: '神秘袋子', type: 'use', effect: 'box', icon: '💰', desc: '獲得隨機道具', price: 100 },
+
 
             // Special
             curse_blood: { id: 'curse_blood', name: '渴血詛咒', icon: '🩸', desc: '無法喝水。攻擊回血，揮空扣血。' },
@@ -658,53 +683,65 @@
         function renderInventory() {
             const content = document.querySelector('#ui-inventory .modal-content');
 
-            // Basic UI Structure with Tabs
+            // Tabs
             let html = `
-                <div style="display:flex; justify-content:center; gap:20px; margin-bottom:20px;">
-                    <button class="btn" style="${invTab === 'bag' ? 'border-color:gold' : ''}" onclick="switchTab('bag')">🎒 背包</button>
+                <div style="display:flex; justify-content:center; gap:10px; margin-bottom:20px;">
+                    <button class="btn" style="${invTab === 'bag' ? 'border-color:gold' : ''}" onclick="switchTab('bag')">🎒 裝備藥水</button>
+                    <button class="btn" style="${invTab === 'mat' ? 'border-color:gold' : ''}" onclick="switchTab('mat')">🪵 雜物素材</button>
                     <button class="btn" style="${invTab === 'stats' ? 'border-color:gold' : ''}" onclick="switchTab('stats')">📊 狀態 & 祝福</button>
                 </div>
             `;
 
             if (invTab === 'bag') {
                 html += `
-                    <div style="display:flex; gap:20px;">
-                        <div style="flex:1;">
+                    <div style="display:flex; gap:20px; flex-wrap:wrap;">
+                        <div style="flex:1; min-width:200px;">
                             <h3>裝備中</h3>
                             <div id="equip-display" class="inv-grid" style="grid-template-columns: repeat(2, 1fr); height:auto;"></div>
                         </div>
-                        <div style="flex:2;">
-                            <h3>物品欄</h3>
+                        <div style="flex:2; min-width:200px;">
+                            <h3>背包 (點擊使用/裝備)</h3>
                             <div id="inv-grid" class="inv-grid"></div>
                         </div>
                     </div>
                 `;
                 content.innerHTML = html;
 
-                // Render Equipment
                 const equipDiv = document.getElementById('equip-display');
                 if (player.equip.weapon) renderItem(equipDiv, player.equip.weapon, true);
                 else equipDiv.innerHTML += '<div class="inv-item">無武器</div>';
-
                 if (player.equip.body) renderItem(equipDiv, player.equip.body, true);
                 else equipDiv.innerHTML += '<div class="inv-item">無防具</div>';
 
-                // Render Grid
                 const grid = document.getElementById('inv-grid');
                 player.inventory.forEach((item, idx) => {
+                    if (item.type === 'mat') return; // Hide mats in Bag
+
                     const div = document.createElement('div');
                     div.className = 'inv-item';
-                    div.innerHTML = `${item.icon}<div class="tooltip">${item.name}<br>${item.desc || ''}</div>`;
+                    renderItemContent(div, item);
                     div.onclick = () => {
                         if (item.type === 'use') { player.useItem(item, idx); }
                         else if (item.type === 'weapon' || item.type === 'armor') { player.equipItem(item); }
-                        renderInventory();
                     };
                     grid.appendChild(div);
                 });
+            } else if (invTab === 'mat') {
+                html += `<h3>雜物與素材</h3><div id="mat-grid" class="inv-grid"></div>`;
+                content.innerHTML = html;
+                const grid = document.getElementById('mat-grid');
+                player.inventory.forEach((item, idx) => {
+                    if (item.type !== 'mat') return; // Show only mats
+
+                    const div = document.createElement('div');
+                    div.className = 'inv-item';
+                    renderItemContent(div, item);
+                    grid.appendChild(div);
+                });
+                if (grid.innerHTML === '') grid.innerHTML = '<p style="color:#777; width:100%;">這裡空空如也...</p>';
 
             } else {
-                // Stats & Traits Tab
+                // Stats Tab
                 html += `
                     <div style="text-align:left; padding:0 20px;">
                         <h3>基礎屬性</h3>
@@ -729,7 +766,6 @@
                         d.className = 'inv-item'; // reuse style
                         d.style.width = 'auto'; d.style.padding = '5px 15px';
                         d.innerHTML = `${t.icon} ${t.name}`;
-                        // Add tooltip manually or just text
                         d.title = t.desc;
                         traitDiv.appendChild(d);
                     });
@@ -749,8 +785,17 @@
         function renderItem(container, item, isEquip) {
             const div = document.createElement('div');
             div.className = 'inv-item equipped';
-            div.innerHTML = `${item.icon}<div class="tooltip">${item.name}<br>${item.desc || ''}</div>`;
+            renderItemContent(div, item);
             container.appendChild(div);
+        }
+
+        function renderItemContent(div, item) {
+            let extra = '';
+            if (item.atk) extra = `<br><span style="color:#f88">⚔️ ${item.atk}</span>`;
+            if (item.def) extra = `<br><span style="color:#88f">🛡️ ${item.def}</span>`;
+            if (item.effect) extra = `<br><span style="color:#8f8">✨ ${item.val || ''}</span>`;
+
+            div.innerHTML = `${item.icon}<div class="tooltip"><b>${item.name}</b><br>${item.desc || ''}${extra}</div>`;
         }
 
         // Shop & Events logic will be added below...
@@ -905,6 +950,7 @@
         });
         setupBtn('btn-dash', 'dash', false, () => player.dashMove());
         setupBtn('btn-heal', 'heal', true); // Heal 僅需偵測按住
+        setupBtn('btn-bag', 'bag', false, toggleInventory);
 
 
 
@@ -1307,11 +1353,15 @@
                 spawnParticles(this.x + 20, this.y + 20, this.color, 5, 2);
                 // 擊退
                 this.vx = (player.x < this.x ? 3 : -3);
+
+                if (this.hp <= 0) {
+                    this.die();
+                }
             }
             die() {
-                player.gold += Math.floor(Math.random() * 20) + 5; // Drop Gold
+                player.gold += Math.floor(Math.random() * 40) + 20; // Increased Gold Drop
                 player.updateHealUI();
-                if (Math.random() < 0.4 && this.dropItem) {
+                if (Math.random() < 0.7 && this.dropItem) { // Increased Item Drop Rate to 70%
                     drops.push({ x: this.x, y: this.y, item: this.dropItem });
                     // Thief Blessing: Chance for extra drop
                     if (player.hasTrait('bless_thief') && Math.random() < 0.5) {
@@ -1519,11 +1569,94 @@
                     }
                 }
 
-                // Normal Events
-                if (r < 0.6) { showToast('遭遇搶劫！失去了 50 金幣'); player.gold = Math.max(0, player.gold - 50); }
-                else if (r < 0.8) { showToast('踩到陷阱！生命 -30'); player.hp -= 30; if (player.hp <= 0) endGame(false); }
-                else { showToast('發現寶箱！獲得藥水'); player.inventory.push(ITEMS.potion_m); }
-                nextLevel();
+                // Normal & New Events
+                const evt = Math.random();
+
+                // 1. 遭遇搶劫 (機率降低)
+                if (evt < 0.05) {
+                    showToast('遭遇搶劫！失去了 50 金幣'); player.gold = Math.max(0, player.gold - 50);
+                    nextLevel();
+                }
+                // 2. 踩到陷阱 (機率大幅降低)
+                else if (evt < 0.1) {
+                    showToast('踩到陷阱！生命 -20'); player.hp -= 20; if (player.hp <= 0) endGame(false);
+                    nextLevel();
+                }
+                // 3. 發現寶箱 (互動事件)
+                else if (evt < 0.3) {
+                    showConfirmDialog(
+                        `發現寶箱`, `一個神秘的寶箱，也許有陷阱...`,
+                        `打開 (70% 成功)`, () => {
+                            if (Math.random() < 0.7) {
+                                showToast('獲得強力藥水！');
+                                player.inventory.push(ITEMS.potion_l);
+                            } else {
+                                showToast('寶箱陷阱！生命 -30');
+                                player.hp -= 30; if (player.hp <= 0) endGame(false);
+                            }
+                            nextLevel();
+                        },
+                        `離開`, () => nextLevel()
+                    );
+                }
+                // 4. 冒險者求救 (互動事件)
+                else if (evt < 0.5) {
+                    showConfirmDialog(
+                        `受傷的冒險者`, `她被怪物包圍了！要幫忙嗎？`,
+                        `拯救 (50% 成功)`, () => {
+                            if (Math.random() < 0.5) {
+                                showToast('拯救成功！獲得贈禮');
+                                player.inventory.push(ITEMS.goblin_sack);
+                            } else {
+                                showToast('拯救失敗...受傷 10');
+                                player.hp -= 10; if (player.hp <= 0) endGame(false);
+                            }
+                            nextLevel();
+                        },
+                        `無視`, () => nextLevel()
+                    );
+                }
+                // 5. 邪教徒 (互動事件)
+                else if (evt < 0.6) {
+                    const curse = ITEMS[TRAITS.curses[Math.floor(Math.random() * TRAITS.curses.length)]];
+                    showConfirmDialog(
+                        `瘋狂邪教徒`, `是否願意獻祭靈魂以獲得力量？<br>(獲得隨機詛咒)`,
+                        `接受`, () => {
+                            player.traits.push(curse);
+                            showToast(`獲得詛咒: ${curse.name}`);
+                            nextLevel();
+                        },
+                        `拒絕`, () => nextLevel()
+                    );
+                }
+                // 6. 哥布林賽跑 (互動事件)
+                else if (evt < 0.75) {
+                    showConfirmDialog(
+                        `哥布林賽跑`, `要跟哥布林比速度嗎？<br>贏了獲得 4 個袋子！`,
+                        `比賽`, () => {
+                            if (Math.random() < 0.5) {
+                                showToast('你贏了！獲得豐厚獎勵');
+                                for (let i = 0; i < 4; i++) player.inventory.push(ITEMS.goblin_sack);
+                            } else {
+                                showToast('你輸了...什麼都沒拿到');
+                            }
+                            nextLevel();
+                        },
+                        `沒興趣`, () => nextLevel()
+                    );
+                }
+                // 7. 彩票 (直接獲得)
+                else if (evt < 0.85) {
+                    showToast('地上撿到彩票！獲得 200 金幣');
+                    player.gold += 200;
+                    nextLevel();
+                }
+                // 8. 平凡的寶箱 (直接獲得)
+                else {
+                    showToast('發現小寶箱！獲得藥水');
+                    player.inventory.push(ITEMS.potion_m);
+                    nextLevel();
+                }
             }
         }
 
@@ -1564,7 +1697,14 @@
             // Buy List
             const buyDiv = document.getElementById('shop-buy-list');
             buyDiv.innerHTML = '';
-            const wares = [ITEMS.potion_s, ITEMS.potion_m, ITEMS.dagger, ITEMS.iron, ITEMS.potion_vio];
+            // New Weapons added to shop
+            const wares = [
+                ITEMS.potion_s, ITEMS.potion_m, ITEMS.potion_vio,
+                ITEMS.dagger_curved, ITEMS.dagger_fast,
+                ITEMS.sword, ITEMS.sword_iron,
+                ITEMS.bow_wood, ITEMS.bow_recurve,
+                ITEMS.leather, ITEMS.iron
+            ];
             wares.forEach(item => {
                 const d = document.createElement('div');
                 d.className = 'shop-row';
