@@ -749,13 +749,15 @@
         const TRAITS = {
             curses: ['curse_blood', 'curse_hunger', 'curse_gambler'],
             blessings: ['bless_dawn', 'bless_str', 'bless_fort', 'bless_will', 'bless_thief', 'bless_crit', 'bless_luck',
-                'bless_poison', 'bless_dragon', 'bless_thorns']
+                'bless_poison', 'bless_dragon', 'bless_thorns', 'bless_fire_icon', 'bless_holy_light']
         };
 
         // Add new Blessings details to ITEMS (for lookup)
         ITEMS.bless_poison = { id: 'bless_poison', name: '毒牙祝福', icon: '🐍', desc: '攻擊造成中毒 (3秒)' };
         ITEMS.bless_dragon = { id: 'bless_dragon', name: '龍息祝福', icon: '🐲', desc: '藥水回復效果增強' };
         ITEMS.bless_thorns = { id: 'bless_thorns', name: '荊棘鎧甲', icon: '🌹', desc: '受傷反彈 3 點傷害' };
+        ITEMS.bless_fire_icon = { id: 'bless_fire_icon', name: '火焰守護', icon: '🔥', desc: '周圍敵人每秒受到 1 點燒傷' };
+        ITEMS.bless_holy_light = { id: 'bless_holy_light', name: '聖光守護', icon: '✨', desc: '三顆光球環繞，觸碰造成 3 點傷害' };
 
         const LOOT_TABLE = [
             'potion_s', 'potion_mystery', 'goo', 'bone', 'skin', 'dagger', 'leather', 'goblin_sack'
@@ -768,7 +770,7 @@
         let camera = { x: 0, y: 0 };
         let floor = 1;
         let particles = [], projectiles = [], slashes = [], drops = [];
-        let platforms = [], enemies = [], spikes = [], texts = [];
+        let platforms = [], enemies = [], spikes = [], texts = [], hazards = [];
         let screenShake = 0, hitStop = 0;
         let frame = 0, gameRunning = false, gameOver = false;
         let paused = false; // For UI Menu
@@ -823,13 +825,31 @@
                 else equipDiv.innerHTML += '<div class="inv-item">無防具</div>';
 
                 const grid = document.getElementById('inv-grid');
-                player.inventory.forEach((item, idx) => {
-                    if (item.type === 'mat') return; // Hide mats in Bag
 
+                // Stacking Logic
+                const stacks = {};
+                player.inventory.forEach(item => {
+                    if (item.type === 'mat') return;
+                    if (!stacks[item.id]) stacks[item.id] = { item: item, count: 0 };
+                    stacks[item.id].count++;
+                });
+
+                Object.values(stacks).forEach(stack => {
+                    const { item, count } = stack;
                     const div = document.createElement('div');
                     div.className = 'inv-item';
                     renderItemContent(div, item);
+
+                    // Count Badge
+                    if (count > 1) {
+                        div.innerHTML += `<div style="position:absolute; bottom:2px; right:2px; background:white; color:black; font-size:12px; padding:0 4px; border-radius:4px;">x${count}</div>`;
+                    }
+
                     div.onclick = () => {
+                        // Find first instance index for logic
+                        const idx = player.inventory.findIndex(i => i.id === item.id);
+                        if (idx === -1) return;
+
                         if (item.type === 'use') { player.useItem(item, idx); }
                         else if (item.type === 'weapon' || item.type === 'armor') { player.equipItem(item, idx); }
                     };
@@ -839,12 +859,23 @@
                 html += `<h3>雜物與素材</h3><div id="mat-grid" class="inv-grid"></div>`;
                 content.innerHTML = html;
                 const grid = document.getElementById('mat-grid');
-                player.inventory.forEach((item, idx) => {
-                    if (item.type !== 'mat') return; // Show only mats
 
+                // Stacking Logic
+                const stacks = {};
+                player.inventory.forEach(item => {
+                    if (item.type !== 'mat') return;
+                    if (!stacks[item.id]) stacks[item.id] = { item: item, count: 0 };
+                    stacks[item.id].count++;
+                });
+
+                Object.values(stacks).forEach(stack => {
+                    const { item, count } = stack;
                     const div = document.createElement('div');
                     div.className = 'inv-item';
                     renderItemContent(div, item);
+                    if (count > 1) {
+                        div.innerHTML += `<div style="position:absolute; bottom:2px; right:2px; background:white; color:black; font-size:12px; padding:0 4px; border-radius:4px;">x${count}</div>`;
+                    }
                     grid.appendChild(div);
                 });
                 if (grid.innerHTML === '') grid.innerHTML = '<p style="color:#777; width:100%;">這裡空空如也...</p>';
@@ -944,6 +975,7 @@
             if (e.code === 'KeyL' || e.code === 'ShiftLeft') { if (!keys.dash) player.dashMove(); keys.dash = true; }
             if (e.code === 'KeyQ') keys.heal = true;
             if (e.code === 'KeyI') toggleInventory();
+            if (e.code === 'Digit9') { floor = 28; nextLevel(); showToast('Debug: Jump to Floor 29'); } // Debug Key
             if (e.code === 'Space' && gameOver) resetGame();
         });
 
@@ -1296,6 +1328,7 @@
                 this.level = 1;
                 this.xp = 0;
                 this.maxXp = 100;
+                this.orbAngle = 0;
 
                 this.updateHealUI();
             }
@@ -1315,6 +1348,46 @@
 
                     showToast(`升級！等級 ${this.level} (攻+2 防+1 血+10)`);
                     spawnParticles(this.x, this.y, 'gold', 20, 5);
+                }
+            }
+
+            updateBlessings() {
+                if (this.hasTrait('bless_fire_icon') && frame % 60 === 0) {
+                    enemies.forEach(e => {
+                        const dist = Math.sqrt((this.x - e.x) ** 2 + (this.y - e.y) ** 2);
+                        if (dist < 200) {
+                            e.takeDamage(1); spawnParticles(e.x + 20, e.y + 30, 'orange', 3, 2);
+                        }
+                    });
+                }
+                if (this.hasTrait('bless_holy_light')) {
+                    this.orbAngle += 0.05;
+                    for (let i = 0; i < 3; i++) {
+                        const ang = this.orbAngle + (i * (Math.PI * 2 / 3));
+                        const ox = this.x + 15 + Math.cos(ang) * 60;
+                        const oy = this.y + 25 + Math.sin(ang) * 60;
+                        if (frame % 30 === 0) {
+                            enemies.forEach(e => {
+                                if (e.x < ox + 10 && e.x + e.w > ox - 10 && e.y < oy + 10 && e.y + e.h > oy - 10) {
+                                    e.takeDamage(3); spawnParticles(ox, oy, 'yellow', 5, 2);
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+
+            drawBlessings(ctx) {
+                if (this.hasTrait('bless_fire_icon')) {
+                    ctx.beginPath(); ctx.arc(this.x + 15, this.y + 30, 200, 0, Math.PI * 2);
+                    ctx.strokeStyle = `rgba(255, 100, 0, ${0.1 + Math.sin(frame * 0.1) * 0.05})`; ctx.lineWidth = 2; ctx.stroke();
+                }
+                if (this.hasTrait('bless_holy_light')) {
+                    for (let i = 0; i < 3; i++) {
+                        const ang = this.orbAngle + (i * (Math.PI * 2 / 3));
+                        ctx.fillStyle = 'white'; ctx.shadowBlur = 10; ctx.shadowColor = 'yellow';
+                        ctx.beginPath(); ctx.arc(this.x + 15 + Math.cos(ang) * 60, this.y + 25 + Math.sin(ang) * 60, 8, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
+                    }
                 }
             }
 
@@ -1510,6 +1583,7 @@
             }
             update() {
                 if (this.dashCooldown > 0) this.dashCooldown--; if (this.atkCooldown > 0) this.atkCooldown--; if (this.invincible > 0) this.invincible--; this.healLogic();
+                this.updateBlessings();
 
                 if (this.dashing) {
                     this.dashTime--; this.x += this.vx;
@@ -1560,6 +1634,7 @@
                 });
             }
             draw(ctx) {
+                this.drawBlessings(ctx);
                 if (this.invincible > 0 && frame % 4 === 0) return;
                 ctx.fillStyle = 'white'; ctx.shadowBlur = 20; ctx.shadowColor = 'white'; ctx.fillRect(this.x, this.y, this.w, this.h);
                 ctx.fillStyle = 'black'; ctx.shadowBlur = 0; ctx.fillRect(this.facing === 1 ? this.x + 18 : this.x + 4, this.y + 10, 8, 20);
@@ -1570,7 +1645,13 @@
         class Enemy {
             constructor(x, y, name, color, hp, speed, dropItem) {
                 this.x = x; this.y = y; this.w = 40; this.h = 60; this.name = name; this.color = color;
-                this.hp = hp; this.maxHp = hp; this.vx = 0; this.vy = 0; this.speed = speed; this.dropItem = dropItem;
+
+                // Scaling
+                const scaleCheck = floor ? Math.min(floor, 15) : 1;
+                this.maxHp = Math.floor(hp * (1 + scaleCheck * 0.1));
+                this.hp = this.maxHp;
+
+                this.vx = 0; this.vy = 0; this.speed = speed; this.dropItem = dropItem;
                 this.state = 'IDLE'; this.timer = 0; this.facing = -1;
             }
             takeDamage(amt) {
@@ -1638,7 +1719,8 @@
                         this.takeDamage(3);
                         spawnParticles(this.x + 20, this.y + 20, 'green', 5, 2);
                     }
-                    player.takeDamage(10);
+                    const dmg = 10 + Math.floor(Math.min(floor || 1, 15) * 0.5);
+                    player.takeDamage(dmg);
                 }
             }
             draw(ctx) {
@@ -1768,38 +1850,104 @@
             constructor(x, y) {
                 super(x, y, 'Fire Dragon', '#aa0000', 3000, ITEMS.sword_nameless);
                 this.w = 150; this.h = 100;
-                this.state = 'FLY'; // FLY, LAND, ROAR
+                this.state = 'FLY_IDLE';
                 this.timer = 0;
             }
             actionLogic() {
                 this.timer++;
 
-                if (this.state === 'FLY') {
-                    this.y = GROUND_Y - 300 + Math.sin(frame * 0.05) * 50; // Hover high
-                    if (this.timer % 60 === 0) {
-                        // Shoot Fireball
-                        projectiles.push(new Projectile(this.x, this.y + 50, (player.x < this.x ? -8 : 8), 5, 30, 30, 'orange'));
+                // 1. Idle / Decision Phase
+                if (this.state === 'FLY_IDLE') {
+                    // Hover
+                    this.y = GROUND_Y - 300 + Math.sin(frame * 0.05) * 50;
+                    this.x += (player.x < this.x ? -1 : 1); // Slowly face player
+
+                    if (this.timer > 120) {
+                        this.timer = 0;
+                        const r = Math.random();
+                        if (r < 0.3) this.state = 'PREPARE_BREATH';
+                        else if (r < 0.5) this.state = 'PREPARE_DIVE';
+                        else if (r < 0.8) this.state = 'FIREBALL_BARRAGE';
+                        else this.state = 'PREPARE_ERUPTION';
                     }
-                    if (this.timer > 300) { this.state = 'LAND'; this.timer = 0; showToast('巨龍降臨!'); }
                 }
-                else if (this.state === 'LAND') {
-                    this.vy += 1; // Fall fast
+
+                // 2. Dragon Breath (Strafe)
+                else if (this.state === 'PREPARE_BREATH') {
+                    // Fly to starting position (Left or Right High)
+                    const targetX = (this.x < WORLD_WIDTH / 2) ? 100 : WORLD_WIDTH - 200;
+                    const targetY = GROUND_Y - 350;
+                    this.x += (targetX - this.x) * 0.05;
+                    this.y += (targetY - this.y) * 0.05;
+
+                    if (this.timer > 120) {
+                        this.timer = 0;
+                        this.state = 'BREATH_STRAFE';
+                        this.vx = (this.x < WORLD_WIDTH / 2) ? 10 : -10; // Fast Fly
+                        showToast('巨龍吐息!');
+                    }
+                }
+                else if (this.state === 'BREATH_STRAFE') {
+                    this.x += this.vx;
+                    // Drop fire particles
+                    if (frame % 5 === 0) {
+                        hazards.push(new Hazard(this.x + 50, this.y + 80, 40, 40, 'fire_path', 200));
+                    }
+                    // End condition
+                    if ((this.vx > 0 && this.x > WORLD_WIDTH) || (this.vx < 0 && this.x < 0)) {
+                        this.state = 'FLY_IDLE'; this.timer = 0; this.vx = 0;
+                    }
+                }
+
+                // 3. Dragon Dive
+                else if (this.state === 'PREPARE_DIVE') {
+                    this.y = GROUND_Y - 400; // Fly High
+                    this.x += (player.x - this.x) * 0.1; // Track Player
+                    if (this.timer > 90) {
+                        this.state = 'DIVE'; this.timer = 0;
+                        this.vx = (player.x < this.x ? -10 : 10);
+                        this.vy = 25; // Super Fast
+                        showToast('巨龍墜擊!');
+                    }
+                }
+                else if (this.state === 'DIVE') {
+                    this.x += this.vx;
+                    this.y += this.vy;
                     if (this.y >= GROUND_Y - this.h) {
                         this.y = GROUND_Y - this.h;
-                        if (this.vy > 5) { screenShake = 30; if (player.grounded) player.takeDamage(15); } // Landing Quake
-                        this.vy = 0;
-                        if (this.timer > 120) { this.state = 'ROAR'; this.timer = 0; }
+                        screenShake = 40;
+                        if (player.grounded) player.takeDamage(20);
+
+                        // Impact Fire
+                        spawnParticles(this.x, this.y + this.h, 'orange', 20, 5);
+                        this.state = 'FLY_IDLE'; this.timer = 0; this.vx = 0; this.vy = -5; // Bounce up
                     }
                 }
-                else if (this.state === 'ROAR') {
-                    if (this.timer === 1) {
-                        showToast('巨龍咆哮!!!');
-                        screenShake = 40;
-                        // Debuff
-                        player.vx = (player.x < this.x ? -30 : 30); // Knockback
-                        player.buffs.def -= 5; setTimeout(() => player.buffs.def += 5, 5000);
+
+                // 4. Fireball Barrage
+                else if (this.state === 'FIREBALL_BARRAGE') {
+                    this.y = GROUND_Y - 250 + Math.sin(frame * 0.1) * 30;
+                    if (this.timer % 15 === 0) {
+                        // Random ballistic
+                        const vx = (Math.random() - 0.5) * 20;
+                        projectiles.push(new Projectile(this.x + 75, this.y + 100, vx, 5, 30, 30, 'orange'));
                     }
-                    if (this.timer > 60) { this.state = 'FLY'; this.timer = 0; this.vy = -10; }
+                    if (this.timer > 300) { // 5 seconds
+                        this.state = 'FLY_IDLE'; this.timer = 0;
+                    }
+                }
+
+                // 5. Eruption
+                else if (this.state === 'PREPARE_ERUPTION') {
+                    if (this.timer === 1) showToast('火焰湧動...');
+                    // Show Warnings on ground
+                    if (this.timer % 10 === 0 && this.timer < 60) {
+                        const hx = Math.random() * WORLD_WIDTH;
+                        hazards.push(new Hazard(hx, GROUND_Y, 60, 20, 'warning', 100)); // Warning first
+                    }
+                    if (this.timer > 100) {
+                        this.state = 'FLY_IDLE'; this.timer = 0;
+                    }
                 }
             }
             update() {
@@ -1811,17 +1959,54 @@
 
                 this.actionLogic();
 
-                // No forced ground snap if Flying
-                if (this.state !== 'FLY') {
-                    this.y += this.vy;
-                    if (this.y > GROUND_Y - this.h) { this.y = GROUND_Y - this.h; this.vy = 0; }
-                }
-
                 if (checkRectCollide(this, player)) player.takeDamage(15);
             }
             die() {
                 super.die();
                 endGame(true); // True Ending
+            }
+        }
+
+        class Hazard {
+            constructor(x, y, w, h, type, life) {
+                this.x = x; this.y = y; this.w = w; this.h = h; this.type = type; this.life = life;
+                // If warning convert to fire pillar logic handled in update
+            }
+            update() {
+                this.life--;
+
+                if (this.type === 'fire_path') {
+                    this.y += 2; // Fall down
+                    if (this.y > GROUND_Y - 10) this.y = GROUND_Y - 10;
+                    if (checkRectCollide(this, player)) player.takeDamage(1); // Burn
+                }
+                else if (this.type === 'warning') {
+                    // Just visual warning
+                    if (this.life <= 20) {
+                        // Transform to Pillar
+                        this.type = 'pillar';
+                        this.life = 60;
+                        this.y = GROUND_Y; this.h = 0; // Grow up
+                    }
+                }
+                else if (this.type === 'pillar') {
+                    if (this.h < 300) { this.h += 20; this.y -= 20; }
+                    if (checkRectCollide(this, player)) player.takeDamage(5);
+                }
+            }
+            draw(ctx) {
+                if (this.type === 'fire_path') {
+                    ctx.fillStyle = `rgba(255, 100, 0, ${this.life / 100})`;
+                    ctx.fillRect(this.x, this.y, this.w, this.h);
+                }
+                else if (this.type === 'warning') {
+                    ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
+                    ctx.fillRect(this.x, this.y - 10, this.w, 10);
+                }
+                else if (this.type === 'pillar') {
+                    ctx.fillStyle = 'orange';
+                    ctx.fillRect(this.x, this.y, this.w, this.h);
+                }
             }
         }
 
@@ -1885,7 +2070,7 @@
             camera.x = 0;
 
             // Reset Level Entities
-            enemies = []; drops = []; projectiles = []; platforms = []; spikes = []; texts = [];
+            enemies = []; drops = []; projectiles = []; platforms = []; spikes = []; texts = []; hazards = [];
 
             // Gen Platforms
             platforms.push({ x: 0, y: GROUND_Y, w: WORLD_WIDTH, h: 50, type: 'ground' });
@@ -1903,14 +2088,13 @@
             let bossSpawned = false;
 
             // Boss Chance (Low)
+            // Boss Chance (Low)
             if (floor === 30) {
                 showToast('⚠️ 最終層：火焰巨龍 ⚠️');
                 enemies.push(new Dragon(WORLD_WIDTH - 400, GROUND_Y - 200));
                 bossSpawned = true;
-                return; // No other enemies
             }
-
-            if (floor % 10 === 0) {
+            else if (floor % 10 === 0) {
                 const isTroll = Math.random() < 0.5;
                 const bossX = WORLD_WIDTH - 300;
                 enemies.push(isTroll ? new Troll(bossX, GROUND_Y) : new GiantSlime(bossX, GROUND_Y));
@@ -1919,6 +2103,7 @@
             }
 
             for (let i = 0; i < count; i++) {
+                if (floor === 30) break; // No minions for Dragon
                 if (bossSpawned && i > count / 2) break; // Reduce enemies if boss present
 
                 const rx = Math.random() * (WORLD_WIDTH - 600) + 500;
@@ -2295,6 +2480,9 @@
 
             projectiles.forEach(p => p.update()); projectiles = projectiles.filter(p => p.active); projectiles.forEach(p => p.draw(ctx));
             slashes.forEach(s => s.update()); slashes = slashes.filter(s => s.life > 0); slashes.forEach(s => s.draw(ctx));
+
+            // Hazards (Dragon Fire, etc)
+            hazards.forEach(h => h.update()); hazards = hazards.filter(h => h.life > 0); hazards.forEach(h => h.draw(ctx));
 
             ctx.restore();
             bg.drawFront(ctx);

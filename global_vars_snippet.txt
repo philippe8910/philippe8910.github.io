@@ -1,0 +1,18 @@
+        let canvas = document.getElementById('gameCanvas');
+        let ctx = canvas.getContext('2d');
+        const WORLD_WIDTH = 3000;
+        const GROUND_Y = canvas.height - 50;
+        
+        // Global Game State
+        let gameRunning = false, paused = false, gameOver = false;
+        let frame = 0, score = 0, floor = 1;
+        
+        // Entities
+        let enemies = [], drops = [], projectiles = [], slashes = [], particles = [], platforms = [], spikes = [], texts = [], hazards = [];
+        let hitStop = 0, screenShake = 0;
+
+        // Camera
+        let camera = { x: 0, y: 0 };
+        
+        // Input
+        let keys = { left: false, right: false, up: false, atk: false, dash: false, heal: false };
