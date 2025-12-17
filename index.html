@@ -479,6 +479,16 @@
             margin-top: -20px;
         }
 
+        #btn-block {
+            grid-column: 1;
+            grid-row: 3;
+            border-color: #5555ff;
+            /* Blue for shield */
+            width: 60px;
+            height: 60px;
+            margin-top: 10px;
+        }
+
         #btn-jump {
             grid-column: 3;
             grid-row: 2;
@@ -749,7 +759,7 @@
         const TRAITS = {
             curses: ['curse_blood', 'curse_hunger', 'curse_gambler'],
             blessings: ['bless_dawn', 'bless_str', 'bless_fort', 'bless_will', 'bless_thief', 'bless_crit', 'bless_luck',
-                'bless_poison', 'bless_dragon', 'bless_thorns', 'bless_fire_icon', 'bless_holy_light']
+                'bless_poison', 'bless_dragon', 'bless_thorns', 'bless_fire_icon', 'bless_holy_light', 'bless_thunder']
         };
 
         // Add new Blessings details to ITEMS (for lookup)
@@ -758,6 +768,7 @@
         ITEMS.bless_thorns = { id: 'bless_thorns', name: '荊棘鎧甲', icon: '🌹', desc: '受傷反彈 3 點傷害' };
         ITEMS.bless_fire_icon = { id: 'bless_fire_icon', name: '火焰守護', icon: '🔥', desc: '周圍敵人每秒受到 1 點燒傷' };
         ITEMS.bless_holy_light = { id: 'bless_holy_light', name: '聖光守護', icon: '✨', desc: '三顆光球環繞，觸碰造成 3 點傷害' };
+        ITEMS.bless_thunder = { id: 'bless_thunder', name: '雷霆大帝', icon: '⚡', desc: '每2秒落雷攻擊3名敵人 (5-15傷害)' };
 
         const LOOT_TABLE = [
             'potion_s', 'potion_mystery', 'goo', 'bone', 'skin', 'dagger', 'leather', 'goblin_sack'
@@ -974,7 +985,28 @@
             }
             if (e.code === 'KeyL' || e.code === 'ShiftLeft') { if (!keys.dash) player.dashMove(); keys.dash = true; }
             if (e.code === 'KeyQ') keys.heal = true;
+            if (e.code === 'KeyL' || e.code === 'ShiftLeft') { if (!keys.dash) player.dashMove(); keys.dash = true; }
+            if (e.code === 'KeyQ') keys.heal = true;
             if (e.code === 'KeyI') toggleInventory();
+            if (e.code === 'Digit8') {
+                if (typeof player !== 'undefined') {
+                    // Give all items
+                    Object.values(ITEMS).forEach(item => {
+                        if (item.type) {
+                            player.inventory.push(item);
+                        }
+                    });
+
+                    // Give all traits
+                    const allTraits = [...TRAITS.curses, ...TRAITS.blessings];
+                    allTraits.forEach(tid => {
+                        if (ITEMS[tid] && !player.hasTrait(tid)) player.traits.push(ITEMS[tid]);
+                    });
+
+                    showToast('Debug: 全狀態/道具入手');
+                    if (document.getElementById('ui-inventory').style.display === 'flex') renderInventory();
+                }
+            }
             if (e.code === 'Digit9') { floor = 28; nextLevel(); showToast('Debug: Jump to Floor 29'); } // Debug Key
             if (e.code === 'Space' && gameOver) resetGame();
         });
@@ -984,6 +1016,7 @@
             if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
             if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'KeyK') keys.up = false;
             if (e.code === 'KeyJ') keys.atk = false;
+            if (e.code === 'KeyL' || e.code === 'ShiftLeft') keys.dash = false;
             if (e.code === 'KeyL' || e.code === 'ShiftLeft') keys.dash = false;
             if (e.code === 'KeyQ') keys.heal = false;
         });
@@ -1310,6 +1343,9 @@
                 this.traits = []; // Blessings and Curses
                 this.tempAtk = 0; this.tempDef = 0; // For temporary buffs
 
+                // New States
+                this.burn = 0;
+
                 // Class Init
                 if (classType === 'thief') {
                     this.equip = { weapon: ITEMS.dagger, body: ITEMS.leather };
@@ -1351,6 +1387,13 @@
                 }
             }
 
+            block() {
+                if (this.dashing || this.atkCooldown > 0) return;
+                this.blocking = true;
+                this.parryWindow = 30; // 0.5s at 60fps
+                this.vx = 0;
+            }
+
             updateBlessings() {
                 if (this.hasTrait('bless_fire_icon') && frame % 60 === 0) {
                     enemies.forEach(e => {
@@ -1374,6 +1417,17 @@
                             });
                         }
                     }
+                }
+                if (this.hasTrait('bless_thunder') && frame % 120 === 0) { // 2 seconds
+                    let targets = enemies.filter(e => e.hp > 0 && Math.abs(e.x - this.x) < 800).sort(() => 0.5 - Math.random()).slice(0, 3);
+                    targets.forEach(e => {
+                        const dmg = Math.floor(Math.random() * 11) + 5; // 5-15
+                        e.takeDamage(dmg);
+                        // Visual Lightning
+                        ctx.strokeStyle = 'cyan'; ctx.lineWidth = 3;
+                        ctx.beginPath(); ctx.moveTo(e.x + e.w / 2, 0); ctx.lineTo(e.x + e.w / 2, e.y); ctx.stroke();
+                        spawnParticles(e.x + e.w / 2, e.y, 'cyan', 10, 3);
+                    });
                 }
             }
 
@@ -1470,7 +1524,7 @@
             attack() {
                 const spd = this.getSpd();
                 if (this.atkCooldown <= 0) {
-                    this.atkCooldown = 25 * spd;
+                    this.atkCooldown = Math.floor(25 / spd); // CHANGED FORMULA: Higher Speed = Lower Cooldown
                     let hitCount = 0;
 
                     // Katana Dash
@@ -1556,12 +1610,26 @@
             takeDamage(amt) {
                 if (this.dashing || this.invincible > 0) return;
 
+                // Parry & Block Logic
+                if (this.parryWindow > 0) {
+                    showToast("PERFECT BLOCK!");
+                    spawnParticles(this.x, this.y, 'cyan', 20, 5);
+                    screenShake = 10;
+                    this.invincible = 20;
+                    return; // No Damage
+                }
+
                 let realDmg = 0;
                 if (this.hasTrait('curse_hunger')) {
                     // Boss check? We don't have "source" here, assume boss damage is > 20
                     realDmg = (amt > 20) ? 5 : 1;
                 } else {
                     realDmg = Math.max(1, amt - this.getDef());
+                }
+
+                if (this.blocking) {
+                    realDmg = Math.floor(realDmg * 0.5); // 50% reduction
+                    spawnParticles(this.x, this.y, 'blue', 5, 2);
                 }
 
                 if (this.hasTrait('bless_str')) { this.tempAtk += 2; showToast("力量祝福: 攻擊提升"); }
@@ -1583,6 +1651,20 @@
             }
             update() {
                 if (this.dashCooldown > 0) this.dashCooldown--; if (this.atkCooldown > 0) this.atkCooldown--; if (this.invincible > 0) this.invincible--; this.healLogic();
+                if (this.parryWindow > 0) this.parryWindow--;
+
+                // Burn Logic
+                if (this.burn > 0) {
+                    if (frame % 60 === 0) {
+                        const burnDmg = Math.floor(Math.random() * 20) + 1; // 1-20
+                        this.hp -= burnDmg;
+                        spawnParticles(this.x, this.y, 'orange', 3, 2);
+                        this.updateHealUI();
+                        if (this.hp <= 0) endGame(false);
+                    }
+                    this.burn--;
+                }
+
                 this.updateBlessings();
 
                 if (this.dashing) {
@@ -1638,6 +1720,16 @@
                 if (this.invincible > 0 && frame % 4 === 0) return;
                 ctx.fillStyle = 'white'; ctx.shadowBlur = 20; ctx.shadowColor = 'white'; ctx.fillRect(this.x, this.y, this.w, this.h);
                 ctx.fillStyle = 'black'; ctx.shadowBlur = 0; ctx.fillRect(this.facing === 1 ? this.x + 18 : this.x + 4, this.y + 10, 8, 20);
+
+                // Draw Shield
+                if (this.blocking) {
+                    ctx.strokeStyle = this.parryWindow > 0 ? 'cyan' : '#5555ff';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.arc(this.x + 15 + (this.facing * 20), this.y + 25, 20, -0.5 * Math.PI, 0.5 * Math.PI, this.facing === -1);
+                    ctx.stroke();
+                }
+
                 if (this.healTimer > 0) { ctx.strokeStyle = 'white'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(this.x + 15, this.y - 20, 10, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * (this.healTimer / this.healTimeMax))); ctx.stroke(); }
             }
         }
@@ -1653,6 +1745,10 @@
 
                 this.vx = 0; this.vy = 0; this.speed = speed; this.dropItem = dropItem;
                 this.state = 'IDLE'; this.timer = 0; this.facing = -1;
+
+                // Attack Logic
+                this.attackWarmup = 0;
+                this.isAttacking = false;
             }
             takeDamage(amt) {
                 this.hp -= amt;
@@ -1715,16 +1811,41 @@
 
                 // Collision with Player
                 if (checkRectCollide(this, player)) {
-                    if (player.hasTrait('bless_thorns')) {
-                        this.takeDamage(3);
-                        spawnParticles(this.x + 20, this.y + 20, 'green', 5, 2);
+                    if (this.attackWarmup === 0 && !this.isAttacking) {
+                        // Start Attack Sequence
+                        this.attackWarmup = 30; // 0.5s Warning
+                        this.isAttacking = true;
                     }
-                    const dmg = 10 + Math.floor(Math.min(floor || 1, 15) * 0.5);
-                    player.takeDamage(dmg);
+                }
+
+                if (this.isAttacking) {
+                    this.attackWarmup--;
+                    if (this.attackWarmup <= 0) {
+                        // Deal Damage
+                        if (checkRectCollide(this, player)) {
+                            if (player.hasTrait('bless_thorns')) {
+                                this.takeDamage(3);
+                                spawnParticles(this.x + 20, this.y + 20, 'green', 5, 2);
+                            }
+                            const dmg = 10 + Math.floor(Math.min(floor || 1, 15) * 0.5);
+                            player.takeDamage(dmg);
+                        }
+                        this.isAttacking = false; // Reset
+                        this.attackWarmup = 0;
+                    }
                 }
             }
             draw(ctx) {
                 if (this.hp <= 0) return;
+
+                // Red Flash Warning
+                if (this.attackWarmup > 0) {
+                    if (Math.floor(frame / 4) % 2 === 0) ctx.globalCompositeOperation = 'source-atop'; // Blink
+                    ctx.fillStyle = 'red';
+                    ctx.fillRect(this.x - 5, this.y - 5, this.w + 10, this.h + 10);
+                    ctx.globalCompositeOperation = 'source-over';
+                }
+
                 ctx.fillStyle = this.color; ctx.fillRect(this.x, this.y, this.w, this.h);
                 // HP Bar
                 ctx.fillStyle = 'red'; ctx.fillRect(this.x, this.y - 10, this.w, 5);
@@ -1792,6 +1913,132 @@
                     this.x += (player.x < this.x ? -1 : 1) * 2;
                 }
                 if (checkRectCollide(this, player)) player.takeDamage(5); // Weak attack
+            }
+        }
+
+        class FallenKnight extends Enemy {
+            constructor(x, y) {
+                super(x, y, 'Fallen Knight', '#330000', 150, 4, ITEMS.sword_iron);
+                this.w = 50; this.h = 70;
+            }
+            update() {
+                if (this.hp <= 0) return;
+                this.timer--;
+
+                if (this.state === 'IDLE') {
+                    if (this.timer <= 0) {
+                        if (Math.abs(player.x - this.x) < 400) {
+                            this.state = 'CHARGE';
+                            this.vx = (player.x < this.x ? -10 : 10); // DASH
+                            this.timer = 30; // Dash time
+                            showToast('墮落騎士衝刺!');
+                        } else {
+                            this.state = 'MOVE'; this.timer = 60; this.vx = (Math.random() - 0.5) * 2;
+                        }
+                    }
+                }
+                else if (this.state === 'CHARGE') { // Dash Attack
+                    this.x += this.vx;
+                    spawnParticles(this.x + this.w / 2, this.y + this.h, 'orange', 2, 2);
+
+                    if (this.timer <= 0) { this.state = 'IDLE'; this.timer = 60; this.vx = 0; }
+
+                    if (checkRectCollide(this, player)) {
+                        if (this.attackWarmup === 0) {
+                            this.attackWarmup = 20; // Short warning for dash
+                            this.isAttacking = true;
+                        }
+                    }
+                }
+                else if (this.state === 'MOVE') {
+                    this.x += this.vx;
+                    if (this.timer <= 0) { this.state = 'IDLE'; this.timer = 60; this.vx = 0; }
+                }
+
+                // Physics
+                this.vy += 1;
+                this.y += this.vy;
+                if (this.y > GROUND_Y - this.h) { this.y = GROUND_Y - this.h; this.vy = 0; }
+
+                // Attack Execution (Override base logic for Burn Application)
+                if (this.isAttacking) {
+                    this.attackWarmup--;
+                    if (this.attackWarmup <= 0) {
+                        // Deal Damage
+                        if (checkRectCollide(this, player)) {
+                            const dmg = 20; // High damage
+                            player.takeDamage(dmg);
+                            // BURN 
+                            player.burn = 300; // 5 seconds (60 * 5)
+                            showToast('被施加燒傷狀態!');
+                        }
+                        this.isAttacking = false; // Reset
+                        this.attackWarmup = 0;
+                    }
+                }
+            }
+            draw(ctx) { // Custom Draw for Knight
+                super.draw(ctx); // Draw Base (including flash)
+                // Helmet
+                if (this.hp > 0) {
+                    ctx.fillStyle = 'gray'; ctx.fillRect(this.x + 10, this.y + 5, 30, 20);
+                    ctx.fillStyle = 'red'; ctx.fillRect(this.x + 15, this.y + 10, 20, 2); // Eye slit
+                }
+            }
+        }
+
+
+        class ThornWitch extends Enemy {
+            constructor(x, y) {
+                super(x, y, 'Thorn Witch', '#004400', 80, 2, ITEMS.potion_s);
+                this.w = 40; this.h = 60;
+                this.state = 'KEEP_DIST';
+            }
+            update() {
+                if (this.hp <= 0) return;
+                this.timer--;
+
+                // Behavior: Keep distance 300-500. If too close, run away.
+                if (Math.abs(player.x - this.x) < 300) {
+                    this.vx = (player.x < this.x ? -1 : 1) * -2; // Run away
+                } else if (Math.abs(player.x - this.x) > 500) {
+                    this.vx = (player.x < this.x ? -1 : 1) * 2; // Chase
+                } else {
+                    this.vx = 0; // Ideal range
+                    if (frame % 180 === 0) { // Attack every 3s
+                        // Cast Thorns under player
+                        // Predict player movement? No, just current pos + slight lead
+                        let targetX = player.x;
+                        if (Math.abs(player.vx) > 1) targetX += player.vx * 10;
+
+                        // Clamp to world
+                        targetX = Math.max(0, Math.min(WORLD_WIDTH - 40, targetX));
+
+                        hazards.push(new Hazard(targetX, GROUND_Y, 40, 60, 'thorn_warning', 30));
+                        showToast('荊棘滋生!');
+                    }
+                }
+
+                this.x += this.vx;
+
+                // Physics
+                this.vy += 1;
+                this.y += this.vy;
+                if (this.y > GROUND_Y - this.h) { this.y = GROUND_Y - this.h; this.vy = 0; }
+
+                if (checkRectCollide(this, player)) {
+                    player.takeDamage(5);
+                }
+            }
+            draw(ctx) {
+                super.draw(ctx);
+                // Witch Hat
+                ctx.fillStyle = 'purple';
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                ctx.lineTo(this.x + this.w / 2, this.y - 30);
+                ctx.lineTo(this.x + this.w, this.y);
+                ctx.fill();
             }
         }
 
@@ -1993,19 +2240,43 @@
                     if (this.h < 300) { this.h += 20; this.y -= 20; }
                     if (checkRectCollide(this, player)) player.takeDamage(5);
                 }
+                else if (this.type === 'thorn_warning') {
+                    // Ground Crack Visual
+                    if (this.life <= 0) {
+                        this.type = 'thorn';
+                        this.life = 120; // 2 Seconds
+                        this.h = 0;
+                    }
+                }
+                else if (this.type === 'thorn') {
+                    if (this.h < 60) { this.h += 5; this.y -= 5; } // Grow Spikes
+                    if (checkRectCollide(this, player)) {
+                        player.takeDamage(12);
+                        // Bleed? Or just damage
+                    }
+                }
             }
             draw(ctx) {
                 if (this.type === 'fire_path') {
                     ctx.fillStyle = `rgba(255, 100, 0, ${this.life / 100})`;
                     ctx.fillRect(this.x, this.y, this.w, this.h);
                 }
-                else if (this.type === 'warning') {
-                    ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
+                else if (this.type === 'warning' || this.type === 'thorn_warning') {
+                    ctx.fillStyle = this.type === 'warning' ? 'rgba(255, 0, 0, 0.3)' : 'rgba(0, 100, 0, 0.5)';
                     ctx.fillRect(this.x, this.y - 10, this.w, 10);
                 }
                 else if (this.type === 'pillar') {
                     ctx.fillStyle = 'orange';
                     ctx.fillRect(this.x, this.y, this.w, this.h);
+                }
+                else if (this.type === 'thorn') {
+                    ctx.fillStyle = '#005500'; // Dark Green
+                    // Draw Spike Shape
+                    ctx.beginPath();
+                    ctx.moveTo(this.x, this.y + this.h);
+                    ctx.lineTo(this.x + this.w / 2, this.y);
+                    ctx.lineTo(this.x + this.w, this.y + this.h);
+                    ctx.fill();
                 }
             }
         }
@@ -2113,6 +2384,8 @@
                 else if (r < 0.4) e = new Goblin(rx, GROUND_Y);
                 else if (r < 0.6) e = new Skeleton(rx, GROUND_Y);
                 else if (r < 0.8) e = new Orc(rx, GROUND_Y);
+                else if (r < 0.9 && floor >= 10) e = new FallenKnight(rx, GROUND_Y);
+                else if (r < 0.95 && floor >= 5) e = new ThornWitch(rx, GROUND_Y);
                 else e = new Bat(rx, GROUND_Y - 100 - Math.random() * 100); // Bat in air
                 enemies.push(e);
             }
