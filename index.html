@@ -725,10 +725,25 @@
             glove_arcane: { id: 'glove_arcane', name: '秘術手套', type: 'weapon', atk: 12, spd: 1.5, icon: '🔮', desc: '發射魔法彈，無下墜', price: 999 },
             sword_nameless: { id: 'sword_nameless', name: '無名之劍', type: 'weapon', atk: 25, spd: 1.0, icon: '⚔️', desc: '揮舞釋放劍氣', price: 999 },
 
+            // Special Chest Weapons
+            axe_battle: { id: 'axe_battle', name: '戰斧', type: 'weapon', atk: 40, spd: 0.4, icon: '🪓', desc: '傷害極高，無法衝刺，移動慢', price: 999 },
+            katana: { id: 'katana', name: '武士刀', type: 'weapon', atk: 18, spd: 1.2, icon: '🗡️', desc: '攻擊自帶衝刺與無敵', price: 999 },
+            glove_arcane: { id: 'glove_arcane', name: '秘術手套', type: 'weapon', atk: 12, spd: 1.5, icon: '🔮', desc: '發射魔法彈，無下墜', price: 999 },
+            sword_nameless: { id: 'sword_nameless', name: '無名之劍', type: 'weapon', atk: 25, spd: 1.0, icon: '⚔️', desc: '揮舞釋放劍氣', price: 999 },
+
+            // New Craftable Items
+            sword_poison: { id: 'sword_poison', name: '毒液鐵劍', type: 'weapon', atk: 18, spd: 1.0, icon: '🦠', desc: '攻擊附加劇毒累積', price: 500 },
+            armor_iron_wing: { id: 'armor_iron_wing', name: '鐵翼鎧甲', type: 'armor', def: 10, icon: '🦇', desc: '賦予三段跳能力', price: 600 },
+
             // Materials
             goo: { id: 'goo', name: '史萊姆黏液', type: 'mat', icon: '💧', price: 5 },
             bone: { id: 'bone', name: '骨頭', type: 'mat', icon: '🦴', price: 8 },
             skin: { id: 'skin', name: '獸皮', type: 'mat', icon: '📜', price: 15 },
+
+            // New Materials
+            iron_ore: { id: 'iron_ore', name: '鐵礦', type: 'mat', icon: '⛏️', price: 20 },
+            acid_goo: { id: 'acid_goo', name: '酸性黏液', type: 'mat', icon: '🧪', price: 15 },
+            bat_wing: { id: 'bat_wing', name: '蝙蝠翅膀', type: 'mat', icon: '🦇', price: 12 },
         };
 
         const TRAITS = {
@@ -839,14 +854,15 @@
                 html += `
                     <div style="text-align:left; padding:0 20px;">
                         <h3>基礎屬性</h3>
+                        <p>⭐ 等級: ${player.level} (XP: ${player.xp} / ${player.maxXp})</p>
                         <p>❤️ 生命: ${Math.floor(player.hp)} / ${player.maxHp}</p>
                         <p>⚔️ 攻擊: ${player.getAtk()} (基礎:${player.baseAtk} + 裝備:${player.equip.weapon?.atk || 0} + Buff:${player.buffs.atk})</p>
-                        <p>🛡️ 防禦: ${player.getDef()} (基礎:${player.baseDef} + 裝備:${player.equip.body?.def || 0} + Buff:${player.buffs.atk})</p>
+                        <p>🛡️ 防禦: ${player.getDef()} (基礎:${player.baseDef} + 裝備:${player.equip.body?.def || 0} + Buff:${player.buffs.def})</p>
                         <p>🎯 爆擊率: ${player.crit + player.buffs.crit}%</p>
                         <p>💰 金幣: ${player.gold}</p>
                         <hr style="border-color:#555; margin:15px 0;">
                         <h3>獲得的祝福與詛咒</h3>
-                        <div id="trait-list" style="display:flex; flex-wrap:wrap; gap:10px;"></div>
+                        <div id="trait-list" style="display:flex; flex-direction:column; gap:10px;"></div>
                     </div>
                 `;
                 content.innerHTML = html;
@@ -858,9 +874,16 @@
                     player.traits.forEach(t => {
                         const d = document.createElement('div');
                         d.className = 'inv-item'; // reuse style
-                        d.style.width = 'auto'; d.style.padding = '5px 15px';
-                        d.innerHTML = `${t.icon} ${t.name}`;
-                        d.title = t.desc;
+                        d.style.width = 'auto';
+                        d.style.padding = '10px 15px';
+                        d.style.display = 'block';
+                        d.style.textAlign = 'left';
+                        d.style.height = 'auto';
+
+                        d.innerHTML = `
+                            <div style="font-size:18px; font-weight:bold;">${t.icon} ${t.name}</div>
+                            <div style="font-size:14px; color:#aaa; margin-top:5px;">${t.desc}</div>
+                        `;
                         traitDiv.appendChild(d);
                     });
                 }
@@ -1268,7 +1291,31 @@
                 }
 
                 this.inventory = [ITEMS.potion_s];
+
+                // Level System
+                this.level = 1;
+                this.xp = 0;
+                this.maxXp = 100;
+
                 this.updateHealUI();
+            }
+
+            gainXp(amount) {
+                this.xp += Math.floor(amount);
+                if (this.xp >= this.maxXp) {
+                    this.xp -= this.maxXp;
+                    this.level++;
+                    this.maxXp = Math.floor(this.maxXp * 1.2);
+
+                    // Stat Growth
+                    this.baseAtk += 2;
+                    this.baseDef += 1;
+                    this.maxHp += 10;
+                    this.hp = this.maxHp;
+
+                    showToast(`升級！等級 ${this.level} (攻+2 防+1 血+10)`);
+                    spawnParticles(this.x, this.y, 'gold', 20, 5);
+                }
             }
 
             getAtk() { return this.baseAtk + (this.equip.weapon?.atk || 0) + this.buffs.atk + this.tempAtk; }
@@ -1336,7 +1383,12 @@
                 }
             }
 
-            jump() { if (this.jumps < 2) { this.vy = -13; this.jumps++; spawnParticles(this.x + 15, this.y + 50, '#555', 5, 4); } }
+            jump() {
+                let maxJumps = 2;
+                if (this.equip.body?.id === 'armor_iron_wing') maxJumps = 3; // Triple Jump
+
+                if (this.jumps < maxJumps) { this.vy = -13; this.jumps++; spawnParticles(this.x + 15, this.y + 50, '#555', 5, 4); }
+            }
             dashMove() {
                 if (this.equip.weapon?.id === 'axe_battle') { showToast('太重了！無法衝刺'); return; }
                 if (this.dashCooldown <= 0 && !this.dashing) { this.dashing = true; this.dashTime = 12; this.dashCooldown = 50; this.vx = this.facing * 22; this.vy = 0; spawnParticles(this.x, this.y + 25, 'cyan', 10, 3); }
@@ -1390,8 +1442,8 @@
                                     let critMult = this.hasTrait('bless_crit') ? 2.5 : 2.0;
                                     let dmg = this.getAtk() * (isCrit ? critMult : 1);
 
-                                    // Poison Blessing
-                                    if (this.hasTrait('bless_poison')) {
+                                    // Poison Blessing or Poison Sword
+                                    if (this.hasTrait('bless_poison') || this.equip.weapon?.id === 'sword_poison') {
                                         if (!e.poison) e.poison = 0;
                                         e.poison += 3; // 3 ticks
                                         showToast('施加中毒!');
@@ -1541,43 +1593,52 @@
                         drops.push({ x: this.x + 10, y: this.y, item: this.dropItem });
                     }
                 }
+                // XP Reward
+                player.gainXp(this.maxHp / 2 + 10);
             }
             update() {
                 if (this.hp <= 0) return;
                 this.timer--;
 
-                // 簡單 AI
+                // State Machine
                 if (this.state === 'IDLE') {
                     if (this.timer <= 0) { this.state = 'MOVE'; this.timer = Math.random() * 60 + 30; this.vx = (Math.random() - 0.5) * this.speed; }
-                    if (this.state === 'MOVE') {
-                        this.x += this.vx;
-                        if (this.x < 0 || this.x > WORLD_WIDTH) this.vx *= -1;
-                        if (this.timer <= 0) { this.state = 'IDLE'; this.timer = 60; this.vx = 0; }
+                }
+                else if (this.state === 'MOVE') {
+                    this.x += this.vx;
+                    if (this.x < 0 || this.x > WORLD_WIDTH) this.vx *= -1;
+                    if (this.timer <= 0) { this.state = 'IDLE'; this.timer = 60; this.vx = 0; }
 
-                        // 玩家接近時追逐
-                        if (Math.abs(player.x - this.x) < 300) {
-                            this.vx = (player.x < this.x ? -1 : 1) * this.speed;
-                        }
+                    // Chase Player
+                    if (Math.abs(player.x - this.x) < 300) {
+                        this.vx = (player.x < this.x ? -1 : 1) * this.speed;
                     }
+                }
 
-                    // Poison Logic
-                    if (this.poison && this.poison > 0) {
-                        if (frame % 60 === 0) {
-                            this.takeDamage(1);
-                            this.poison--;
-                            spawnParticles(this.x + 20, this.y, 'green', 3, 2);
-                        }
+                // Poison Logic
+                if (this.poison && this.poison > 0) {
+                    if (frame % 60 === 0) {
+                        this.takeDamage(1);
+                        this.poison--;
+                        spawnParticles(this.x + 20, this.y, 'green', 3, 2);
                     }
-                    // Physics
+                }
+
+                // Physics (Gravity & Ground)
+                this.vy += 1;
+                this.y += this.vy;
+                if (this.y > GROUND_Y - this.h) {
                     this.y = GROUND_Y - this.h;
+                    this.vy = 0;
+                }
 
-                    if (checkRectCollide(this, player)) {
-                        if (player.hasTrait('bless_thorns')) {
-                            this.takeDamage(3);
-                            spawnParticles(this.x + 20, this.y + 20, 'green', 5, 2);
-                        }
-                        player.takeDamage(10);
+                // Collision with Player
+                if (checkRectCollide(this, player)) {
+                    if (player.hasTrait('bless_thorns')) {
+                        this.takeDamage(3);
+                        spawnParticles(this.x + 20, this.y + 20, 'green', 5, 2);
                     }
+                    player.takeDamage(10);
                 }
             }
             draw(ctx) {
@@ -1591,15 +1652,24 @@
 
         class Slime extends Enemy {
             constructor(x, y) { super(x, y, 'Slime', '#00ff00', 30, 1, ITEMS.goo); }
+            die() {
+                // Acid Goo Drop Chance
+                if (Math.random() < 0.3) drops.push({ x: this.x, y: this.y, item: ITEMS.acid_goo });
+                super.die();
+            }
             update() {
+                // Jump Logic
+                if (frame % 60 === 0 && this.vy === 0) this.vy = -12;
                 super.update();
-                if (frame % 60 === 0) this.vy = -10; // Jump
-                this.y += this.vy; this.vy += 0.6;
-                if (this.y > GROUND_Y - this.h) { this.y = GROUND_Y - this.h; this.vy = 0; }
             }
         }
         class Goblin extends Enemy {
             constructor(x, y) { super(x, y, 'Goblin', '#55aa55', 50, 4, ITEMS.goblin_sack); } // Fast
+            die() {
+                // Iron Ore Drop Chance
+                if (Math.random() < 0.3) drops.push({ x: this.x, y: this.y, item: ITEMS.iron_ore });
+                super.die();
+            }
         }
         class Orc extends Enemy {
             constructor(x, y) { super(x, y, 'Orc', '#885555', 120, 1.5, ITEMS.skin); this.w = 60; this.h = 80; }
@@ -1620,13 +1690,17 @@
                     projectiles.push(new Projectile(this.x, this.y + 20, dir * 8, -2, 20, 5, 'white'));
                 }
                 this.y = GROUND_Y - this.h;
+
+                if (checkRectCollide(this, player)) {
+                    player.takeDamage(10);
+                }
             }
         }
 
 
 
         class Bat extends Enemy {
-            constructor(x, y) { super(x, y, 'Bat', '#5555aa', 20, 3, null); this.w = 30; this.h = 30; this.startY = y; }
+            constructor(x, y) { super(x, y, 'Bat', '#5555aa', 20, 3, ITEMS.bat_wing); this.w = 30; this.h = 30; this.startY = y; }
             update() {
                 if (this.hp <= 0) return;
                 this.x += (Math.sin(frame * 0.05) * 2); // Float
@@ -1657,8 +1731,15 @@
 
                 this.actionLogic();
 
+
                 // Physics
-                this.y = GROUND_Y - this.h;
+                this.vy += 1;
+                this.y += this.vy;
+                if (this.y > GROUND_Y - this.h) {
+                    this.y = GROUND_Y - this.h;
+                    this.vy = 0;
+                }
+
                 if (checkRectCollide(this, player)) player.takeDamage(15);
             }
             actionLogic() { } // Override
@@ -1683,6 +1764,67 @@
             }
         }
 
+        class Dragon extends Boss {
+            constructor(x, y) {
+                super(x, y, 'Fire Dragon', '#aa0000', 3000, ITEMS.sword_nameless);
+                this.w = 150; this.h = 100;
+                this.state = 'FLY'; // FLY, LAND, ROAR
+                this.timer = 0;
+            }
+            actionLogic() {
+                this.timer++;
+
+                if (this.state === 'FLY') {
+                    this.y = GROUND_Y - 300 + Math.sin(frame * 0.05) * 50; // Hover high
+                    if (this.timer % 60 === 0) {
+                        // Shoot Fireball
+                        projectiles.push(new Projectile(this.x, this.y + 50, (player.x < this.x ? -8 : 8), 5, 30, 30, 'orange'));
+                    }
+                    if (this.timer > 300) { this.state = 'LAND'; this.timer = 0; showToast('巨龍降臨!'); }
+                }
+                else if (this.state === 'LAND') {
+                    this.vy += 1; // Fall fast
+                    if (this.y >= GROUND_Y - this.h) {
+                        this.y = GROUND_Y - this.h;
+                        if (this.vy > 5) { screenShake = 30; if (player.grounded) player.takeDamage(15); } // Landing Quake
+                        this.vy = 0;
+                        if (this.timer > 120) { this.state = 'ROAR'; this.timer = 0; }
+                    }
+                }
+                else if (this.state === 'ROAR') {
+                    if (this.timer === 1) {
+                        showToast('巨龍咆哮!!!');
+                        screenShake = 40;
+                        // Debuff
+                        player.vx = (player.x < this.x ? -30 : 30); // Knockback
+                        player.buffs.def -= 5; setTimeout(() => player.buffs.def += 5, 5000);
+                    }
+                    if (this.timer > 60) { this.state = 'FLY'; this.timer = 0; this.vy = -10; }
+                }
+            }
+            update() {
+                // Manual Boss Update to allow Flying
+                if (this.hp <= 0) { document.getElementById('boss-hp-container').style.display = 'none'; return; }
+                const bar = document.getElementById('boss-hp');
+                document.getElementById('boss-hp-container').style.display = 'block';
+                bar.style.width = (this.hp / this.maxHp * 100) + '%';
+
+                this.actionLogic();
+
+                // No forced ground snap if Flying
+                if (this.state !== 'FLY') {
+                    this.y += this.vy;
+                    if (this.y > GROUND_Y - this.h) { this.y = GROUND_Y - this.h; this.vy = 0; }
+                }
+
+                if (checkRectCollide(this, player)) player.takeDamage(15);
+            }
+            die() {
+                super.die();
+                endGame(true); // True Ending
+            }
+        }
+
         class GiantSlime extends Boss {
             constructor(x, y) { super(x, y, 'King Slime', '#00ff00', 600, ITEMS.slime_potion); }
             actionLogic() {
@@ -1696,11 +1838,6 @@
                         showToast('泰山壓頂!');
                         this.vy = -15;
                     }
-                }
-                this.y += this.vy; this.vy += 0.6;
-                if (this.y > GROUND_Y - this.h) {
-                    if (this.vy > 10) { screenShake = 20; if (player.grounded) player.takeDamage(10); } // Quake
-                    this.y = GROUND_Y - this.h; this.vy = 0;
                 }
             }
         }
@@ -1766,7 +1903,14 @@
             let bossSpawned = false;
 
             // Boss Chance (Low)
-            if (floor > 2 && Math.random() < 0.2) {
+            if (floor === 30) {
+                showToast('⚠️ 最終層：火焰巨龍 ⚠️');
+                enemies.push(new Dragon(WORLD_WIDTH - 400, GROUND_Y - 200));
+                bossSpawned = true;
+                return; // No other enemies
+            }
+
+            if (floor % 10 === 0) {
                 const isTroll = Math.random() < 0.5;
                 const bossX = WORLD_WIDTH - 300;
                 enemies.push(isTroll ? new Troll(bossX, GROUND_Y) : new GiantSlime(bossX, GROUND_Y));
@@ -1907,16 +2051,37 @@
                     );
                 }
                 // 5. 邪教徒 (互動事件)
-                else if (evt < 0.6) {
-                    const curse = ITEMS[TRAITS.curses[Math.floor(Math.random() * TRAITS.curses.length)]];
+                // 5. 邪教徒 (互動事件) -> Changed to Forbidden Cult (High Risk)
+                else if (evt < 0.55) {
                     showConfirmDialog(
-                        `瘋狂邪教徒`, `是否願意獻祭靈魂以獲得力量？<br>(獲得隨機詛咒)`,
-                        `接受`, () => {
-                            player.traits.push(curse);
-                            showToast(`獲得詛咒: ${curse.name}`);
+                        `邪教綁架`, `一群狂信徒將你包圍...<br>強制注入詛咒以換取生存？`,
+                        `接受 (獲得3個詛咒)`, () => {
+                            for (let i = 0; i < 3; i++) {
+                                const pick = TRAITS.curses[Math.floor(Math.random() * TRAITS.curses.length)];
+                                player.traits.push(ITEMS[pick]);
+                            }
+                            showToast(`身體被詛咒侵蝕...`);
                             nextLevel();
                         },
-                        `拒絕`, () => nextLevel()
+                        `反抗 (HP -50)`, () => {
+                            player.takeDamage(50);
+                            showToast('你殺出一條血路...');
+                            if (player.hp > 0) nextLevel();
+                        }
+                    );
+                }
+                // New: Forced Baptism
+                else if (evt < 0.6) {
+                    showConfirmDialog(
+                        `強制受洗`, `被強光籠罩，神聖的力量灌入體內！`,
+                        `接受 (獲得3個祝福)`, () => {
+                            for (let i = 0; i < 3; i++) {
+                                const pick = TRAITS.blessings[Math.floor(Math.random() * TRAITS.blessings.length)];
+                                player.traits.push(ITEMS[pick]);
+                            }
+                            showToast(`獲得神聖力量！`);
+                            nextLevel();
+                        }
                     );
                 }
                 // 6. 哥布林賽跑 (互動事件)
@@ -1998,7 +2163,7 @@
             wares.forEach(item => {
                 const d = document.createElement('div');
                 d.className = 'shop-row';
-                d.innerHTML = `<span>${item.icon} ${item.name} ($${item.price || 50})</span> <button class="btn">購買</button>`;
+                d.innerHTML = `<span style="display:flex; align-items:center; gap:5px;">${item.icon} ${item.name} <span style="color:gold; font-size:14px;">$${item.price || 50}</span></span> <button class="btn">購買</button>`;
                 d.querySelector('button').onclick = () => {
                     if (player.gold >= (item.price || 50)) {
                         player.gold -= (item.price || 50);
@@ -2013,19 +2178,47 @@
             // Craft List
             const craftDiv = document.getElementById('shop-craft-list');
             craftDiv.innerHTML = '';
+
+            // Quantity-based Recipes
             const recipes = [
-                { res: ITEMS.slime_potion, req: [ITEMS.goo, ITEMS.potion_s], text: '黏液 + 小藥水 -> 黏液藥水' },
-                { res: ITEMS.bone_knife, req: [ITEMS.bone, ITEMS.dagger], text: '骨頭 + 匕首 -> 骨刀' },
-                { res: ITEMS.beast_armor, req: [ITEMS.skin, ITEMS.leather], text: '獸皮 + 皮甲 -> 獸皮鎧甲' }
+                {
+                    res: ITEMS.potion_l,
+                    inputs: [{ item: ITEMS.potion_m, count: 2 }],
+                    text: '大瓶藥水 (需 2 中瓶)'
+                },
+                {
+                    res: ITEMS.sword_poison,
+                    inputs: [{ item: ITEMS.acid_goo, count: 30 }, { item: ITEMS.sword, count: 1 }],
+                    text: '毒液鐵劍 (需 30 黏液 + 1 大劍)'
+                },
+                {
+                    res: ITEMS.armor_iron_wing,
+                    inputs: [{ item: ITEMS.bat_wing, count: 50 }, { item: ITEMS.skin, count: 20 }, { item: ITEMS.iron_ore, count: 10 }],
+                    text: '鐵翼鎧甲 (需 50 翅膀 + 20 獸皮 + 10 鐵礦)'
+                }
             ];
+
             recipes.forEach(r => {
                 const d = document.createElement('div');
                 d.className = 'shop-row';
                 d.innerHTML = `<span style="font-size:12px;">${r.text}</span> <button class="btn">合成</button>`;
+
                 d.querySelector('button').onclick = () => {
-                    const hasReq = r.req.every(req => player.inventory.includes(req));
+                    // Check Logic
+                    const hasReq = r.inputs.every(req => {
+                        const count = player.inventory.filter(i => i.id === req.item.id).length;
+                        return count >= req.count;
+                    });
+
                     if (hasReq) {
-                        r.req.forEach(req => player.inventory.splice(player.inventory.indexOf(req), 1));
+                        // Consume Logic
+                        r.inputs.forEach(req => {
+                            for (let i = 0; i < req.count; i++) {
+                                const idx = player.inventory.findIndex(inv => inv.id === req.item.id);
+                                if (idx !== -1) player.inventory.splice(idx, 1);
+                            }
+                        });
+
                         player.inventory.push(r.res);
                         alert('合成成功！');
                         renderShop();
