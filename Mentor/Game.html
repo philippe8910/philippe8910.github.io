@@ -1,0 +1,2770 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Hollow Slayer - Abyssal Ruins</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #050508;
+            /* 更深邃的背景色 */
+            font-family: 'Courier New', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        canvas {
+            /* 讓畫布邊緣發光，像是在看一個發光的洞穴 */
+            box-shadow: 0 0 100px rgba(50, 50, 100, 0.3);
+            background: linear-gradient(to bottom, #0d0d12 0%, #15151a 80%, #0a0a0d 100%);
+        }
+
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 800px;
+            color: white;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .bar-wrap {
+            width: 100%;
+            background: #222;
+            height: 15px;
+            border: 2px solid #444;
+            margin-bottom: 5px;
+            position: relative;
+            box-shadow: 0 2px 5px black;
+        }
+
+        .bar-fill {
+            height: 100%;
+            transition: width 0.1s;
+        }
+
+        #boss-hp-container {
+            display: none;
+            position: absolute;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60%;
+            z-index: 20;
+        }
+
+        #boss-hp {
+            background: linear-gradient(to right, #900, #d00);
+            width: 100%;
+            box-shadow: 0 0 10px #d00;
+        }
+
+        #player-hp {
+            background: linear-gradient(to right, #ccc, #fff);
+            width: 100%;
+            box-shadow: 0 0 10px #eee;
+        }
+
+        #heals {
+            display: flex;
+            gap: 10px;
+            margin-top: 5px;
+        }
+
+        .heal-orb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            background: transparent;
+        }
+
+        .heal-orb.filled {
+            background: white;
+            box-shadow: 0 0 15px white, inset 0 0 10px #aaf;
+            border-color: white;
+        }
+
+        #msg {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            font-size: 30px;
+            color: white;
+            text-shadow: 0 0 20px white;
+            display: none;
+            z-index: 20;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            color: #777;
+            font-size: 12px;
+            z-index: 10;
+            text-shadow: 1px 1px 2px black;
+        }
+
+        /* --- UI Windows --- */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 2000;
+            /* Fix overlap with mobile controls */
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            background: #15151a;
+            border: 2px solid #444;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+            max-width: 800px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .event-choices {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .choice-card {
+            background: #222;
+            border: 1px solid #555;
+            padding: 20px;
+            width: 200px;
+            cursor: pointer;
+            transition: 0.2s;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .choice-card:hover {
+            background: #333;
+            border-color: white;
+            transform: scale(1.05);
+        }
+
+        .inv-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .inv-item {
+            width: 60px;
+            height: 60px;
+            background: #222;
+            border: 1px solid #444;
+            position: relative;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+        }
+
+        .inv-item:hover .tooltip {
+            display: block;
+        }
+
+        .inv-item.equipped {
+            border-color: gold;
+            box-shadow: 0 0 5px gold;
+        }
+
+        .tooltip {
+            display: none;
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #111;
+            border: 1px solid #666;
+            padding: 5px;
+            width: 150px;
+            font-size: 12px;
+            z-index: 100;
+            pointer-events: none;
+        }
+
+        .shop-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px;
+            background: #222;
+            margin-bottom: 5px;
+        }
+
+        .btn {
+            padding: 5px 15px;
+            background: #444;
+            color: white;
+            border: 1px solid #666;
+            border: 1px solid #666;
+            cursor: pointer;
+        }
+
+        .btn:hover {
+            background: #666;
+        }
+
+        /* Class Selection Styles */
+        .class-card {
+            background: #2a2a30;
+            border: 2px solid #555;
+            padding: 20px;
+            width: 250px;
+            cursor: pointer;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            transition: 0.2s;
+        }
+
+        .class-card:hover {
+            transform: scale(1.05);
+            border-color: gold;
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+        }
+
+        .class-icon {
+            font-size: 50px;
+            margin-bottom: 10px;
+        }
+
+        .class-desc {
+            font-size: 14px;
+            color: #aaa;
+            min-height: 40px;
+        }
+
+        /* Toast Notification */
+        #toast {
+            position: fixed;
+            top: 20%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid gold;
+            padding: 15px 30px;
+            color: white;
+            font-size: 20px;
+            border-radius: 30px;
+            z-index: 200;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s, top 0.3s;
+        }
+
+        #toast.show {
+            opacity: 1;
+            top: 15%;
+        }
+
+        /* --- 手機版適配 CSS --- */
+        @media (max-width: 1024px) {
+            #ui {
+                width: 95%;
+                top: 10px;
+            }
+
+            canvas {
+                width: 100vw;
+                height: 100vh;
+                object-fit: contain;
+            }
+
+            .controls {
+                display: none;
+            }
+
+            /* Mobile Fullscreen Modal */
+            .modal-content {
+                width: 98%;
+                height: 90vh;
+                /* Leave some space */
+                max-width: none;
+                padding: 10px;
+                display: flex;
+                flex-direction: column;
+            }
+
+            /* Scrollable Inventory Grid */
+            .inv-grid {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                overflow-y: auto;
+                max-height: 75vh;
+                padding-bottom: 50px;
+            }
+
+            .inv-item {
+                width: 100%;
+                height: auto;
+                min-height: 70px;
+                font-size: 30px;
+                justify-content: flex-start;
+                padding: 0 20px;
+                gap: 20px;
+            }
+
+            /* Mobile Info Layout */
+            .item-info {
+                display: flex !important;
+                flex-direction: column;
+                align-items: flex-start;
+                text-align: left;
+            }
+
+            .item-info h4 {
+                margin: 0;
+                font-size: 18px;
+                color: white;
+            }
+
+            .item-info p {
+                margin: 5px 0 0;
+                font-size: 14px;
+                color: #aaa;
+            }
+
+            .tooltip {
+                display: none !important;
+            }
+        }
+
+        /* Desktop: Hide item info inside card */
+        .item-info {
+            display: none;
+        }
+
+        #rotate-warning {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #050508;
+            z-index: 9999;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            color: white;
+        }
+
+        @media screen and (orientation: portrait) and (max-width: 1024px) {
+            #rotate-warning {
+                display: flex;
+            }
+        }
+
+        #mobile-controls {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 100;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        @media (pointer: coarse) {
+            #mobile-controls {
+                display: block;
+            }
+        }
+
+        .joystick-zone {
+            position: absolute;
+            bottom: 40px;
+            left: 40px;
+            width: 160px;
+            height: 160px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            pointer-events: auto;
+            touch-action: none;
+        }
+
+        #joystick-knob {
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            position: absolute;
+            left: 50px;
+            top: 50px;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+            pointer-events: none;
+            transform: translate(0, 0);
+            transition: 0.1s;
+        }
+
+        .action-zone {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            pointer-events: auto;
+        }
+
+        .m-btn {
+            width: 70px;
+            height: 70px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid #555;
+            border-radius: 50%;
+            color: #ddd;
+            font-size: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(4px);
+            touch-action: manipulation;
+        }
+
+        .m-btn:active {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(0.9);
+            border-color: white;
+        }
+
+        #btn-atk {
+            grid-column: 2;
+            grid-row: 1;
+            width: 90px;
+            height: 90px;
+            border-color: #ff5555;
+            background: rgba(100, 0, 0, 0.2);
+            font-size: 30px;
+            margin-top: -20px;
+        }
+
+        #btn-block {
+            grid-column: 1;
+            grid-row: 3;
+            border-color: #5555ff;
+            /* Blue for shield */
+            width: 60px;
+            height: 60px;
+            margin-top: 10px;
+        }
+
+        #btn-jump {
+            grid-column: 3;
+            grid-row: 2;
+            border-color: #5555ff;
+        }
+
+        #btn-dash {
+            grid-column: 1;
+            grid-row: 2;
+            border-color: #55ff55;
+        }
+
+        #btn-heal {
+            grid-column: 2;
+            grid-row: 3;
+            width: 60px;
+            height: 60px;
+            border-color: #ffff55;
+            margin-top: 10px;
+        }
+
+        #btn-bag {
+            grid-column: 3;
+            grid-row: 1;
+            width: 50px;
+            height: 50px;
+            border-color: gold;
+            margin-top: -10px;
+            margin-left: 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="ui">
+        <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+            <div>
+                <span style="font-size: 20px; text-shadow: 0 0 5px white;">EXPLORER</span>
+                <div id="heals">
+                    <div class="heal-orb filled"></div>
+                    <div class="heal-orb filled"></div>
+                    <div class="heal-orb filled"></div>
+                </div>
+                <div style="font-size: 14px; margin-top: 5px; color: gold;">💰 <span id="gold-display">0</span></div>
+            </div>
+            <div style="text-align: right;">
+                <span style="font-size: 24px; color: #ff4444; text-shadow: 0 0 15px red;">FLOOR <span
+                        id="floor-num">1</span></span>
+                <button onclick="toggleInventory()"
+                    style="display:block; margin-top:5px; background:none; border:1px solid white; color:white; padding:5px;">🎒
+                    包包</button>
+            </div>
+        </div>
+        <div class="bar-wrap" style="width: 30%; float:left; margin-top:5px;">
+            <div id="player-hp" class="bar-fill"></div>
+        </div>
+        <div class="bar-wrap" style="width: 65%; float:right; margin-top:5px; opacity:0;">
+            <div id="boss-hp" class="bar-fill"></div>
+        </div>
+    </div>
+
+    <div id="msg">按下 SPACE 或 攻擊鍵 進入地下城<br><span style="font-size:16px; color:#aaa;">(點擊畫面開始)</span></div>
+    <div class="controls">移動: WASD | 跳躍: K | 攻擊: J | 衝刺: L | 回血(按住): Q | 包包: I</div>
+
+    <!-- Inventory Modal -->
+    <!-- Inventory Modal -->
+    <div id="ui-inventory" class="modal">
+        <div class="modal-content" style="min-width: 600px;">
+            <!-- Dynamic Content -->
+            <div id="inv-content"></div>
+        </div>
+    </div>
+
+    <!-- Event Modal -->
+    <div id="ui-event" class="modal">
+        <div class="modal-content" style="text-align:center;">
+            <h2>區域完成</h2>
+            <p>選擇你的下一步...</p>
+            <div class="event-choices">
+                <div class="choice-card" onclick="triggerEvent('left')">
+                    <div style="font-size:40px;">⬅️</div>
+                    <h3>左邊通道</h3>
+                    <p>未知的命運</p>
+                </div>
+                <div class="choice-card" onclick="triggerEvent('right')">
+                    <div style="font-size:40px;">➡️</div>
+                    <h3>右邊通道</h3>
+                    <p>未知的命運</p>
+                </div>
+                <div class="choice-card" id="btn-shop" onclick="openShop()">
+                    <div style="font-size:40px;">🏪</div>
+                    <h3>神秘商店</h3>
+                    <p>交易與合成</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Class Selection Modal -->
+    <div id="ui-class" class="modal" style="display:flex;">
+        <div class="modal-content" style="max-width: 900px;">
+            <h2 style="text-align:center; margin-bottom:30px;">選擇你的命運</h2>
+            <div class="event-choices">
+                <div class="class-card" onclick="chooseClass('thief')">
+                    <div class="class-icon">🗡️</div>
+                    <h3>盜賊 (Thief)</h3>
+                    <div class="class-desc">高暴擊，敏捷。起始裝備：匕首 + 皮甲。<br>被動：掉落率增加。</div>
+                </div>
+                <div class="class-card" onclick="chooseClass('archer')">
+                    <div class="class-icon">🏹</div>
+                    <h3>弓箭手 (Archer)</h3>
+                    <div class="class-desc">遠程攻擊。起始裝備：弓箭 + 皮甲。<br>擅長保持距離。</div>
+                </div>
+                <div class="class-card" onclick="chooseClass('swordsman')">
+                    <div class="class-icon">⚔️</div>
+                    <h3>劍士 (Swordsman)</h3>
+                    <div class="class-desc">高傷害，高血量。起始裝備：大劍 + 鐵甲。<br>近戰專家。</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Shop Modal -->
+    <div id="ui-shop" class="modal">
+        <div class="modal-content">
+            <h2>🏪 神秘商店</h2>
+            <p>持有金幣: <span id="shop-gold" style="color:gold;">0</span></p>
+
+            <div style="display:flex; gap:20px; flex-wrap:wrap;">
+                <div style="flex:1; min-width:300px;">
+                    <h3>購買裝備/補給</h3>
+                    <div id="shop-buy-list"></div>
+                </div>
+                <div style="flex:1; min-width:300px;">
+                    <h3>合成 / 販賣素材</h3>
+                    <div id="shop-craft-list"></div>
+                    <div style="margin-top:20px;">
+                        <button class="btn" onclick="sellMaterials()">一鍵賣出所有素材</button>
+                    </div>
+                </div>
+            </div>
+            <button class="btn" style="margin-top:20px; width:100%; height:50px; font-size:20px;"
+                onclick="nextLevel()">出發前往下一層</button>
+        </div>
+    </div>
+
+    <!-- Loot Toast -->
+    <div id="toast">獲得 骨頭 x1</div>
+
+    <!-- Boss HP Bar -->
+    <div id="boss-hp-container">
+        <div style="text-align:center; text-shadow:2px 2px 2px black; font-weight:bold; font-size:24px;">⚠️ BOSS ⚠️
+        </div>
+        <div class="bar-wrap">
+            <div class="bar-fill" id="boss-hp" style="width: 100%;"></div>
+        </div>
+    </div>
+
+    <!-- 手機版警告 -->
+    <div id="rotate-warning">
+        <div style="font-size: 40px; margin-bottom: 20px;">📱</div>
+        <h2>請轉動您的裝置</h2>
+        <p>為了最佳體驗，請使用橫向模式遊玩</p>
+    </div>
+
+    <!-- 手機版控制器 -->
+    <div id="mobile-controls">
+        <div class="joystick-zone" id="joystick">
+            <div id="joystick-knob"></div>
+        </div>
+        <div class="action-zone">
+            <div class="m-btn" id="btn-dash">↝</div>
+            <div class="m-btn" id="btn-atk">⚔</div>
+            <div class="m-btn" id="btn-jump">⇪</div>
+            <div class="m-btn" id="btn-heal">+</div>
+            <div class="m-btn" id="btn-bag" style="font-size:24px;">🎒</div>
+        </div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 1000;
+        canvas.height = 600;
+
+        // --- 物品與資料庫 ---
+        const ITEMS = {
+            // Daggers
+            dagger: { id: 'dagger', name: '匕首', type: 'weapon', atk: 5, spd: 1.5, icon: '🗡️', desc: '攻速快，傷害低', price: 30 },
+            dagger_curved: { id: 'dagger_curved', name: '彎曲匕首', type: 'weapon', atk: 7, spd: 1.6, icon: '🗡️', desc: '獨特造型，暴擊高', price: 60 },
+            dagger_fast: { id: 'dagger_fast', name: '快速匕首', type: 'weapon', atk: 6, spd: 2.2, icon: '⚡', desc: '極致攻速', price: 90 },
+            dagger_dual: { id: 'dagger_dual', name: '雙刃匕首', type: 'weapon', atk: 9, spd: 1.8, icon: '⚔️', desc: '雙倍鋒利', price: 120 },
+
+            // Swords
+            sword: { id: 'sword', name: '大劍', type: 'weapon', atk: 15, spd: 0.7, icon: '⚔️', desc: '攻速慢，傷害高', price: 80 },
+            sword_ultra: { id: 'sword_ultra', name: '特大劍', type: 'weapon', atk: 25, spd: 0.5, icon: '🗡️', desc: '極度沉重，破壞力強', price: 180 },
+            sword_iron: { id: 'sword_iron', name: '鐵大劍', type: 'weapon', atk: 20, spd: 0.6, icon: '🔩', desc: '厚實的鐵塊', price: 140 },
+
+            // Bows
+            bow: { id: 'bow', name: '弓箭', type: 'weapon', atk: 8, spd: 1.0, icon: '🏹', desc: '遠程攻擊', price: 50 },
+            bow_wood: { id: 'bow_wood', name: '木弓', type: 'weapon', atk: 10, spd: 1.1, icon: '🪵', desc: '精良木材製作', price: 70 },
+            bow_recurve: { id: 'bow_recurve', name: '反曲弓', type: 'weapon', atk: 14, spd: 1.2, icon: '🏹', desc: '強力射擊', price: 110 },
+            bow_silver: { id: 'bow_silver', name: '銀弓', type: 'weapon', atk: 18, spd: 1.3, icon: '✨', desc: '神聖銀光', price: 200 },
+
+            bone_knife: { id: 'bone_knife', name: '骨刀', type: 'weapon', atk: 12, spd: 1.3, icon: '🦴', desc: '骨頭磨製的刀', price: 60 },
+
+            // Armor
+            leather: { id: 'leather', name: '皮甲', type: 'armor', def: 2, icon: '🧥', desc: '輕便的防護', price: 40 },
+            iron: { id: 'iron', name: '鐵甲', type: 'armor', def: 5, icon: '🛡️', desc: '堅固的防禦', price: 100 },
+            plate: { id: 'plate', name: '板甲', type: 'armor', def: 8, icon: '🏯', desc: '重型裝甲', price: 150 },
+            beast_armor: { id: 'beast_armor', name: '獸皮鎧甲', type: 'armor', def: 6, icon: '🐗', desc: '野獸皮毛製成', price: 120 },
+
+            // Consumables (Potions)
+            potion_s: { id: 'potion_s', name: '小瓶藥水', type: 'use', effect: 'heal', val: 20, icon: '🧪', price: 20 },
+            potion_m: { id: 'potion_m', name: '中瓶藥水', type: 'use', effect: 'heal', val: 50, icon: '⚗️', price: 50 },
+            potion_l: { id: 'potion_l', name: '大瓶藥水', type: 'use', effect: 'heal', val: 100, icon: '🍷', price: 100 },
+            potion_mystery: { id: 'potion_mystery', name: '神秘藥水', type: 'use', effect: 'mystery', icon: '🎲', desc: '隨機回復 -50~50', price: 40 },
+            potion_vio: { id: 'potion_vio', name: '暴力藥水', type: 'use', effect: 'buff_atk', val: 5, icon: '💥', desc: '本層攻擊+5', price: 70 },
+            potion_def: { id: 'potion_def', name: '防禦藥水', type: 'use', effect: 'buff_def', val: 2, icon: '🐢', desc: '本層防禦+2', price: 60 },
+            potion_crit: { id: 'potion_crit', name: '爆擊藥水', type: 'use', effect: 'buff_crit', val: 10, icon: '🎯', desc: '本層爆擊+10%', price: 80 },
+            slime_potion: { id: 'slime_potion', name: '黏液藥水', type: 'use', effect: 'slime_buff', icon: '🟢', desc: '回血+少量防禦', price: 50 },
+            goblin_sack: { id: 'goblin_sack', name: '神秘袋子', type: 'use', effect: 'box', icon: '💰', desc: '獲得隨機道具', price: 100 },
+
+
+            // Special
+            curse_blood: { id: 'curse_blood', name: '渴血詛咒', icon: '🩸', desc: '無法喝水。攻擊回血，揮空扣血。' },
+            curse_hunger: { id: 'curse_hunger', name: '永恆飢渴', icon: '🧟', desc: 'MaxHP=10。普通受傷1，Boss受傷5。' },
+            curse_gambler: { id: 'curse_gambler', name: '坐殺博徒', icon: '🎲', desc: '未爆擊0傷害。爆擊率+30%。' },
+
+            bless_dawn: { id: 'bless_dawn', name: '破曉祝福', icon: '🌅', desc: '每層開始回 10 HP。' },
+            bless_str: { id: 'bless_str', name: '力量祝福', icon: '💪', desc: '受傷加攻擊 (本層有效)。' },
+            bless_fort: { id: 'bless_fort', name: '堅毅祝福', icon: '🛡️', desc: '受傷加防禦 (短暫)。' },
+            bless_will: { id: 'bless_will', name: '最終意志', icon: '❤️', desc: '抵擋一次死亡並回滿血 (消耗)。' },
+            bless_thief: { id: 'bless_thief', name: '盜賊祝福', icon: '💰', desc: '掉落率 1.5 倍。' },
+            bless_crit: { id: 'bless_crit', name: '爆擊祝福', icon: '🎯', desc: '爆擊傷害 200% -> 250%。' },
+            bless_luck: { id: 'bless_luck', name: '賭徒祝福', icon: '🍀', desc: '爆擊率 +10%。' },
+
+            // Special Chest Weapons
+            axe_battle: { id: 'axe_battle', name: '戰斧', type: 'weapon', atk: 40, spd: 0.4, icon: '🪓', desc: '傷害極高，無法衝刺，移動慢', price: 999 },
+            katana: { id: 'katana', name: '武士刀', type: 'weapon', atk: 18, spd: 1.2, icon: '🗡️', desc: '攻擊自帶衝刺與無敵', price: 999 },
+            glove_arcane: { id: 'glove_arcane', name: '秘術手套', type: 'weapon', atk: 12, spd: 1.5, icon: '🔮', desc: '發射魔法彈，無下墜', price: 999 },
+            sword_nameless: { id: 'sword_nameless', name: '無名之劍', type: 'weapon', atk: 25, spd: 1.0, icon: '⚔️', desc: '揮舞釋放劍氣', price: 999 },
+
+            // Special Chest Weapons
+            axe_battle: { id: 'axe_battle', name: '戰斧', type: 'weapon', atk: 40, spd: 0.4, icon: '🪓', desc: '傷害極高，無法衝刺，移動慢', price: 999 },
+            katana: { id: 'katana', name: '武士刀', type: 'weapon', atk: 18, spd: 1.2, icon: '🗡️', desc: '攻擊自帶衝刺與無敵', price: 999 },
+            glove_arcane: { id: 'glove_arcane', name: '秘術手套', type: 'weapon', atk: 12, spd: 1.5, icon: '🔮', desc: '發射魔法彈，無下墜', price: 999 },
+            sword_nameless: { id: 'sword_nameless', name: '無名之劍', type: 'weapon', atk: 25, spd: 1.0, icon: '⚔️', desc: '揮舞釋放劍氣', price: 999 },
+
+            // New Craftable Items
+            sword_poison: { id: 'sword_poison', name: '毒液鐵劍', type: 'weapon', atk: 18, spd: 1.0, icon: '🦠', desc: '攻擊附加劇毒累積', price: 500 },
+            armor_iron_wing: { id: 'armor_iron_wing', name: '鐵翼鎧甲', type: 'armor', def: 10, icon: '🦇', desc: '賦予三段跳能力', price: 600 },
+
+            // Materials
+            goo: { id: 'goo', name: '史萊姆黏液', type: 'mat', icon: '💧', price: 5 },
+            bone: { id: 'bone', name: '骨頭', type: 'mat', icon: '🦴', price: 8 },
+            skin: { id: 'skin', name: '獸皮', type: 'mat', icon: '📜', price: 15 },
+
+            // New Materials
+            iron_ore: { id: 'iron_ore', name: '鐵礦', type: 'mat', icon: '⛏️', price: 20 },
+            acid_goo: { id: 'acid_goo', name: '酸性黏液', type: 'mat', icon: '🧪', price: 15 },
+            bat_wing: { id: 'bat_wing', name: '蝙蝠翅膀', type: 'mat', icon: '🦇', price: 12 },
+        };
+
+        const TRAITS = {
+            curses: ['curse_blood', 'curse_hunger', 'curse_gambler'],
+            blessings: ['bless_dawn', 'bless_str', 'bless_fort', 'bless_will', 'bless_thief', 'bless_crit', 'bless_luck',
+                'bless_poison', 'bless_dragon', 'bless_thorns', 'bless_fire_icon', 'bless_holy_light', 'bless_thunder']
+        };
+
+        // Add new Blessings details to ITEMS (for lookup)
+        ITEMS.bless_poison = { id: 'bless_poison', name: '毒牙祝福', icon: '🐍', desc: '攻擊造成中毒 (3秒)' };
+        ITEMS.bless_dragon = { id: 'bless_dragon', name: '龍息祝福', icon: '🐲', desc: '藥水回復效果增強' };
+        ITEMS.bless_thorns = { id: 'bless_thorns', name: '荊棘鎧甲', icon: '🌹', desc: '受傷反彈 3 點傷害' };
+        ITEMS.bless_fire_icon = { id: 'bless_fire_icon', name: '火焰守護', icon: '🔥', desc: '周圍敵人每秒受到 1 點燒傷' };
+        ITEMS.bless_holy_light = { id: 'bless_holy_light', name: '聖光守護', icon: '✨', desc: '三顆光球環繞，觸碰造成 3 點傷害' };
+        ITEMS.bless_thunder = { id: 'bless_thunder', name: '雷霆大帝', icon: '⚡', desc: '每2秒落雷攻擊3名敵人 (5-15傷害)' };
+
+        const LOOT_TABLE = [
+            'potion_s', 'potion_mystery', 'goo', 'bone', 'skin', 'dagger', 'leather', 'goblin_sack'
+        ];
+
+        // --- 遊戲全域變數 ---
+        const WORLD_WIDTH = 3000;
+        const GROUND_Y = 550;
+
+        let camera = { x: 0, y: 0 };
+        let floor = 1;
+        let particles = [], projectiles = [], slashes = [], drops = [];
+        let platforms = [], enemies = [], spikes = [], texts = [], hazards = [];
+        let screenShake = 0, hitStop = 0;
+        let frame = 0, gameRunning = false, gameOver = false;
+        let paused = false; // For UI Menu
+
+        const keys = { left: false, right: false, up: false, atk: false, dash: false, heal: false };
+
+        // UI Handling
+        let invTab = 'bag'; // 'bag' or 'stats'
+
+        function toggleInventory() {
+            const ui = document.getElementById('ui-inventory');
+            if (ui.style.display === 'flex') { ui.style.display = 'none'; paused = false; }
+            else { ui.style.display = 'flex'; paused = true; renderInventory(); }
+        }
+
+        function switchTab(tab) {
+            invTab = tab;
+            renderInventory();
+        }
+
+        function renderInventory() {
+            const content = document.querySelector('#ui-inventory .modal-content');
+
+            // Tabs
+            let html = `
+                <div style="display:flex; justify-content:center; gap:10px; margin-bottom:20px;">
+                    <button class="btn" style="${invTab === 'bag' ? 'border-color:gold' : ''}" onclick="switchTab('bag')">🎒 裝備藥水</button>
+                    <button class="btn" style="${invTab === 'mat' ? 'border-color:gold' : ''}" onclick="switchTab('mat')">🪵 雜物素材</button>
+                    <button class="btn" style="${invTab === 'stats' ? 'border-color:gold' : ''}" onclick="switchTab('stats')">📊 狀態 & 祝福</button>
+                </div>
+            `;
+
+            if (invTab === 'bag') {
+                html += `
+                    <div style="display:flex; gap:20px; flex-wrap:wrap;">
+                        <div style="flex:1; min-width:200px;">
+                            <h3>裝備中</h3>
+                            <div id="equip-display" class="inv-grid" style="grid-template-columns: repeat(2, 1fr); height:auto;"></div>
+                        </div>
+                        <div style="flex:2; min-width:200px;">
+                            <h3>背包 (點擊使用/裝備)</h3>
+                            <div id="inv-grid" class="inv-grid"></div>
+                        </div>
+                    </div>
+                `;
+                content.innerHTML = html;
+
+                const equipDiv = document.getElementById('equip-display');
+                if (player.equip.weapon) renderItem(equipDiv, player.equip.weapon, true);
+                else equipDiv.innerHTML += '<div class="inv-item">無武器</div>';
+                if (player.equip.body) renderItem(equipDiv, player.equip.body, true);
+                else equipDiv.innerHTML += '<div class="inv-item">無防具</div>';
+
+                const grid = document.getElementById('inv-grid');
+
+                // Stacking Logic
+                const stacks = {};
+                player.inventory.forEach(item => {
+                    if (item.type === 'mat') return;
+                    if (!stacks[item.id]) stacks[item.id] = { item: item, count: 0 };
+                    stacks[item.id].count++;
+                });
+
+                Object.values(stacks).forEach(stack => {
+                    const { item, count } = stack;
+                    const div = document.createElement('div');
+                    div.className = 'inv-item';
+                    renderItemContent(div, item);
+
+                    // Count Badge
+                    if (count > 1) {
+                        div.innerHTML += `<div style="position:absolute; bottom:2px; right:2px; background:white; color:black; font-size:12px; padding:0 4px; border-radius:4px;">x${count}</div>`;
+                    }
+
+                    div.onclick = () => {
+                        // Find first instance index for logic
+                        const idx = player.inventory.findIndex(i => i.id === item.id);
+                        if (idx === -1) return;
+
+                        if (item.type === 'use') { player.useItem(item, idx); }
+                        else if (item.type === 'weapon' || item.type === 'armor') { player.equipItem(item, idx); }
+                    };
+                    grid.appendChild(div);
+                });
+            } else if (invTab === 'mat') {
+                html += `<h3>雜物與素材</h3><div id="mat-grid" class="inv-grid"></div>`;
+                content.innerHTML = html;
+                const grid = document.getElementById('mat-grid');
+
+                // Stacking Logic
+                const stacks = {};
+                player.inventory.forEach(item => {
+                    if (item.type !== 'mat') return;
+                    if (!stacks[item.id]) stacks[item.id] = { item: item, count: 0 };
+                    stacks[item.id].count++;
+                });
+
+                Object.values(stacks).forEach(stack => {
+                    const { item, count } = stack;
+                    const div = document.createElement('div');
+                    div.className = 'inv-item';
+                    renderItemContent(div, item);
+                    if (count > 1) {
+                        div.innerHTML += `<div style="position:absolute; bottom:2px; right:2px; background:white; color:black; font-size:12px; padding:0 4px; border-radius:4px;">x${count}</div>`;
+                    }
+                    grid.appendChild(div);
+                });
+                if (grid.innerHTML === '') grid.innerHTML = '<p style="color:#777; width:100%;">這裡空空如也...</p>';
+
+            } else {
+                // Stats Tab
+                html += `
+                    <div style="text-align:left; padding:0 20px;">
+                        <h3>基礎屬性</h3>
+                        <p>⭐ 等級: ${player.level} (XP: ${player.xp} / ${player.maxXp})</p>
+                        <p>❤️ 生命: ${Math.floor(player.hp)} / ${player.maxHp}</p>
+                        <p>⚔️ 攻擊: ${player.getAtk()} (基礎:${player.baseAtk} + 裝備:${player.equip.weapon?.atk || 0} + Buff:${player.buffs.atk})</p>
+                        <p>🛡️ 防禦: ${player.getDef()} (基礎:${player.baseDef} + 裝備:${player.equip.body?.def || 0} + Buff:${player.buffs.def})</p>
+                        <p>🎯 爆擊率: ${player.crit + player.buffs.crit}%</p>
+                        <p>💰 金幣: ${player.gold}</p>
+                        <hr style="border-color:#555; margin:15px 0;">
+                        <h3>獲得的祝福與詛咒</h3>
+                        <div id="trait-list" style="display:flex; flex-direction:column; gap:10px;"></div>
+                    </div>
+                `;
+                content.innerHTML = html;
+
+                const traitDiv = document.getElementById('trait-list');
+                if (player.traits.length === 0) {
+                    traitDiv.innerHTML = '<p style="color:#777;">暫無特殊能力</p>';
+                } else {
+                    player.traits.forEach(t => {
+                        const d = document.createElement('div');
+                        d.className = 'inv-item'; // reuse style
+                        d.style.width = 'auto';
+                        d.style.padding = '10px 15px';
+                        d.style.display = 'block';
+                        d.style.textAlign = 'left';
+                        d.style.height = 'auto';
+
+                        d.innerHTML = `
+                            <div style="font-size:18px; font-weight:bold;">${t.icon} ${t.name}</div>
+                            <div style="font-size:14px; color:#aaa; margin-top:5px;">${t.desc}</div>
+                        `;
+                        traitDiv.appendChild(d);
+                    });
+                }
+            }
+
+            // Close Button
+            const closeBtn = document.createElement('button');
+            closeBtn.className = 'btn';
+            closeBtn.style.marginTop = '20px';
+            closeBtn.style.width = '100%';
+            closeBtn.innerText = '關閉';
+            closeBtn.onclick = toggleInventory;
+            content.appendChild(closeBtn);
+        }
+
+        function renderItem(container, item, isEquip) {
+            const div = document.createElement('div');
+            div.className = 'inv-item equipped';
+            renderItemContent(div, item);
+            container.appendChild(div);
+        }
+
+        function renderItemContent(div, item) {
+            div.innerHTML = item.icon;
+
+            // Mobile Info
+            let info = `<div class="item-info">
+                 <h4>${item.name}</h4>
+                 <p>${item.desc || ''}</p>
+             </div>`;
+            div.innerHTML += info;
+
+            // Desktop Tooltip
+            let extra = '';
+            if (item.atk) extra = `<br><span style="color:#f88">⚔️ ${item.atk}</span>`;
+            if (item.def) extra = `<br><span style="color:#88f">🛡️ ${item.def}</span>`;
+            if (item.effect) extra = `<br><span style="color:#8f8">✨ ${item.val || ''}</span>`;
+
+            div.innerHTML += `<div class="tooltip"><b>${item.name}</b><br>${item.desc || ''}${extra}</div>`;
+        }
+
+        // Shop & Events logic will be added below...
+
+
+        // --- 鍵盤輸入 ---
+        document.addEventListener('keydown', e => {
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
+            if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'KeyK') { if (!keys.up) player.jump(); keys.up = true; }
+            if (e.code === 'KeyJ') {
+                if (!gameRunning && !paused) {
+                    if (gameOver) resetGame(); else startGame();
+                } else {
+                    if (!keys.atk && !paused) player.attack();
+                }
+                keys.atk = true;
+            }
+            if (e.code === 'KeyL' || e.code === 'ShiftLeft') { if (!keys.dash) player.dashMove(); keys.dash = true; }
+            if (e.code === 'KeyQ') keys.heal = true;
+            if (e.code === 'KeyL' || e.code === 'ShiftLeft') { if (!keys.dash) player.dashMove(); keys.dash = true; }
+            if (e.code === 'KeyQ') keys.heal = true;
+            if (e.code === 'KeyI') toggleInventory();
+            if (e.code === 'Digit8') {
+                if (typeof player !== 'undefined') {
+                    // Give all items
+                    Object.values(ITEMS).forEach(item => {
+                        if (item.type) {
+                            player.inventory.push(item);
+                        }
+                    });
+
+                    // Give all traits
+                    const allTraits = [...TRAITS.curses, ...TRAITS.blessings];
+                    allTraits.forEach(tid => {
+                        if (ITEMS[tid] && !player.hasTrait(tid)) player.traits.push(ITEMS[tid]);
+                    });
+
+                    showToast('Debug: 全狀態/道具入手');
+                    if (document.getElementById('ui-inventory').style.display === 'flex') renderInventory();
+                }
+            }
+            if (e.code === 'Digit9') { floor = 28; nextLevel(); showToast('Debug: Jump to Floor 29'); } // Debug Key
+            if (e.code === 'Space' && gameOver) resetGame();
+        });
+
+        document.addEventListener('keyup', e => {
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
+            if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'KeyK') keys.up = false;
+            if (e.code === 'KeyJ') keys.atk = false;
+            if (e.code === 'KeyL' || e.code === 'ShiftLeft') keys.dash = false;
+            if (e.code === 'KeyL' || e.code === 'ShiftLeft') keys.dash = false;
+            if (e.code === 'KeyQ') keys.heal = false;
+        });
+
+        // Toast Logic
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 2000);
+        }
+
+        // Class Logic
+        let selectedClass = 'thief';
+
+        function chooseClass(type) {
+            selectedClass = type;
+            startGame();
+        }
+
+        function startGame() {
+            // Init Player based on Class
+            player = new Player(selectedClass);
+            document.getElementById('ui-class').style.display = 'none';
+
+            gameRunning = true;
+            document.getElementById('msg').style.display = 'none';
+            if (document.documentElement.requestFullscreen) {
+                document.documentElement.requestFullscreen().catch(err => { });
+            }
+            nextLevel(); // Gen Floor 1
+            loop();
+        }
+
+        // --- 虛擬搖桿邏輯 ---
+        const joystick = document.getElementById('joystick');
+        const knob = document.getElementById('joystick-knob');
+        let touchId = null;
+        let joyStartX = 0, joyStartY = 0;
+
+        joystick.addEventListener('touchstart', e => {
+            e.preventDefault();
+            const touch = e.changedTouches[0];
+            touchId = touch.identifier;
+            joyStartX = touch.clientX;
+            joyStartY = touch.clientY;
+            knob.style.transition = '0s';
+        }, { passive: false });
+
+        joystick.addEventListener('touchmove', e => {
+            e.preventDefault();
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                if (e.changedTouches[i].identifier === touchId) {
+                    const touch = e.changedTouches[i];
+                    let dx = touch.clientX - joyStartX;
+                    let dy = touch.clientY - joyStartY;
+                    const dist = Math.min(Math.sqrt(dx * dx + dy * dy), 60); // 限制移動半徑
+                    const angle = Math.atan2(dy, dx);
+
+                    const moveX = Math.cos(angle) * dist;
+                    const moveY = Math.sin(angle) * dist;
+
+                    knob.style.transform = `translate(${moveX}px, ${moveY}px)`;
+
+                    // 判斷方向
+                    keys.left = dx < -20;
+                    keys.right = dx > 20;
+
+                    // 向上推判定為跳躍 (選擇性)
+                    // if(dy < -40) { if(!keys.up) player.jump(); keys.up = true; } else { keys.up = false; }
+                }
+            }
+        }, { passive: false });
+
+        joystick.addEventListener('touchend', e => {
+            e.preventDefault();
+            touchId = null;
+            knob.style.transition = '0.2s';
+            knob.style.transform = `translate(0px, 0px)`;
+            keys.left = false;
+            keys.right = false;
+            keys.up = false;
+        });
+
+        // --- 虛擬按鈕邏輯 ---
+        const setupBtn = (id, keyName, autoRepeat = false, actionFunc = null) => {
+            const btn = document.getElementById(id);
+
+            const start = (e) => {
+                e.preventDefault();
+                // Action Logic
+                if (actionFunc) actionFunc();
+
+                // Set Key State
+                keys[keyName] = true;
+                btn.style.background = 'rgba(255,255,255,0.4)';
+            };
+
+            const end = (e) => {
+                e.preventDefault();
+                keys[keyName] = false;
+                btn.style.background = '';
+            };
+
+            // Touch Events
+            btn.addEventListener('touchstart', start, { passive: false });
+            btn.addEventListener('touchend', end);
+            btn.addEventListener('touchcancel', end); // Robustness
+
+            // Mouse Events (for testing on PC without Touch emulation)
+            btn.addEventListener('mousedown', start);
+            btn.addEventListener('mouseup', end);
+            btn.addEventListener('mouseleave', end);
+        };
+
+        setupBtn('btn-jump', 'up', false, () => player.jump());
+        setupBtn('btn-atk', 'atk', false, () => {
+            if (!gameRunning && !paused) {
+                if (gameOver) resetGame(); else startGame();
+            } else {
+                if (!paused) player.attack();
+            }
+        });
+        setupBtn('btn-dash', 'dash', false, () => player.dashMove());
+        setupBtn('btn-heal', 'heal', true); // Heal 僅需偵測按住
+        setupBtn('btn-bag', 'bag', false, toggleInventory);
+
+
+
+        // --- 全新設計的場景類別 (支援捲動) ---
+        class Background {
+            constructor() {
+                // 1. 遠景 (視差係數 0.2)
+                this.distantRuins = [];
+                for (let i = 0; i < 30; i++) { // 增加數量覆蓋長地圖
+                    this.distantRuins.push({
+                        x: i * 150 - 50,
+                        w: 80 + Math.random() * 60,
+                        h: 200 + Math.random() * 150,
+                        offsetY: Math.random() * 20
+                    });
+                }
+
+                // 2. 中景 (視差係數 0.5)
+                this.pillars = [];
+                for (let i = 0; i < 20; i++) {
+                    this.pillars.push({ x: i * 280 + 50, w: 100 + Math.random() * 40, cracks: Math.random() > 0.5 });
+                }
+
+                // 3. 前景 (視差係數 1.2)
+                this.foregroundObjects = [];
+                for (let i = 0; i < 40; i++) {
+                    this.foregroundObjects.push({
+                        x: Math.random() * WORLD_WIDTH,
+                        h: 50 + Math.random() * 150,
+                        type: Math.random() > 0.7 ? 'chain' : 'vine'
+                    });
+                }
+
+                // 4. 粒子 (視窗空間)
+                this.dust = [];
+                for (let i = 0; i < 30; i++) {
+                    this.dust.push({
+                        x: Math.random() * canvas.width, y: Math.random() * canvas.height,
+                        size: Math.random() * 2.5, speed: Math.random() * 0.4 + 0.1, alpha: Math.random() * 0.5 + 0.2
+                    });
+                }
+            }
+
+            // 繪製最遠的背景
+            drawBack(ctx) {
+                const slowMove = Math.sin(frame * 0.02) * 10;
+
+                // 視差計算: 物件位置 - (相機位置 * 係數)
+                // 1. 遠景
+                ctx.fillStyle = '#08080c';
+                this.distantRuins.forEach(r => {
+                    let rx = r.x - camera.x * 0.2;
+                    if (rx > -200 && rx < canvas.width + 200) // 只畫視野內
+                        ctx.fillRect(rx, 150 + r.offsetY + slowMove * 0.5, r.w, GROUND_Y);
+                });
+
+                // 2. 中景
+                this.pillars.forEach(p => {
+                    let px = p.x - camera.x * 0.5;
+                    if (px > -200 && px < canvas.width + 200) {
+                        ctx.fillStyle = '#121218';
+                        ctx.fillRect(px, 80 + slowMove, p.w, GROUND_Y - 80);
+                        if (p.cracks) {
+                            ctx.save();
+                            ctx.shadowBlur = 15; ctx.shadowColor = '#4444ff';
+                            ctx.strokeStyle = '#222255'; ctx.lineWidth = 2;
+                            ctx.beginPath();
+                            ctx.moveTo(px + 10, 100 + slowMove);
+                            ctx.lineTo(px + p.w - 20, 250 + slowMove);
+                            ctx.lineTo(px + 30, 400 + slowMove);
+                            ctx.stroke();
+                            ctx.restore();
+                        }
+                    }
+                });
+            }
+
+            // 繪製場景物件 (平台、地板) -> 這些跟隨世界座標，不套視差，但受 camera.x 影響 (在外部 transform 下繪製)
+            drawWorld(ctx) {
+                // 地板
+                ctx.fillStyle = '#0a0a0d';
+                // 由於地板現在有坑洞，我們需要繪製具體的平台
+                platforms.forEach(p => {
+                    ctx.fillStyle = p.type === 'wall' ? '#08080a' : '#0a0a0d';
+                    ctx.fillRect(p.x, p.y, p.w, p.h);
+                    // 平台邊緣裝飾
+                    ctx.fillStyle = '#1a1a22';
+                    for (let i = p.x; i < p.x + p.w; i += 40) {
+                        let h = Math.random() * 15;
+                        ctx.beginPath(); ctx.moveTo(i, p.y); ctx.lineTo(i + 20, p.y - h); ctx.lineTo(i + 40, p.y); ctx.fill();
+                    }
+                    ctx.strokeStyle = '#222233'; ctx.lineWidth = 2;
+                    ctx.beginPath(); ctx.moveTo(p.x, p.y + 1); ctx.lineTo(p.x + p.w, p.y + 1); ctx.stroke();
+                });
+
+                // 尖刺
+                ctx.fillStyle = '#555';
+                spikes.forEach(s => {
+                    ctx.beginPath();
+                    ctx.moveTo(s.x, s.y + s.h);
+                    ctx.lineTo(s.x + s.w / 2, s.y);
+                    ctx.lineTo(s.x + s.w, s.y + s.h);
+                    ctx.fill();
+                });
+
+                // 教學文字
+                ctx.fillStyle = 'rgba(255,255,255,0.7)';
+                ctx.font = '20px Courier New';
+                ctx.textAlign = 'center';
+                texts.forEach(t => {
+                    ctx.fillText(t.str, t.x, t.y);
+                });
+                ctx.textAlign = 'left';
+            }
+
+            // 繪製前景 (遮擋物和氛圍) - 視差係數 1.2
+            drawFront(ctx) {
+                const fasterMove = Math.sin(frame * 0.03) * 15;
+                ctx.fillStyle = '#040406';
+                this.foregroundObjects.forEach(o => {
+                    let ox = o.x - camera.x * 1.2;
+                    if (ox > -50 && ox < canvas.width + 50) {
+                        let sway = Math.sin(frame * 0.05 + o.x) * 5;
+                        if (o.type === 'vine') {
+                            ctx.beginPath();
+                            ctx.moveTo(ox, 0);
+                            ctx.quadraticCurveTo(ox + sway, o.h / 2, ox, o.h + fasterMove);
+                            ctx.lineTo(ox + 10, o.h + fasterMove);
+                            ctx.quadraticCurveTo(ox + sway + 10, o.h / 2, ox + 10, 0);
+                            ctx.fill();
+                        } else {
+                            ctx.fillRect(ox + sway, -20, 5, o.h + fasterMove);
+                        }
+                    }
+                });
+
+                // 4. 塵埃粒子 (增加環境光感)
+                this.dust.forEach(d => {
+                    d.y -= d.speed;
+                    if (d.y < 0) d.y = canvas.height;
+                    ctx.globalAlpha = d.alpha;
+                    ctx.fillStyle = '#aaaaff'; // 帶點藍色的塵埃
+                    ctx.beginPath(); ctx.arc(d.x, d.y, d.size, 0, Math.PI * 2); ctx.fill();
+                });
+                ctx.globalAlpha = 1;
+
+                // 5. 強烈的暗角效果 (Vignette) - 聚焦中心
+                const grad = ctx.createRadialGradient(canvas.width / 2, canvas.height / 2, 250, canvas.width / 2, canvas.height / 2, 700);
+                grad.addColorStop(0, 'transparent');
+                grad.addColorStop(0.7, 'rgba(0,0,0,0.5)');
+                grad.addColorStop(1, 'rgba(0,0,0,0.9)');
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+
+        // --- (以下為既有的遊戲邏輯類別，未做大幅修改，僅配合場景調整顏色) ---
+        class SlashAnim {
+            constructor(x, y, facing) {
+                this.x = x; this.y = y; this.facing = facing; this.life = 1.0; this.angle = facing === 1 ? -0.5 : 3.5;
+            }
+            update() { this.life -= 0.15; this.x += this.facing * 2; }
+            draw(ctx) {
+                ctx.save(); ctx.translate(this.x, this.y); ctx.scale(this.facing, 1);
+                ctx.beginPath(); ctx.arc(0, 0, 60, -0.5, 0.5 + (1 - this.life));
+                ctx.lineWidth = 20 * this.life; ctx.strokeStyle = `rgba(255, 255, 255, ${this.life})`;
+                ctx.shadowBlur = 20; ctx.shadowColor = 'cyan'; // 改為冷色調刀光
+                ctx.stroke(); ctx.restore();
+            }
+        }
+        class Particle {
+            constructor(x, y, color, speed, size) {
+                this.x = x; this.y = y; this.color = color;
+                this.vx = (Math.random() - 0.5) * speed; this.vy = (Math.random() - 0.5) * speed;
+                this.life = 1.0; this.size = size;
+            }
+            update() { this.x += this.vx; this.y += this.vy; this.life -= 0.04; this.size *= 0.95; }
+            draw(ctx) {
+                ctx.globalAlpha = this.life; ctx.fillStyle = this.color;
+                ctx.shadowBlur = 5; ctx.shadowColor = this.color;
+                ctx.fillRect(this.x, this.y, this.size, this.size);
+                ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+            }
+        }
+        class Player {
+            constructor(classType) {
+                this.w = 30; this.h = 50; this.x = 100; this.y = GROUND_Y - 50; this.vx = 0; this.vy = 0; this.facing = 1;
+                this.hp = 100; this.maxHp = 100; this.heals = 3; this.healTimer = 0; this.healTimeMax = 90;
+                this.jumps = 0; this.dashing = false; this.dashTime = 0; this.dashCooldown = 0;
+                this.atkCooldown = 0; this.invincible = 60; this.grounded = false;
+
+                // RPG Stats
+                this.gold = 0;
+                this.baseAtk = 10;
+                this.baseDef = 0;
+                this.crit = 5;
+                this.buffs = { atk: 0, def: 0, crit: 0 };
+                this.traits = []; // Blessings and Curses
+                this.tempAtk = 0; this.tempDef = 0; // For temporary buffs
+
+                // New States
+                this.burn = 0;
+
+                // Class Init
+                if (classType === 'thief') {
+                    this.equip = { weapon: ITEMS.dagger, body: ITEMS.leather };
+                    this.traits.push(ITEMS.bless_thief);
+                    this.crit = 15;
+                } else if (classType === 'archer') {
+                    this.equip = { weapon: ITEMS.bow, body: ITEMS.leather };
+                } else { // swordsman
+                    this.equip = { weapon: ITEMS.sword, body: ITEMS.iron };
+                    this.maxHp = 120; this.hp = 120;
+                }
+
+                this.inventory = [ITEMS.potion_s];
+
+                // Level System
+                this.level = 1;
+                this.xp = 0;
+                this.maxXp = 100;
+                this.orbAngle = 0;
+
+                this.updateHealUI();
+            }
+
+            gainXp(amount) {
+                this.xp += Math.floor(amount);
+                if (this.xp >= this.maxXp) {
+                    this.xp -= this.maxXp;
+                    this.level++;
+                    this.maxXp = Math.floor(this.maxXp * 1.2);
+
+                    // Stat Growth
+                    this.baseAtk += 2;
+                    this.baseDef += 1;
+                    this.maxHp += 10;
+                    this.hp = this.maxHp;
+
+                    showToast(`升級！等級 ${this.level} (攻+2 防+1 血+10)`);
+                    spawnParticles(this.x, this.y, 'gold', 20, 5);
+                }
+            }
+
+            block() {
+                if (this.dashing || this.atkCooldown > 0) return;
+                this.blocking = true;
+                this.parryWindow = 30; // 0.5s at 60fps
+                this.vx = 0;
+            }
+
+            updateBlessings() {
+                if (this.hasTrait('bless_fire_icon') && frame % 60 === 0) {
+                    enemies.forEach(e => {
+                        const dist = Math.sqrt((this.x - e.x) ** 2 + (this.y - e.y) ** 2);
+                        if (dist < 200) {
+                            e.takeDamage(1); spawnParticles(e.x + 20, e.y + 30, 'orange', 3, 2);
+                        }
+                    });
+                }
+                if (this.hasTrait('bless_holy_light')) {
+                    this.orbAngle += 0.05;
+                    for (let i = 0; i < 3; i++) {
+                        const ang = this.orbAngle + (i * (Math.PI * 2 / 3));
+                        const ox = this.x + 15 + Math.cos(ang) * 60;
+                        const oy = this.y + 25 + Math.sin(ang) * 60;
+                        if (frame % 30 === 0) {
+                            enemies.forEach(e => {
+                                if (e.x < ox + 10 && e.x + e.w > ox - 10 && e.y < oy + 10 && e.y + e.h > oy - 10) {
+                                    e.takeDamage(3); spawnParticles(ox, oy, 'yellow', 5, 2);
+                                }
+                            });
+                        }
+                    }
+                }
+                if (this.hasTrait('bless_thunder') && frame % 120 === 0) { // 2 seconds
+                    let targets = enemies.filter(e => e.hp > 0 && Math.abs(e.x - this.x) < 800).sort(() => 0.5 - Math.random()).slice(0, 3);
+                    targets.forEach(e => {
+                        const dmg = Math.floor(Math.random() * 11) + 5; // 5-15
+                        e.takeDamage(dmg);
+                        // Visual Lightning
+                        ctx.strokeStyle = 'cyan'; ctx.lineWidth = 3;
+                        ctx.beginPath(); ctx.moveTo(e.x + e.w / 2, 0); ctx.lineTo(e.x + e.w / 2, e.y); ctx.stroke();
+                        spawnParticles(e.x + e.w / 2, e.y, 'cyan', 10, 3);
+                    });
+                }
+            }
+
+            drawBlessings(ctx) {
+                if (this.hasTrait('bless_fire_icon')) {
+                    ctx.beginPath(); ctx.arc(this.x + 15, this.y + 30, 200, 0, Math.PI * 2);
+                    ctx.strokeStyle = `rgba(255, 100, 0, ${0.1 + Math.sin(frame * 0.1) * 0.05})`; ctx.lineWidth = 2; ctx.stroke();
+                }
+                if (this.hasTrait('bless_holy_light')) {
+                    for (let i = 0; i < 3; i++) {
+                        const ang = this.orbAngle + (i * (Math.PI * 2 / 3));
+                        ctx.fillStyle = 'white'; ctx.shadowBlur = 10; ctx.shadowColor = 'yellow';
+                        ctx.beginPath(); ctx.arc(this.x + 15 + Math.cos(ang) * 60, this.y + 25 + Math.sin(ang) * 60, 8, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
+                    }
+                }
+            }
+
+            getAtk() { return this.baseAtk + (this.equip.weapon?.atk || 0) + this.buffs.atk + this.tempAtk; }
+            getDef() { return this.baseDef + (this.equip.body?.def || 0) + this.buffs.def + this.tempDef; }
+            getSpd() { return this.equip.weapon?.spd || 1.0; }
+
+            hasTrait(id) { return this.traits.some(t => t.id === id); }
+
+            useItem(item, idx) {
+                if (this.hasTrait('curse_blood') && item.effect === 'heal') {
+                    showToast("渴血詛咒：無法喝水！"); return;
+                }
+
+                let consumed = true;
+                if (item.effect === 'heal') {
+                    let healVal = item.val;
+                    if (this.hasTrait('bless_dragon')) healVal *= 1.5;
+                    this.hp = Math.min(this.hp + healVal, this.maxHp);
+                    spawnParticles(this.x, this.y, 'green', 10, 3);
+                }
+                else if (item.effect === 'mystery') { const val = Math.floor(Math.random() * 101) - 50; this.hp += val; spawnParticles(this.x, this.y, val > 0 ? 'green' : 'red', 10, 3); if (this.hp <= 0) endGame(false); }
+                else if (item.effect === 'buff_atk') { this.buffs.atk += item.val; }
+                else if (item.effect === 'buff_def') { this.buffs.def += item.val; }
+                else if (item.effect === 'buff_crit') { this.buffs.crit += item.val; }
+                else if (item.effect === 'slime_buff') { this.hp += 20; this.buffs.def += 1; }
+                else if (item.effect === 'box') {
+                    consumed = true;
+                    const keys = Object.keys(ITEMS);
+                    const r = ITEMS[keys[Math.floor(Math.random() * keys.length)]];
+                    this.inventory.push(r);
+                    showToast(`打開袋子獲得: ${r.name}`);
+                }
+                if (consumed) this.inventory.splice(idx, 1);
+                this.updateHealUI();
+
+                // Optimized Refresh: Only if UI is open
+                if (document.getElementById('ui-inventory').style.display === 'flex') {
+                    renderInventory();
+                }
+            }
+
+            equipItem(item, idx) {
+                // Correct Swap Logic
+                if (idx !== undefined && idx >= 0) {
+                    this.inventory.splice(idx, 1);
+                }
+
+                let oldItem = null;
+                if (item.type === 'weapon') {
+                    oldItem = this.equip.weapon;
+                    this.equip.weapon = item;
+                }
+                if (item.type === 'armor') {
+                    oldItem = this.equip.body;
+                    this.equip.body = item;
+                }
+
+                if (oldItem) this.inventory.push(oldItem);
+
+                showToast(`裝備了 ${item.name}`);
+
+                // Optimized Refresh
+                if (document.getElementById('ui-inventory').style.display === 'flex') {
+                    renderInventory();
+                }
+            }
+
+            jump() {
+                let maxJumps = 2;
+                if (this.equip.body?.id === 'armor_iron_wing') maxJumps = 3; // Triple Jump
+
+                if (this.jumps < maxJumps) { this.vy = -13; this.jumps++; spawnParticles(this.x + 15, this.y + 50, '#555', 5, 4); }
+            }
+            dashMove() {
+                if (this.equip.weapon?.id === 'axe_battle') { showToast('太重了！無法衝刺'); return; }
+                if (this.dashCooldown <= 0 && !this.dashing) { this.dashing = true; this.dashTime = 12; this.dashCooldown = 50; this.vx = this.facing * 22; this.vy = 0; spawnParticles(this.x, this.y + 25, 'cyan', 10, 3); }
+            }
+
+            attack() {
+                const spd = this.getSpd();
+                if (this.atkCooldown <= 0) {
+                    this.atkCooldown = Math.floor(25 / spd); // CHANGED FORMULA: Higher Speed = Lower Cooldown
+                    let hitCount = 0;
+
+                    // Katana Dash
+                    if (this.equip.weapon?.id === 'katana') {
+                        this.dashing = true; this.dashTime = 5; this.vx = this.facing * 20; this.vy = 0; this.invincible = 10;
+                    }
+
+                    // 弓箭邏輯
+                    if (this.equip.weapon?.id === 'bow' || this.equip.weapon?.type === 'weapon' && this.equip.weapon.id.startsWith('bow')) {
+                        projectiles.push(new Projectile(this.x + 20 * this.facing, this.y + 25, 15 * this.facing, 0, 30, 5, 'white', true));
+                        return; // Bow stops here
+                    }
+                    // Arcane Glove
+                    if (this.equip.weapon?.id === 'glove_arcane') {
+                        projectiles.push(new Projectile(this.x + 20 * this.facing, this.y + 25, 10 * this.facing, 0, 20, 20, 'purple', true));
+                        // No gravity logic in Projectile need
+                    }
+                    // Nameless Sword
+                    if (this.equip.weapon?.id === 'sword_nameless') {
+                        projectiles.push(new Projectile(this.x + 20 * this.facing, this.y + 25, 12 * this.facing, 0, 10, 40, 'cyan', true));
+                    }
+
+                    // 近戰邏輯 (Melee) - Arcane Glove skips this? No, Glove is Ranged.
+                    if (this.equip.weapon?.id !== 'glove_arcane') {
+                        slashes.push(new SlashAnim(this.facing === 1 ? this.x + 40 : this.x - 40, this.y + 25, this.facing));
+                        const hitBox = { x: this.facing === 1 ? this.x : this.x - 70, y: this.y - 10, w: 100, h: 70 };
+
+                        enemies.forEach(e => {
+                            if (e.hp > 0 && checkRectCollide(hitBox, e)) {
+                                let critRate = this.crit + this.buffs.crit;
+                                if (this.hasTrait('curse_gambler')) critRate += 30;
+                                if (this.hasTrait('bless_luck')) critRate += 10;
+                                // Dagger Curved (High Crit)
+                                if (this.equip.weapon?.id === 'dagger_curved') critRate += 20;
+
+                                let isCrit = Math.random() * 100 < critRate;
+
+                                // Gambler Curse
+                                if (this.hasTrait('curse_gambler') && !isCrit) {
+                                    spawnParticles(e.x, e.y, 'gray', 2, 2); // whiff
+                                } else {
+                                    let critMult = this.hasTrait('bless_crit') ? 2.5 : 2.0;
+                                    let dmg = this.getAtk() * (isCrit ? critMult : 1);
+
+                                    // Poison Blessing or Poison Sword
+                                    if (this.hasTrait('bless_poison') || this.equip.weapon?.id === 'sword_poison') {
+                                        if (!e.poison) e.poison = 0;
+                                        e.poison += 3; // 3 ticks
+                                        showToast('施加中毒!');
+                                    }
+
+                                    e.takeDamage(dmg);
+                                    hitStop = 4; screenShake = isCrit ? 8 : 2;
+                                    spawnParticles(e.x + e.w / 2, e.y + e.h / 2, isCrit ? 'gold' : 'wheat', 10, 3);
+                                }
+                                hitCount++;
+                            }
+                        });
+                    }
+
+                    // Blood Curse
+                    if (this.hasTrait('curse_blood')) {
+                        if (hitCount > 0) { this.hp = Math.min(this.hp + 5, this.maxHp); showToast("嗜血: +5HP"); }
+                        else { this.hp -= 5; showToast("嗜血揮空: -5HP"); if (this.hp <= 0) endGame(false); }
+                        this.updateHealUI();
+                    }
+                }
+            }
+
+            healLogic() {
+                if (this.hasTrait('curse_blood')) return;
+                if (keys.heal && Math.abs(this.vx) < 1 && this.grounded && this.heals > 0 && this.hp < this.maxHp) {
+                    this.healTimer++; if (frame % 5 === 0) spawnParticles(this.x + Math.random() * 30, this.y + Math.random() * 50, 'white', 2, 2);
+                    if (this.healTimer >= this.healTimeMax) { this.hp = Math.min(this.hp + 34, this.maxHp); this.heals--; this.healTimer = 0; this.updateHealUI(); spawnParticles(this.x + 15, this.y + 25, 'white', 30, 5); screenShake = 5; }
+                } else { this.healTimer = 0; }
+            }
+            updateHealUI() {
+                document.querySelectorAll('.heal-orb').forEach((orb, i) => orb.classList.toggle('filled', i < this.heals));
+                document.getElementById('player-hp').style.width = (this.hp / this.maxHp * 100) + '%';
+                document.getElementById('gold-display').innerText = this.gold;
+                document.getElementById('player-hp').style.backgroundColor = this.hasTrait('curse_hunger') ? '#550055' : '#ff4444';
+            }
+            takeDamage(amt) {
+                if (this.dashing || this.invincible > 0) return;
+
+                // Parry & Block Logic
+                if (this.parryWindow > 0) {
+                    showToast("PERFECT BLOCK!");
+                    spawnParticles(this.x, this.y, 'cyan', 20, 5);
+                    screenShake = 10;
+                    this.invincible = 20;
+                    return; // No Damage
+                }
+
+                let realDmg = 0;
+                if (this.hasTrait('curse_hunger')) {
+                    // Boss check? We don't have "source" here, assume boss damage is > 20
+                    realDmg = (amt > 20) ? 5 : 1;
+                } else {
+                    realDmg = Math.max(1, amt - this.getDef());
+                }
+
+                if (this.blocking) {
+                    realDmg = Math.floor(realDmg * 0.5); // 50% reduction
+                    spawnParticles(this.x, this.y, 'blue', 5, 2);
+                }
+
+                if (this.hasTrait('bless_str')) { this.tempAtk += 2; showToast("力量祝福: 攻擊提升"); }
+                if (this.hasTrait('bless_fort')) { this.tempDef += 5; setTimeout(() => this.tempDef -= 5, 5000); showToast("堅毅祝福: 防禦提升"); }
+
+                this.hp -= realDmg; this.invincible = 60; this.healTimer = 0; screenShake = 12; this.updateHealUI(); spawnParticles(this.x + 15, this.y + 25, 'red', 15, 6);
+
+                if (this.hp <= 0) {
+                    if (this.hasTrait('bless_will')) {
+                        this.hp = this.maxHp;
+                        this.traits = this.traits.filter(t => t.id !== 'bless_will');
+                        showToast("最終意志觸發！");
+                        screenShake = 30;
+                        spawnParticles(this.x, this.y, 'gold', 50, 10);
+                        return;
+                    }
+                    endGame(false);
+                }
+            }
+            update() {
+                if (this.dashCooldown > 0) this.dashCooldown--; if (this.atkCooldown > 0) this.atkCooldown--; if (this.invincible > 0) this.invincible--; this.healLogic();
+                if (this.parryWindow > 0) this.parryWindow--;
+
+                // Burn Logic
+                if (this.burn > 0) {
+                    if (frame % 60 === 0) {
+                        const burnDmg = Math.floor(Math.random() * 20) + 1; // 1-20
+                        this.hp -= burnDmg;
+                        spawnParticles(this.x, this.y, 'orange', 3, 2);
+                        this.updateHealUI();
+                        if (this.hp <= 0) endGame(false);
+                    }
+                    this.burn--;
+                }
+
+                this.updateBlessings();
+
+                if (this.dashing) {
+                    this.dashTime--; this.x += this.vx;
+                    if (this.dashTime <= 0) { this.dashing = false; this.vx = 0; }
+                } else {
+                    if (this.healTimer > 0) { this.vx = 0; }
+                    else {
+                        let spd = 6;
+                        // Battle Axe Slow
+                        if (this.equip.weapon?.id === 'axe_battle') spd = 3;
+
+                        if (keys.left) { this.vx = -spd; this.facing = -1; }
+                        else if (keys.right) { this.vx = spd; this.facing = 1; }
+                        else { this.vx *= 0.8; }
+                    }
+                    this.vy += 0.6; this.x += this.vx; this.y += this.vy;
+                }
+
+                // 物理與碰撞
+                if (this.x < 0) this.x = 0;
+                if (this.x > WORLD_WIDTH - this.w) this.x = WORLD_WIDTH - this.w;
+
+                this.grounded = false;
+                platforms.forEach(p => {
+                    if (this.vy >= 0 &&
+                        this.x + this.w > p.x && this.x < p.x + p.w &&
+                        this.y + this.h >= p.y && this.y + this.h <= p.y + 20) {
+                        this.y = p.y - this.h;
+                        this.vy = 0;
+                        this.grounded = true;
+                        this.jumps = 0;
+                    }
+                });
+
+                if (this.y > canvas.height + 100) {
+                    this.hp -= 20; this.updateHealUI();
+                    this.x = 100; this.y = GROUND_Y - 100; this.vx = 0; this.vy = 0;
+                    screenShake = 10;
+                    if (this.hp <= 0) endGame(false);
+                }
+
+                spikes.forEach(s => {
+                    if (checkRectCollide(this, s) && this.invincible <= 0) {
+                        this.takeDamage(10);
+                        this.vy = -10;
+                        this.x -= this.facing * 50;
+                    }
+                });
+            }
+            draw(ctx) {
+                this.drawBlessings(ctx);
+                if (this.invincible > 0 && frame % 4 === 0) return;
+                ctx.fillStyle = 'white'; ctx.shadowBlur = 20; ctx.shadowColor = 'white'; ctx.fillRect(this.x, this.y, this.w, this.h);
+                ctx.fillStyle = 'black'; ctx.shadowBlur = 0; ctx.fillRect(this.facing === 1 ? this.x + 18 : this.x + 4, this.y + 10, 8, 20);
+
+                // Draw Shield
+                if (this.blocking) {
+                    ctx.strokeStyle = this.parryWindow > 0 ? 'cyan' : '#5555ff';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.arc(this.x + 15 + (this.facing * 20), this.y + 25, 20, -0.5 * Math.PI, 0.5 * Math.PI, this.facing === -1);
+                    ctx.stroke();
+                }
+
+                if (this.healTimer > 0) { ctx.strokeStyle = 'white'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(this.x + 15, this.y - 20, 10, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * (this.healTimer / this.healTimeMax))); ctx.stroke(); }
+            }
+        }
+        // --- 怪物類別 ---
+        class Enemy {
+            constructor(x, y, name, color, hp, speed, dropItem) {
+                this.x = x; this.y = y; this.w = 40; this.h = 60; this.name = name; this.color = color;
+
+                // Scaling
+                const scaleCheck = floor ? Math.min(floor, 15) : 1;
+                this.maxHp = Math.floor(hp * (1 + scaleCheck * 0.1));
+                this.hp = this.maxHp;
+
+                this.vx = 0; this.vy = 0; this.speed = speed; this.dropItem = dropItem;
+                this.state = 'IDLE'; this.timer = 0; this.facing = -1;
+
+                // Attack Logic
+                this.attackWarmup = 0;
+                this.isAttacking = false;
+            }
+            takeDamage(amt) {
+                this.hp -= amt;
+                spawnParticles(this.x + 20, this.y + 20, this.color, 5, 2);
+                // 擊退
+                this.vx = (player.x < this.x ? 3 : -3);
+
+                if (this.hp <= 0) {
+                    this.die();
+                }
+            }
+            die() {
+                player.gold += Math.floor(Math.random() * 40) + 20; // Increased Gold Drop
+                player.updateHealUI();
+                if (Math.random() < 0.7 && this.dropItem) { // Increased Item Drop Rate to 70%
+                    drops.push({ x: this.x, y: this.y, item: this.dropItem });
+                    // Thief Blessing: Chance for extra drop
+                    if (player.hasTrait('bless_thief') && Math.random() < 0.5) {
+                        drops.push({ x: this.x + 10, y: this.y, item: this.dropItem });
+                    }
+                }
+                // XP Reward
+                player.gainXp(this.maxHp / 2 + 10);
+            }
+            update() {
+                if (this.hp <= 0) return;
+                this.timer--;
+
+                // State Machine
+                if (this.state === 'IDLE') {
+                    if (this.timer <= 0) { this.state = 'MOVE'; this.timer = Math.random() * 60 + 30; this.vx = (Math.random() - 0.5) * this.speed; }
+                }
+                else if (this.state === 'MOVE') {
+                    this.x += this.vx;
+                    if (this.x < 0 || this.x > WORLD_WIDTH) this.vx *= -1;
+                    if (this.timer <= 0) { this.state = 'IDLE'; this.timer = 60; this.vx = 0; }
+
+                    // Chase Player
+                    if (Math.abs(player.x - this.x) < 300) {
+                        this.vx = (player.x < this.x ? -1 : 1) * this.speed;
+                    }
+                }
+
+                // Poison Logic
+                if (this.poison && this.poison > 0) {
+                    if (frame % 60 === 0) {
+                        this.takeDamage(1);
+                        this.poison--;
+                        spawnParticles(this.x + 20, this.y, 'green', 3, 2);
+                    }
+                }
+
+                // Physics (Gravity & Ground)
+                this.vy += 1;
+                this.y += this.vy;
+                if (this.y > GROUND_Y - this.h) {
+                    this.y = GROUND_Y - this.h;
+                    this.vy = 0;
+                }
+
+                // Collision with Player
+                if (checkRectCollide(this, player)) {
+                    if (this.attackWarmup === 0 && !this.isAttacking) {
+                        // Start Attack Sequence
+                        this.attackWarmup = 30; // 0.5s Warning
+                        this.isAttacking = true;
+                    }
+                }
+
+                if (this.isAttacking) {
+                    this.attackWarmup--;
+                    if (this.attackWarmup <= 0) {
+                        // Deal Damage
+                        if (checkRectCollide(this, player)) {
+                            if (player.hasTrait('bless_thorns')) {
+                                this.takeDamage(3);
+                                spawnParticles(this.x + 20, this.y + 20, 'green', 5, 2);
+                            }
+                            const dmg = 10 + Math.floor(Math.min(floor || 1, 15) * 0.5);
+                            player.takeDamage(dmg);
+                        }
+                        this.isAttacking = false; // Reset
+                        this.attackWarmup = 0;
+                    }
+                }
+            }
+            draw(ctx) {
+                if (this.hp <= 0) return;
+
+                // Red Flash Warning
+                if (this.attackWarmup > 0) {
+                    if (Math.floor(frame / 4) % 2 === 0) ctx.globalCompositeOperation = 'source-atop'; // Blink
+                    ctx.fillStyle = 'red';
+                    ctx.fillRect(this.x - 5, this.y - 5, this.w + 10, this.h + 10);
+                    ctx.globalCompositeOperation = 'source-over';
+                }
+
+                ctx.fillStyle = this.color; ctx.fillRect(this.x, this.y, this.w, this.h);
+                // HP Bar
+                ctx.fillStyle = 'red'; ctx.fillRect(this.x, this.y - 10, this.w, 5);
+                ctx.fillStyle = '#0f0'; ctx.fillRect(this.x, this.y - 10, this.w * (this.hp / this.maxHp), 5);
+            }
+        }
+
+        class Slime extends Enemy {
+            constructor(x, y) { super(x, y, 'Slime', '#00ff00', 30, 1, ITEMS.goo); }
+            die() {
+                // Acid Goo Drop Chance
+                if (Math.random() < 0.3) drops.push({ x: this.x, y: this.y, item: ITEMS.acid_goo });
+                super.die();
+            }
+            update() {
+                // Jump Logic
+                if (frame % 60 === 0 && this.vy === 0) this.vy = -12;
+                super.update();
+            }
+        }
+        class Goblin extends Enemy {
+            constructor(x, y) { super(x, y, 'Goblin', '#55aa55', 50, 4, ITEMS.goblin_sack); } // Fast
+            die() {
+                // Iron Ore Drop Chance
+                if (Math.random() < 0.3) drops.push({ x: this.x, y: this.y, item: ITEMS.iron_ore });
+                super.die();
+            }
+        }
+        class Orc extends Enemy {
+            constructor(x, y) { super(x, y, 'Orc', '#885555', 120, 1.5, ITEMS.skin); this.w = 60; this.h = 80; }
+        }
+        class Skeleton extends Enemy {
+            constructor(x, y) { super(x, y, 'Skeleton', '#eeeeee', 40, 1, ITEMS.bone); }
+            update() {
+                if (this.hp <= 0) return;
+                this.timer--;
+                // 逃離玩家
+                if (Math.abs(player.x - this.x) < 200) {
+                    this.vx = (player.x < this.x ? 2 : -2);
+                    this.x += this.vx;
+                }
+                // 射箭
+                if (frame % 120 === 0 && Math.abs(player.x - this.x) < 600) {
+                    let dir = (player.x < this.x ? -1 : 1);
+                    projectiles.push(new Projectile(this.x, this.y + 20, dir * 8, -2, 20, 5, 'white'));
+                }
+                this.y = GROUND_Y - this.h;
+
+                if (checkRectCollide(this, player)) {
+                    player.takeDamage(10);
+                }
+            }
+        }
+
+
+
+        class Bat extends Enemy {
+            constructor(x, y) { super(x, y, 'Bat', '#5555aa', 20, 3, ITEMS.bat_wing); this.w = 30; this.h = 30; this.startY = y; }
+            update() {
+                if (this.hp <= 0) return;
+                this.x += (Math.sin(frame * 0.05) * 2); // Float
+                this.y = this.startY + Math.sin(frame * 0.1) * 50; // Fly up down
+
+                if (Math.abs(player.x - this.x) < 300) {
+                    this.x += (player.x < this.x ? -1 : 1) * 2;
+                }
+                if (checkRectCollide(this, player)) player.takeDamage(5); // Weak attack
+            }
+        }
+
+        class FallenKnight extends Enemy {
+            constructor(x, y) {
+                super(x, y, 'Fallen Knight', '#330000', 150, 4, ITEMS.sword_iron);
+                this.w = 50; this.h = 70;
+            }
+            update() {
+                if (this.hp <= 0) return;
+                this.timer--;
+
+                if (this.state === 'IDLE') {
+                    if (this.timer <= 0) {
+                        if (Math.abs(player.x - this.x) < 400) {
+                            this.state = 'CHARGE';
+                            this.vx = (player.x < this.x ? -10 : 10); // DASH
+                            this.timer = 30; // Dash time
+                            showToast('墮落騎士衝刺!');
+                        } else {
+                            this.state = 'MOVE'; this.timer = 60; this.vx = (Math.random() - 0.5) * 2;
+                        }
+                    }
+                }
+                else if (this.state === 'CHARGE') { // Dash Attack
+                    this.x += this.vx;
+                    spawnParticles(this.x + this.w / 2, this.y + this.h, 'orange', 2, 2);
+
+                    if (this.timer <= 0) { this.state = 'IDLE'; this.timer = 60; this.vx = 0; }
+
+                    if (checkRectCollide(this, player)) {
+                        if (this.attackWarmup === 0) {
+                            this.attackWarmup = 20; // Short warning for dash
+                            this.isAttacking = true;
+                        }
+                    }
+                }
+                else if (this.state === 'MOVE') {
+                    this.x += this.vx;
+                    if (this.timer <= 0) { this.state = 'IDLE'; this.timer = 60; this.vx = 0; }
+                }
+
+                // Physics
+                this.vy += 1;
+                this.y += this.vy;
+                if (this.y > GROUND_Y - this.h) { this.y = GROUND_Y - this.h; this.vy = 0; }
+
+                // Attack Execution (Override base logic for Burn Application)
+                if (this.isAttacking) {
+                    this.attackWarmup--;
+                    if (this.attackWarmup <= 0) {
+                        // Deal Damage
+                        if (checkRectCollide(this, player)) {
+                            const dmg = 20; // High damage
+                            player.takeDamage(dmg);
+                            // BURN 
+                            player.burn = 300; // 5 seconds (60 * 5)
+                            showToast('被施加燒傷狀態!');
+                        }
+                        this.isAttacking = false; // Reset
+                        this.attackWarmup = 0;
+                    }
+                }
+            }
+            draw(ctx) { // Custom Draw for Knight
+                super.draw(ctx); // Draw Base (including flash)
+                // Helmet
+                if (this.hp > 0) {
+                    ctx.fillStyle = 'gray'; ctx.fillRect(this.x + 10, this.y + 5, 30, 20);
+                    ctx.fillStyle = 'red'; ctx.fillRect(this.x + 15, this.y + 10, 20, 2); // Eye slit
+                }
+            }
+        }
+
+
+        class ThornWitch extends Enemy {
+            constructor(x, y) {
+                super(x, y, 'Thorn Witch', '#004400', 80, 2, ITEMS.potion_s);
+                this.w = 40; this.h = 60;
+                this.state = 'KEEP_DIST';
+            }
+            update() {
+                if (this.hp <= 0) return;
+                this.timer--;
+
+                // Behavior: Keep distance 300-500. If too close, run away.
+                if (Math.abs(player.x - this.x) < 300) {
+                    this.vx = (player.x < this.x ? -1 : 1) * -2; // Run away
+                } else if (Math.abs(player.x - this.x) > 500) {
+                    this.vx = (player.x < this.x ? -1 : 1) * 2; // Chase
+                } else {
+                    this.vx = 0; // Ideal range
+                    if (frame % 180 === 0) { // Attack every 3s
+                        // Cast Thorns under player
+                        // Predict player movement? No, just current pos + slight lead
+                        let targetX = player.x;
+                        if (Math.abs(player.vx) > 1) targetX += player.vx * 10;
+
+                        // Clamp to world
+                        targetX = Math.max(0, Math.min(WORLD_WIDTH - 40, targetX));
+
+                        hazards.push(new Hazard(targetX, GROUND_Y, 40, 60, 'thorn_warning', 30));
+                        showToast('荊棘滋生!');
+                    }
+                }
+
+                this.x += this.vx;
+
+                // Physics
+                this.vy += 1;
+                this.y += this.vy;
+                if (this.y > GROUND_Y - this.h) { this.y = GROUND_Y - this.h; this.vy = 0; }
+
+                if (checkRectCollide(this, player)) {
+                    player.takeDamage(5);
+                }
+            }
+            draw(ctx) {
+                super.draw(ctx);
+                // Witch Hat
+                ctx.fillStyle = 'purple';
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                ctx.lineTo(this.x + this.w / 2, this.y - 30);
+                ctx.lineTo(this.x + this.w, this.y);
+                ctx.fill();
+            }
+        }
+
+        class Boss extends Enemy {
+            constructor(x, y, name, color, hp, item) {
+                super(x, y, name, color, hp, 1, item);
+                this.w = 100; this.h = 120;
+                this.actionTimer = 0;
+                this.isBoss = true;
+            }
+            update() {
+                if (this.hp <= 0) { document.getElementById('boss-hp-container').style.display = 'none'; return; }
+
+                // Boss HP Bar Update
+                const bar = document.getElementById('boss-hp');
+                const container = document.getElementById('boss-hp-container');
+                container.style.display = 'block';
+                bar.style.width = (this.hp / this.maxHp * 100) + '%';
+
+                this.actionLogic();
+
+
+                // Physics
+                this.vy += 1;
+                this.y += this.vy;
+                if (this.y > GROUND_Y - this.h) {
+                    this.y = GROUND_Y - this.h;
+                    this.vy = 0;
+                }
+
+                if (checkRectCollide(this, player)) player.takeDamage(15);
+            }
+            actionLogic() { } // Override
+        }
+
+        class Troll extends Boss {
+            constructor(x, y) { super(x, y, 'Giant Troll', '#558855', 800, ITEMS.potion_l); }
+            actionLogic() {
+                this.actionTimer++;
+                if (Math.abs(player.x - this.x) > 50) this.x += (player.x < this.x ? -0.5 : 0.5); // Slow chase
+
+                if (this.actionTimer > 180) {
+                    this.actionTimer = 0;
+                    const r = Math.random();
+                    if (r < 0.3) { showToast('巨魔怒吼!'); screenShake = 20; player.vx = (player.x < this.x ? -20 : 20); }
+                    else if (r < 0.6) {
+                        showToast('巨魔投石!');
+                        projectiles.push(new Projectile(this.x, this.y + 20, (player.x < this.x ? -10 : 10), -5, 40, 40, '#555'));
+                    }
+                    else { showToast('巨魔重擊!'); this.vx = (player.x < this.x ? -10 : 10); setTimeout(() => this.vx = 0, 500); }
+                }
+            }
+        }
+
+        class Dragon extends Boss {
+            constructor(x, y) {
+                super(x, y, 'Fire Dragon', '#aa0000', 3000, ITEMS.sword_nameless);
+                this.w = 150; this.h = 100;
+                this.state = 'FLY_IDLE';
+                this.timer = 0;
+            }
+            actionLogic() {
+                this.timer++;
+
+                // 1. Idle / Decision Phase
+                if (this.state === 'FLY_IDLE') {
+                    // Hover
+                    this.y = GROUND_Y - 300 + Math.sin(frame * 0.05) * 50;
+                    this.x += (player.x < this.x ? -1 : 1); // Slowly face player
+
+                    if (this.timer > 120) {
+                        this.timer = 0;
+                        const r = Math.random();
+                        if (r < 0.3) this.state = 'PREPARE_BREATH';
+                        else if (r < 0.5) this.state = 'PREPARE_DIVE';
+                        else if (r < 0.8) this.state = 'FIREBALL_BARRAGE';
+                        else this.state = 'PREPARE_ERUPTION';
+                    }
+                }
+
+                // 2. Dragon Breath (Strafe)
+                else if (this.state === 'PREPARE_BREATH') {
+                    // Fly to starting position (Left or Right High)
+                    const targetX = (this.x < WORLD_WIDTH / 2) ? 100 : WORLD_WIDTH - 200;
+                    const targetY = GROUND_Y - 350;
+                    this.x += (targetX - this.x) * 0.05;
+                    this.y += (targetY - this.y) * 0.05;
+
+                    if (this.timer > 120) {
+                        this.timer = 0;
+                        this.state = 'BREATH_STRAFE';
+                        this.vx = (this.x < WORLD_WIDTH / 2) ? 10 : -10; // Fast Fly
+                        showToast('巨龍吐息!');
+                    }
+                }
+                else if (this.state === 'BREATH_STRAFE') {
+                    this.x += this.vx;
+                    // Drop fire particles
+                    if (frame % 5 === 0) {
+                        hazards.push(new Hazard(this.x + 50, this.y + 80, 40, 40, 'fire_path', 200));
+                    }
+                    // End condition
+                    if ((this.vx > 0 && this.x > WORLD_WIDTH) || (this.vx < 0 && this.x < 0)) {
+                        this.state = 'FLY_IDLE'; this.timer = 0; this.vx = 0;
+                    }
+                }
+
+                // 3. Dragon Dive
+                else if (this.state === 'PREPARE_DIVE') {
+                    this.y = GROUND_Y - 400; // Fly High
+                    this.x += (player.x - this.x) * 0.1; // Track Player
+                    if (this.timer > 90) {
+                        this.state = 'DIVE'; this.timer = 0;
+                        this.vx = (player.x < this.x ? -10 : 10);
+                        this.vy = 25; // Super Fast
+                        showToast('巨龍墜擊!');
+                    }
+                }
+                else if (this.state === 'DIVE') {
+                    this.x += this.vx;
+                    this.y += this.vy;
+                    if (this.y >= GROUND_Y - this.h) {
+                        this.y = GROUND_Y - this.h;
+                        screenShake = 40;
+                        if (player.grounded) player.takeDamage(20);
+
+                        // Impact Fire
+                        spawnParticles(this.x, this.y + this.h, 'orange', 20, 5);
+                        this.state = 'FLY_IDLE'; this.timer = 0; this.vx = 0; this.vy = -5; // Bounce up
+                    }
+                }
+
+                // 4. Fireball Barrage
+                else if (this.state === 'FIREBALL_BARRAGE') {
+                    this.y = GROUND_Y - 250 + Math.sin(frame * 0.1) * 30;
+                    if (this.timer % 15 === 0) {
+                        // Random ballistic
+                        const vx = (Math.random() - 0.5) * 20;
+                        projectiles.push(new Projectile(this.x + 75, this.y + 100, vx, 5, 30, 30, 'orange'));
+                    }
+                    if (this.timer > 300) { // 5 seconds
+                        this.state = 'FLY_IDLE'; this.timer = 0;
+                    }
+                }
+
+                // 5. Eruption
+                else if (this.state === 'PREPARE_ERUPTION') {
+                    if (this.timer === 1) showToast('火焰湧動...');
+                    // Show Warnings on ground
+                    if (this.timer % 10 === 0 && this.timer < 60) {
+                        const hx = Math.random() * WORLD_WIDTH;
+                        hazards.push(new Hazard(hx, GROUND_Y, 60, 20, 'warning', 100)); // Warning first
+                    }
+                    if (this.timer > 100) {
+                        this.state = 'FLY_IDLE'; this.timer = 0;
+                    }
+                }
+            }
+            update() {
+                // Manual Boss Update to allow Flying
+                if (this.hp <= 0) { document.getElementById('boss-hp-container').style.display = 'none'; return; }
+                const bar = document.getElementById('boss-hp');
+                document.getElementById('boss-hp-container').style.display = 'block';
+                bar.style.width = (this.hp / this.maxHp * 100) + '%';
+
+                this.actionLogic();
+
+                if (checkRectCollide(this, player)) player.takeDamage(15);
+            }
+            die() {
+                super.die();
+                endGame(true); // True Ending
+            }
+        }
+
+        class Hazard {
+            constructor(x, y, w, h, type, life) {
+                this.x = x; this.y = y; this.w = w; this.h = h; this.type = type; this.life = life;
+                // If warning convert to fire pillar logic handled in update
+            }
+            update() {
+                this.life--;
+
+                if (this.type === 'fire_path') {
+                    this.y += 2; // Fall down
+                    if (this.y > GROUND_Y - 10) this.y = GROUND_Y - 10;
+                    if (checkRectCollide(this, player)) player.takeDamage(1); // Burn
+                }
+                else if (this.type === 'warning') {
+                    // Just visual warning
+                    if (this.life <= 20) {
+                        // Transform to Pillar
+                        this.type = 'pillar';
+                        this.life = 60;
+                        this.y = GROUND_Y; this.h = 0; // Grow up
+                    }
+                }
+                else if (this.type === 'pillar') {
+                    if (this.h < 300) { this.h += 20; this.y -= 20; }
+                    if (checkRectCollide(this, player)) player.takeDamage(5);
+                }
+                else if (this.type === 'thorn_warning') {
+                    // Ground Crack Visual
+                    if (this.life <= 0) {
+                        this.type = 'thorn';
+                        this.life = 120; // 2 Seconds
+                        this.h = 0;
+                    }
+                }
+                else if (this.type === 'thorn') {
+                    if (this.h < 60) { this.h += 5; this.y -= 5; } // Grow Spikes
+                    if (checkRectCollide(this, player)) {
+                        player.takeDamage(12);
+                        // Bleed? Or just damage
+                    }
+                }
+            }
+            draw(ctx) {
+                if (this.type === 'fire_path') {
+                    ctx.fillStyle = `rgba(255, 100, 0, ${this.life / 100})`;
+                    ctx.fillRect(this.x, this.y, this.w, this.h);
+                }
+                else if (this.type === 'warning' || this.type === 'thorn_warning') {
+                    ctx.fillStyle = this.type === 'warning' ? 'rgba(255, 0, 0, 0.3)' : 'rgba(0, 100, 0, 0.5)';
+                    ctx.fillRect(this.x, this.y - 10, this.w, 10);
+                }
+                else if (this.type === 'pillar') {
+                    ctx.fillStyle = 'orange';
+                    ctx.fillRect(this.x, this.y, this.w, this.h);
+                }
+                else if (this.type === 'thorn') {
+                    ctx.fillStyle = '#005500'; // Dark Green
+                    // Draw Spike Shape
+                    ctx.beginPath();
+                    ctx.moveTo(this.x, this.y + this.h);
+                    ctx.lineTo(this.x + this.w / 2, this.y);
+                    ctx.lineTo(this.x + this.w, this.y + this.h);
+                    ctx.fill();
+                }
+            }
+        }
+
+        class GiantSlime extends Boss {
+            constructor(x, y) { super(x, y, 'King Slime', '#00ff00', 600, ITEMS.slime_potion); }
+            actionLogic() {
+                this.actionTimer++;
+                if (this.actionTimer > 120) {
+                    this.actionTimer = 0;
+                    if (Math.random() < 0.5) {
+                        showToast('史萊姆召喚!');
+                        enemies.push(new Slime(this.x + (Math.random() - 0.5) * 100, GROUND_Y));
+                    } else {
+                        showToast('泰山壓頂!');
+                        this.vy = -15;
+                    }
+                }
+            }
+        }
+
+        class Projectile {
+            constructor(x, y, vx, vy, w, h, c = 'orange', isPlayer = false) { this.x = x; this.y = y; this.vx = vx; this.vy = vy; this.w = w; this.h = h; this.color = c; this.active = true; this.isPlayer = isPlayer; }
+            update() {
+                this.x += this.vx; this.y += this.vy;
+                if (this.y > canvas.height + 200) this.active = false;
+
+                // Arcane Glove: No Gravity
+                if (this.color === 'purple') this.vy = 0;
+                else this.vy += 0.1; // 重力
+
+                if (this.active) {
+                    if (this.isPlayer) {
+                        enemies.forEach(e => {
+                            if (e.hp > 0 && checkRectCollide(this, e)) { e.takeDamage(10 + player.getAtk()); this.active = false; }
+                        });
+                    } else {
+                        if (checkRectCollide(this, player)) { player.takeDamage(10); this.active = false; }
+                    }
+                }
+            }
+            draw(ctx) { ctx.fillStyle = this.color; ctx.fillRect(this.x, this.y, this.w, this.h); }
+        }
+
+        function checkRectCollide(r1, r2) { return (r1.x < r2.x + r2.w && r1.x + r1.w > r2.x && r1.y < r2.y + r2.h && r1.y + r1.h > r2.y); }
+        function spawnParticles(x, y, c, cnt, sz) { for (let i = 0; i < cnt; i++)particles.push(new Particle(x, y, c, 8, sz)); }
+
+        function resetGame() {
+            // Show Class Selection instead of starting immediately
+            document.getElementById('msg').style.display = 'none';
+            document.getElementById('ui-class').style.display = 'flex';
+
+            // Background reset
+            bg = new Background();
+            Object.keys(keys).forEach(k => keys[k] = false); // Reset Keys
+        }
+
+        function nextLevel() {
+            floor++;
+            document.getElementById('floor-num').innerText = floor;
+            player.x = 100; player.y = GROUND_Y - 50;
+            camera.x = 0;
+
+            // Reset Level Entities
+            enemies = []; drops = []; projectiles = []; platforms = []; spikes = []; texts = []; hazards = [];
+
+            // Gen Platforms
+            platforms.push({ x: 0, y: GROUND_Y, w: WORLD_WIDTH, h: 50, type: 'ground' });
+            // Random Platforms
+            for (let i = 0; i < 10; i++) {
+                platforms.push({
+                    x: Math.random() * (WORLD_WIDTH - 500) + 300,
+                    y: GROUND_Y - Math.random() * 150 - 50,
+                    w: Math.random() * 200 + 100, h: 20
+                });
+            }
+
+            // Gen Enemies
+            const count = 3 + floor * 1;
+            let bossSpawned = false;
+
+            // Boss Chance (Low)
+            // Boss Chance (Low)
+            if (floor === 30) {
+                showToast('⚠️ 最終層：火焰巨龍 ⚠️');
+                enemies.push(new Dragon(WORLD_WIDTH - 400, GROUND_Y - 200));
+                bossSpawned = true;
+            }
+            else if (floor % 10 === 0) {
+                const isTroll = Math.random() < 0.5;
+                const bossX = WORLD_WIDTH - 300;
+                enemies.push(isTroll ? new Troll(bossX, GROUND_Y) : new GiantSlime(bossX, GROUND_Y));
+                bossSpawned = true;
+                showToast('警告: 強大氣息接近中...');
+            }
+
+            for (let i = 0; i < count; i++) {
+                if (floor === 30) break; // No minions for Dragon
+                if (bossSpawned && i > count / 2) break; // Reduce enemies if boss present
+
+                const rx = Math.random() * (WORLD_WIDTH - 600) + 500;
+                const r = Math.random();
+                let e;
+                if (r < 0.2) e = new Slime(rx, GROUND_Y);
+                else if (r < 0.4) e = new Goblin(rx, GROUND_Y);
+                else if (r < 0.6) e = new Skeleton(rx, GROUND_Y);
+                else if (r < 0.8) e = new Orc(rx, GROUND_Y);
+                else if (r < 0.9 && floor >= 10) e = new FallenKnight(rx, GROUND_Y);
+                else if (r < 0.95 && floor >= 5) e = new ThornWitch(rx, GROUND_Y);
+                else e = new Bat(rx, GROUND_Y - 100 - Math.random() * 100); // Bat in air
+                enemies.push(e);
+            }
+
+            bg = new Background();
+            document.getElementById('ui-event').style.display = 'none';
+            document.getElementById('ui-shop').style.display = 'none';
+            document.getElementById('boss-hp-container').style.display = 'none'; // Hide Boss Bar initially
+            paused = false;
+
+            if (player.hasTrait('curse_hunger')) { player.hp = 10; player.maxHp = 10; }
+            if (player.hasTrait('bless_dawn')) { player.hp = Math.min(player.hp + 10, player.maxHp); showToast("破曉祝福: +10HP"); }
+
+            // Clear temp buffs
+            player.tempAtk = 0;
+            if (!player.hasTrait('bless_fort')) player.tempDef = 0;
+
+            player.updateHealUI();
+        }
+
+        function showEventUI() {
+            paused = true;
+            document.getElementById('ui-event').style.display = 'flex';
+            // Randomly hide Shop if unlucky? No, let's keep it constant for gameplay flow or 30% chance.
+            document.getElementById('btn-shop').style.display = (Math.random() > 0.3) ? 'flex' : 'none';
+        }
+
+        function triggerEvent(type) {
+            const r = Math.random();
+            const modalContent = document.querySelector('#ui-event .modal-content');
+
+            if (type === 'left' || type === 'right') {
+                // Special Trait Events
+                if (r < 0.3) {
+                    // Get Random Blessing
+                    const avail = TRAITS.blessings.filter(id => !player.hasTrait(id));
+                    if (avail.length > 0) {
+                        const pick = avail[Math.floor(Math.random() * avail.length)];
+                        const trait = ITEMS[pick];
+                        showConfirmDialog(
+                            `神像發現`,
+                            `${trait.icon} ${trait.name}<br>${trait.desc}`,
+                            `接受祝福`,
+                            () => {
+                                player.traits.push(trait);
+                                showToast(`獲得祝福: ${trait.name}`);
+                                nextLevel();
+                            },
+                            `離開`,
+                            () => nextLevel()
+                        );
+                        return;
+                    }
+                } else if (r < 0.5) {
+                    // Get Random Curse
+                    const avail = TRAITS.curses.filter(id => !player.hasTrait(id));
+                    if (avail.length > 0) {
+                        const pick = avail[Math.floor(Math.random() * avail.length)];
+                        const trait = ITEMS[pick];
+                        showConfirmDialog(
+                            `邪神凝視`,
+                            `${trait.icon} ${trait.name}<br>${trait.desc}`,
+                            `接受詛咒`,
+                            () => {
+                                player.traits.push(trait);
+                                showToast(`獲得詛咒: ${trait.name}`);
+                                nextLevel();
+                            },
+                            `拒絕`,
+                            () => nextLevel()
+                        );
+                        return;
+                    }
+                }
+
+                // Normal & New Events
+                const evt = Math.random();
+
+                // 1. 遭遇搶劫 (機率降低)
+                if (evt < 0.05) {
+                    showToast('遭遇搶劫！失去了 50 金幣'); player.gold = Math.max(0, player.gold - 50);
+                    nextLevel();
+                }
+                // 2. 踩到陷阱 (機率大幅降低)
+                else if (evt < 0.1) {
+                    showToast('踩到陷阱！生命 -20'); player.hp -= 20; if (player.hp <= 0) endGame(false);
+                    nextLevel();
+                }
+                // 3. 發現寶箱 (互動事件)
+                else if (evt < 0.3) {
+                    showConfirmDialog(
+                        `發現寶箱`, `一個神秘的寶箱，也許有陷阱...`,
+                        `打開 (70% 成功)`, () => {
+                            if (Math.random() < 0.7) {
+                                showToast('獲得強力藥水！');
+                                player.inventory.push(ITEMS.potion_l);
+                            } else {
+                                showToast('寶箱陷阱！生命 -30');
+                                player.hp -= 30; if (player.hp <= 0) endGame(false);
+                            }
+                            nextLevel();
+                        },
+                        `離開`, () => nextLevel()
+                    );
+                }
+                // 4. 冒險者求救 (互動事件)
+                else if (evt < 0.5) {
+                    showConfirmDialog(
+                        `受傷的冒險者`, `她被怪物包圍了！要幫忙嗎？`,
+                        `拯救 (50% 成功)`, () => {
+                            if (Math.random() < 0.5) {
+                                showToast('拯救成功！獲得贈禮');
+                                player.inventory.push(ITEMS.goblin_sack);
+                            } else {
+                                showToast('拯救失敗...受傷 10');
+                                player.hp -= 10; if (player.hp <= 0) endGame(false);
+                            }
+                            nextLevel();
+                        },
+                        `無視`, () => nextLevel()
+                    );
+                }
+                // 5. 邪教徒 (互動事件)
+                // 5. 邪教徒 (互動事件) -> Changed to Forbidden Cult (High Risk)
+                else if (evt < 0.55) {
+                    showConfirmDialog(
+                        `邪教綁架`, `一群狂信徒將你包圍...<br>強制注入詛咒以換取生存？`,
+                        `接受 (獲得3個詛咒)`, () => {
+                            for (let i = 0; i < 3; i++) {
+                                const pick = TRAITS.curses[Math.floor(Math.random() * TRAITS.curses.length)];
+                                player.traits.push(ITEMS[pick]);
+                            }
+                            showToast(`身體被詛咒侵蝕...`);
+                            nextLevel();
+                        },
+                        `反抗 (HP -50)`, () => {
+                            player.takeDamage(50);
+                            showToast('你殺出一條血路...');
+                            if (player.hp > 0) nextLevel();
+                        }
+                    );
+                }
+                // New: Forced Baptism
+                else if (evt < 0.6) {
+                    showConfirmDialog(
+                        `強制受洗`, `被強光籠罩，神聖的力量灌入體內！`,
+                        `接受 (獲得3個祝福)`, () => {
+                            for (let i = 0; i < 3; i++) {
+                                const pick = TRAITS.blessings[Math.floor(Math.random() * TRAITS.blessings.length)];
+                                player.traits.push(ITEMS[pick]);
+                            }
+                            showToast(`獲得神聖力量！`);
+                            nextLevel();
+                        }
+                    );
+                }
+                // 6. 哥布林賽跑 (互動事件)
+                else if (evt < 0.75) {
+                    showConfirmDialog(
+                        `哥布林賽跑`, `要跟哥布林比速度嗎？<br>贏了獲得 4 個袋子！`,
+                        `比賽`, () => {
+                            if (Math.random() < 0.5) {
+                                showToast('你贏了！獲得豐厚獎勵');
+                                for (let i = 0; i < 4; i++) player.inventory.push(ITEMS.goblin_sack);
+                            } else {
+                                showToast('你輸了...什麼都沒拿到');
+                            }
+                            nextLevel();
+                        },
+                        `沒興趣`, () => nextLevel()
+                    );
+                }
+                // 7. 彩票 (直接獲得)
+                else if (evt < 0.85) {
+                    showToast('地上撿到彩票！獲得 200 金幣');
+                    player.gold += 200;
+                    nextLevel();
+                }
+                // 8. 平凡的寶箱 (直接獲得)
+                else {
+                    showToast('發現小寶箱！獲得藥水');
+                    player.inventory.push(ITEMS.potion_m);
+                    nextLevel();
+                }
+            }
+        }
+
+        function showConfirmDialog(title, desc, btn1Text, btn1Action, btn2Text, btn2Action) {
+            // Re-use event modal temporarily for choice
+            const content = document.querySelector('#ui-event .modal-content');
+            const originalHTML = content.innerHTML;
+
+            content.innerHTML = `
+                <h2>${title}</h2>
+                <div style="font-size:20px; margin:20px;">${desc}</div>
+                <div style="display:flex; gap:20px; justify-content:center;">
+                    <button class="btn" id="confirm-btn1" style="font-size:24px; padding:10px 30px;">${btn1Text}</button>
+                    ${btn2Text ? `<button class="btn" id="confirm-btn2" style="font-size:24px; padding:10px 30px;">${btn2Text}</button>` : ''}
+                </div>
+            `;
+
+            document.getElementById('confirm-btn1').onclick = () => {
+                content.innerHTML = originalHTML; // restore
+                btn1Action();
+            };
+            if (btn2Text) {
+                document.getElementById('confirm-btn2').onclick = () => {
+                    content.innerHTML = originalHTML; // restore
+                    btn2Action();
+                };
+            }
+        }
+
+        function openShop() {
+            document.getElementById('ui-event').style.display = 'none';
+            document.getElementById('ui-shop').style.display = 'flex';
+            renderShop();
+        }
+
+        function renderShop() {
+            document.getElementById('shop-gold').innerText = player.gold;
+            // Buy List
+            const buyDiv = document.getElementById('shop-buy-list');
+            buyDiv.innerHTML = '';
+            // New Weapons added to shop
+            const wares = [
+                ITEMS.potion_s, ITEMS.potion_m, ITEMS.potion_vio,
+                ITEMS.dagger_curved, ITEMS.dagger_fast,
+                ITEMS.sword, ITEMS.sword_iron,
+                ITEMS.bow_wood, ITEMS.bow_recurve,
+                ITEMS.leather, ITEMS.iron
+            ];
+            wares.forEach(item => {
+                const d = document.createElement('div');
+                d.className = 'shop-row';
+                d.innerHTML = `<span style="display:flex; align-items:center; gap:5px;">${item.icon} ${item.name} <span style="color:gold; font-size:14px;">$${item.price || 50}</span></span> <button class="btn">購買</button>`;
+                d.querySelector('button').onclick = () => {
+                    if (player.gold >= (item.price || 50)) {
+                        player.gold -= (item.price || 50);
+                        player.inventory.push(item);
+                        alert('購買成功');
+                        renderShop();
+                    } else alert('金幣不足');
+                };
+                buyDiv.appendChild(d);
+            });
+
+            // Craft List
+            const craftDiv = document.getElementById('shop-craft-list');
+            craftDiv.innerHTML = '';
+
+            // Quantity-based Recipes
+            const recipes = [
+                {
+                    res: ITEMS.potion_l,
+                    inputs: [{ item: ITEMS.potion_m, count: 2 }],
+                    text: '大瓶藥水 (需 2 中瓶)'
+                },
+                {
+                    res: ITEMS.sword_poison,
+                    inputs: [{ item: ITEMS.acid_goo, count: 30 }, { item: ITEMS.sword, count: 1 }],
+                    text: '毒液鐵劍 (需 30 黏液 + 1 大劍)'
+                },
+                {
+                    res: ITEMS.armor_iron_wing,
+                    inputs: [{ item: ITEMS.bat_wing, count: 50 }, { item: ITEMS.skin, count: 20 }, { item: ITEMS.iron_ore, count: 10 }],
+                    text: '鐵翼鎧甲 (需 50 翅膀 + 20 獸皮 + 10 鐵礦)'
+                }
+            ];
+
+            recipes.forEach(r => {
+                const d = document.createElement('div');
+                d.className = 'shop-row';
+                d.innerHTML = `<span style="font-size:12px;">${r.text}</span> <button class="btn">合成</button>`;
+
+                d.querySelector('button').onclick = () => {
+                    // Check Logic
+                    const hasReq = r.inputs.every(req => {
+                        const count = player.inventory.filter(i => i.id === req.item.id).length;
+                        return count >= req.count;
+                    });
+
+                    if (hasReq) {
+                        // Consume Logic
+                        r.inputs.forEach(req => {
+                            for (let i = 0; i < req.count; i++) {
+                                const idx = player.inventory.findIndex(inv => inv.id === req.item.id);
+                                if (idx !== -1) player.inventory.splice(idx, 1);
+                            }
+                        });
+
+                        player.inventory.push(r.res);
+                        alert('合成成功！');
+                        renderShop();
+                    } else alert('素材不足');
+                };
+                craftDiv.appendChild(d);
+            });
+        }
+
+        function sellMaterials() {
+            let gain = 0;
+            for (let i = player.inventory.length - 1; i >= 0; i--) {
+                if (player.inventory[i].type === 'mat') {
+                    gain += player.inventory[i].price;
+                    player.inventory.splice(i, 1);
+                }
+            }
+            player.gold += gain;
+            alert(`賣出素材獲得 ${gain} 金幣`);
+            renderShop();
+        }
+
+        function endGame(win) { gameRunning = false; gameOver = true; const msg = document.getElementById('msg'); msg.style.display = 'block'; msg.innerHTML = win ? "WIN" : "<span style='color:red'>YOU DIED</span><br>Floor: " + floor; }
+
+        let player = new Player(), bg = new Background();
+
+        function loop() {
+            if (paused) { requestAnimationFrame(loop); return; } // Pause loop
+
+            if (!gameRunning) return; requestAnimationFrame(loop);
+            if (hitStop > 0) { hitStop--; return; } frame++;
+            let sx = 0, sy = 0; if (screenShake > 0) { sx = (Math.random() - 0.5) * screenShake; sy = (Math.random() - 0.5) * screenShake; screenShake *= 0.9; }
+
+            // --- 相機邏輯 ---
+            let targetCamX = player.x - 400;
+            targetCamX = Math.max(0, Math.min(WORLD_WIDTH - canvas.width, targetCamX));
+            camera.x += (targetCamX - camera.x) * 0.1;
+
+            // 到達終點，觸發事件
+            if (player.x > WORLD_WIDTH - 100) {
+                showEventUI();
+                player.x -= 50; // 防止重複觸發
+            }
+
+            ctx.save();
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            bg.drawBack(ctx);
+
+            ctx.save();
+            ctx.translate(-camera.x + sx, 0 + sy);
+
+            bg.drawWorld(ctx);
+
+            particles.forEach(p => p.update()); particles = particles.filter(p => p.life > 0); particles.forEach(p => p.draw(ctx));
+
+            // Drops
+            drops.forEach(d => {
+                ctx.font = '20px Arial'; ctx.fillText(d.item.icon, d.x, d.y);
+                // Pick up
+                if (Math.abs(player.x - d.x) < 40 && Math.abs(player.y - d.y) < 60) {
+                    player.inventory.push(d.item);
+                    d.picked = true;
+                    // UI Tip
+                    ctx.fillStyle = 'white'; ctx.fillText(`+${d.item.name}`, player.x, player.y - 50);
+                }
+            });
+            drops = drops.filter(d => !d.picked);
+
+            enemies.forEach(e => { e.update(); e.draw(ctx); });
+            enemies = enemies.filter(e => e.hp > 0);
+
+            player.update(); player.draw(ctx);
+
+            projectiles.forEach(p => p.update()); projectiles = projectiles.filter(p => p.active); projectiles.forEach(p => p.draw(ctx));
+            slashes.forEach(s => s.update()); slashes = slashes.filter(s => s.life > 0); slashes.forEach(s => s.draw(ctx));
+
+            // Hazards (Dragon Fire, etc)
+            hazards.forEach(h => h.update()); hazards = hazards.filter(h => h.life > 0); hazards.forEach(h => h.draw(ctx));
+
+            ctx.restore();
+            bg.drawFront(ctx);
+            ctx.restore();
+        }
+        ctx.fillStyle = 'white'; ctx.font = '20px Courier New';
+        ctx.fillText("按 攻擊鍵(⚔) 開始", canvas.width / 2 - 100, 300);
+    </script>
+</body>
+
+</html>
+```
