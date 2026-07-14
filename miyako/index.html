@@ -48,18 +48,25 @@ const EJECT = {
 };
 
 // ---- 大型灰盒測試關卡：左起點 → 中段階梯連跳 → 終點 Boss 房 ----
-const WORLD = { w: 12480, h: 2160 };
-const F1_Y = 2000, F2_Y = 1300, F3_Y = 600;   // 三層樓地面高度（Metroidvania）
+const WORLD = { w: 16000, h: 3160 };
+// 五層 Metroidvania：L0 起始（底）→ L4 天頂（Boss 在左上）
+const L0_Y = 3000, L1_Y = 2400, L2_Y = 1800, L3_Y = 1200, L4_Y = 600;
+const F1_Y = L0_Y, F3_Y = L4_Y;               // 舊別名：出生層 / Boss 層
 function floorYAt(y) {                          // y 所屬樓層的地面
-  for (const fy of [F3_Y, F2_Y, F1_Y]) if (y <= fy + 5) return fy;
-  return F1_Y;
+  for (const fy of [L4_Y, L3_Y, L2_Y, L1_Y, L0_Y]) if (y <= fy + 5) return fy;
+  return L0_Y;
 }
 const GROUND_Y = F1_Y;   // 出生樓層地面
 // Boss 房：門洞在左牆下方（y370-530），玩家進房觸發後由 bossGate 落閘封死
-const BOSS_ROOM = { left: 440, right: 2400, camX: 1400, triggerX: 2300, homeX: 1400 };   // F3 左上角
-const bossGate = { x: 2360, y: 100, w: 40, h: 500 };   // 右側閘門（從右進房）
+const BOSS_ROOM = { left: 440, right: 2800, camX: 1600, triggerX: 2700, homeX: 1600 };   // L4 左上角
+const bossGate = { x: 2760, y: 100, w: 40, h: 500 };   // 右側閘門（從右進房）
 // ---- Boss 前存檔點 ----
-const checkpoint = { x: 2600, y: F3_Y, active: false };   // F3 Boss 門前
+const checkpoint = { x: 120, y: L0_Y, active: false };   // 目前重生點（觸碰站點時更新）
+const CHECKPOINTS = [
+  { x: 7100,  y: L2_Y, active: false },   // 中央大廳
+  { x: 12470, y: L3_Y, active: false },   // 東塔 E4 前
+  { x: 2950,  y: L4_Y, active: false },   // Boss 門前
+];
 // ---- Speedrun 計時（確認選人後起算；擊倒 Boss 記錄）----
 let speedrunT = 0, bossCleared = false, bossClearT = 0, bestClearT = null;
 try { const v = localStorage.getItem("miyako_best"); if (v) bestClearT = +v; } catch (e) {}
@@ -68,78 +75,101 @@ function fmtTime(t) {
   return `${String(m).padStart(2, "0")}:${s < 10 ? "0" : ""}${s.toFixed(2)}`;
 }
 const SOLIDS = [
-  { x: -40, y: 2000, w: 6440, h: 160 },   // F1 地板（世界底）
-  { x: 4600, y: 1300, w: 1020, h: 90 },   // F2 地板（左段，電梯井前）
-  { x: 5760, y: 1300, w: 6680, h: 90 },   // F2 地板（右段）
-  { x: 400, y: 600, w: 11520, h: 90 },   // F3 地板（左段，電梯井前）
-  { x: 12060, y: 600, w: 380, h: 90 },   // F3 地板（右段）
+  { x: -40, y: 3000, w: 16080, h: 160 },   // L0 地板（世界底）
+  { x: 800, y: 2400, w: 2160, h: 90 },   // L1 板
+  { x: 3100, y: 2400, w: 2640, h: 90 },   // L1 板
+  { x: 5900, y: 2400, w: 3840, h: 90 },   // L1 板
+  { x: 9900, y: 2400, w: 4300, h: 90 },   // L1 板
+  { x: 400, y: 1800, w: 1140, h: 90 },   // L2 板
+  { x: 1700, y: 1800, w: 2500, h: 90 },   // L2 板
+  { x: 4340, y: 1800, w: 7000, h: 90 },   // L2 板
+  { x: 11500, y: 1800, w: 3500, h: 90 },   // L2 板
+  { x: 400, y: 1200, w: 240, h: 90 },   // L3 板
+  { x: 800, y: 1200, w: 5200, h: 90 },   // L3 板
+  { x: 8200, y: 1200, w: 4540, h: 90 },   // L3 板
+  { x: 12900, y: 1200, w: 700, h: 90 },   // L3 板
+  { x: 400, y: 600, w: 9540, h: 90 },   // L4 板
+  { x: 10080, y: 600, w: 2460, h: 90 },   // L4 板
+  { x: 12700, y: 600, w: 700, h: 90 },   // L4 板
   { x: 400, y: 100, w: 40, h: 500 },   // Boss 房左牆
-  { x: 12440, y: 100, w: 40, h: 1290 },   // 右牆（F2/F3）
-  { x: 6360, y: 1390, w: 60, h: 780 },   // F1 右端牆
-  { x: 260, y: 1890, w: 140, h: 16 },
-  { x: 520, y: 1810, w: 130, h: 16 },
-  { x: 760, y: 1900, w: 140, h: 16 },
-  { x: 900, y: 1940, w: 100, h: 60 },   // 台階（sim）
-  { x: 1150, y: 1890, w: 120, h: 16 },   // 平台（sim）
-  { x: 1600, y: 1820, w: 130, h: 16 },
-  { x: 1900, y: 1900, w: 140, h: 16 },
-  { x: 2200, y: 1810, w: 130, h: 16 },
-  { x: 2520, y: 1890, w: 140, h: 16 },
-  { x: 2840, y: 1800, w: 130, h: 16 },
-  { x: 3160, y: 1890, w: 140, h: 16 },
-  { x: 3480, y: 1810, w: 130, h: 16 },
-  { x: 3800, y: 1900, w: 140, h: 16 },
-  { x: 4120, y: 1820, w: 130, h: 16 },
-  { x: 4440, y: 1890, w: 140, h: 16 },
-  { x: 4760, y: 1900, w: 130, h: 16 },
-  { x: 5100, y: 1850, w: 140, h: 16 },
-  { x: 4900, y: 1190, w: 120, h: 16 },
-  { x: 5105, y: 1110, w: 132, h: 16 },
-  { x: 5322, y: 1190, w: 144, h: 16 },
-  { x: 5551, y: 1230, w: 120, h: 16 },
-  { x: 5792, y: 1140, w: 132, h: 16 },
-  { x: 5997, y: 1190, w: 144, h: 16 },
-  { x: 6214, y: 1110, w: 120, h: 16 },
-  { x: 6443, y: 1190, w: 132, h: 16 },
-  { x: 6684, y: 1230, w: 144, h: 16 },
-  { x: 6889, y: 1140, w: 120, h: 16 },
-  { x: 7106, y: 1190, w: 132, h: 16 },
-  { x: 7335, y: 1110, w: 144, h: 16 },
-  { x: 7576, y: 1230, w: 120, h: 16 },
-  { x: 7781, y: 1190, w: 132, h: 16 },
-  { x: 7998, y: 1140, w: 144, h: 16 },
-  { x: 8227, y: 1190, w: 120, h: 16 },
-  { x: 8468, y: 1110, w: 132, h: 16 },
-  { x: 8673, y: 1190, w: 144, h: 16 },
-  { x: 6200, y: 1210, w: 110, h: 90 },   // 掩體
-  { x: 8000, y: 1210, w: 110, h: 90 },   // 掩體
-  { x: 9800, y: 1210, w: 110, h: 90 },   // 掩體
-  { x: 9000, y: 520, w: 110, h: 80 },   // 掩體
-  { x: 9330, y: 430, w: 130, h: 16 },
-  { x: 9750, y: 520, w: 110, h: 80 },   // 掩體
-  { x: 10080, y: 430, w: 130, h: 16 },
-  { x: 10500, y: 520, w: 110, h: 80 },   // 掩體
-  { x: 10830, y: 430, w: 130, h: 16 },
-  { x: 11250, y: 520, w: 110, h: 80 },   // 掩體
-  { x: 11580, y: 430, w: 130, h: 16 },
-  { x: 3100, y: 490, w: 125, h: 16 },
-  { x: 3360, y: 410, w: 140, h: 16 },
-  { x: 3620, y: 490, w: 125, h: 16 },
-  { x: 3880, y: 430, w: 140, h: 16 },
-  { x: 4140, y: 490, w: 125, h: 16 },
-  { x: 4400, y: 410, w: 140, h: 16 },
-  { x: 4660, y: 490, w: 125, h: 16 },
-  { x: 4920, y: 430, w: 140, h: 16 },
-  { x: 5180, y: 490, w: 125, h: 16 },
-  { x: 5440, y: 410, w: 140, h: 16 },
-  { x: 5700, y: 490, w: 125, h: 16 },
-  { x: 5960, y: 430, w: 140, h: 16 },
-  { x: 6220, y: 490, w: 125, h: 16 },
-  { x: 6480, y: 410, w: 140, h: 16 },
+  { x: 15960, y: 100, w: 40, h: 2900 },   // 世界右牆
+  { x: 400, y: 690, w: 40, h: 510 },   // L3 西端牆
+  { x: 14960, y: 1890, w: 40, h: 510 },   // L2 東端牆
+  { x: 9770, y: 2850, w: 110, h: 16 },   // T1 塔 L0→L1
+  { x: 9860, y: 2700, w: 110, h: 16 },   // T1 塔 L0→L1
+  { x: 9770, y: 2550, w: 110, h: 16 },   // T1 塔 L0→L1
+  { x: 1570, y: 2250, w: 110, h: 16 },   // T2 塔 L1→L2
+  { x: 1660, y: 2100, w: 110, h: 16 },   // T2 塔 L1→L2
+  { x: 1570, y: 1950, w: 110, h: 16 },   // T2 塔 L1→L2
+  { x: 12770, y: 1050, w: 110, h: 16 },   // T3 塔 L3→L4
+  { x: 12860, y: 900, w: 110, h: 16 },   // T3 塔 L3→L4
+  { x: 12770, y: 750, w: 110, h: 16 },   // T3 塔 L3→L4
+  { x: 6470, y: 1650, w: 110, h: 16 },   // 大廳西鏈
+  { x: 6560, y: 1500, w: 110, h: 16 },   // 大廳西鏈
+  { x: 6470, y: 1350, w: 110, h: 16 },   // 大廳西鏈
+  { x: 7670, y: 1650, w: 110, h: 16 },   // 大廳東鏈
+  { x: 7760, y: 1500, w: 110, h: 16 },   // 大廳東鏈
+  { x: 7670, y: 1350, w: 110, h: 16 },   // 大廳東鏈
+  { x: 6900, y: 1500, w: 400, h: 16 },   // 大廳中層橋
+  { x: 260, y: 2890, w: 140, h: 16 },
+  { x: 520, y: 2810, w: 130, h: 16 },
+  { x: 760, y: 2900, w: 140, h: 16 },
+  { x: 900, y: 2940, w: 100, h: 60 },   // 台階（sim）
+  { x: 1150, y: 2890, w: 120, h: 16 },   // 平台（sim）
+  { x: 1600, y: 2820, w: 130, h: 16 },
+  { x: 2100, y: 2900, w: 140, h: 16 },
+  { x: 2600, y: 2820, w: 130, h: 16 },
+  { x: 3300, y: 2890, w: 140, h: 16 },
+  { x: 3900, y: 2820, w: 130, h: 16 },
+  { x: 4500, y: 2900, w: 140, h: 16 },
+  { x: 5100, y: 2840, w: 130, h: 16 },
+  { x: 7000, y: 2880, w: 130, h: 16 },
+  { x: 8400, y: 2810, w: 130, h: 16 },
+  { x: 9800, y: 2740, w: 130, h: 16 },
+  { x: 11200, y: 2880, w: 130, h: 16 },
+  { x: 12600, y: 2810, w: 130, h: 16 },
+  { x: 14000, y: 2740, w: 130, h: 16 },
+  { x: 1400, y: 2290, w: 130, h: 16 },
+  { x: 2750, y: 2210, w: 130, h: 16 },
+  { x: 4100, y: 2290, w: 130, h: 16 },
+  { x: 5450, y: 2210, w: 130, h: 16 },
+  { x: 6800, y: 2290, w: 130, h: 16 },
+  { x: 8150, y: 2210, w: 130, h: 16 },
+  { x: 9500, y: 2290, w: 130, h: 16 },
+  { x: 10850, y: 2210, w: 130, h: 16 },
+  { x: 12200, y: 2290, w: 130, h: 16 },
+  { x: 700, y: 1690, w: 125, h: 16 },
+  { x: 1600, y: 1610, w: 125, h: 16 },
+  { x: 2500, y: 1690, w: 125, h: 16 },
+  { x: 4700, y: 1700, w: 130, h: 16 },
+  { x: 5400, y: 1650, w: 130, h: 16 },
+  { x: 8700, y: 1700, w: 130, h: 16 },
+  { x: 9950, y: 1610, w: 130, h: 16 },
+  { x: 11200, y: 1700, w: 130, h: 16 },
+  { x: 12450, y: 1610, w: 130, h: 16 },
+  { x: 13700, y: 1700, w: 130, h: 16 },
+  { x: 1100, y: 1090, w: 130, h: 16 },
+  { x: 2300, y: 1020, w: 130, h: 16 },
+  { x: 3500, y: 950, w: 130, h: 16 },
+  { x: 4700, y: 1090, w: 130, h: 16 },
+  { x: 5900, y: 1020, w: 130, h: 16 },
+  { x: 7100, y: 950, w: 130, h: 16 },
+  { x: 8300, y: 1090, w: 130, h: 16 },
+  { x: 9500, y: 1020, w: 130, h: 16 },
+  { x: 10700, y: 950, w: 130, h: 16 },
+  { x: 11900, y: 1090, w: 130, h: 16 },
+  { x: 3400, y: 490, w: 130, h: 16 },
+  { x: 4750, y: 420, w: 130, h: 16 },
+  { x: 6100, y: 490, w: 130, h: 16 },
+  { x: 7450, y: 420, w: 130, h: 16 },
+  { x: 8800, y: 490, w: 130, h: 16 },
+  { x: 10150, y: 420, w: 130, h: 16 },
+  { x: 11500, y: 490, w: 130, h: 16 },
   { x: 700, y: 490, w: 140, h: 16 },
   { x: 1100, y: 420, w: 140, h: 16 },
   { x: 1500, y: 490, w: 140, h: 16 },
   { x: 1900, y: 430, w: 130, h: 16 },
+  { x: 2300, y: 490, w: 130, h: 16 },
 ];
 
 function setGate(on) {
@@ -151,8 +181,10 @@ function setGate(on) {
 // ---- Cinemachine-style camera: per-axis damped follow + lookahead + dead zone ----
 // ---- 電梯（紅三角標記；站上去升到上層，離開 2 秒後回到下層）----
 const ELEVATORS = [
-  { x: 5620, w: 140, top: F2_Y, bottom: F1_Y, y: F1_Y, idleT: 0 },   // F1 → F2
-  { x: 11920, w: 140, top: F3_Y, bottom: F2_Y, y: F2_Y, idleT: 0 },  // F2 → F3
+  { x: 5760,  w: 140, top: L1_Y, bottom: L0_Y, y: L0_Y, idleT: 0 },   // E1 起始平原 → 下水道
+  { x: 11360, w: 140, top: L2_Y, bottom: L1_Y, y: L1_Y, idleT: 0 },   // E2 下水道東 → 東迴廊
+  { x: 660,   w: 140, top: L3_Y, bottom: L2_Y, y: L2_Y, idleT: 0 },   // E3 西洞窟 → 西高地
+  { x: 12560, w: 140, top: L4_Y, bottom: L3_Y, y: L3_Y, idleT: 0 },   // E4 東塔 → 天頂迴廊
 ];
 for (const el of ELEVATORS) {
   el.solid = { x: el.x, y: el.y, w: el.w, h: 14, elevator: true };
@@ -251,6 +283,7 @@ addEventListener("keydown", e => {
   if (selectScreen && (e.code === "Enter" || e.code === "Space") && selectFocus !== null) {
     chooseSupport(selectFocus);
   }
+  if (e.code === "KeyM") minimapOn = !minimapOn;      // 小地圖切換
   if (e.code === "KeyJ" && targeting) quickCast();   // 快速施法：攻擊鍵直接放
   if (e.code === "Escape") cancelTargeting();
 });
@@ -501,42 +534,60 @@ function rocketBlast(x, y) {       // 火箭落點爆風：濺射 2 傷（直擊
 }
 
 const ENEMY_SPAWNS = [
-  { x: 700, y: 2000, range: 130, kind: "pmc" },
-  { x: 1450, y: 2000, range: 90, kind: "sgtrooper" },
-  { x: 2100, y: 2000, range: 120, kind: "pmc" },
-  { x: 2750, y: 2000, range: 110, kind: "pmc2" },
-  { x: 3400, y: 2000, range: 90, kind: "sgtrooper" },
-  { x: 4050, y: 2000, range: 120, kind: "pmc" },
-  { x: 4700, y: 2000, range: 100, kind: "pmc2" },
-  { x: 5300, y: 2000, range: 80, kind: "sgtrooper" },
-  { x: 6100, y: 1300, range: 80, kind: "shield" },
-  { x: 6600, y: 1300, range: 0, kind: "turret" },
-  { x: 7100, y: 1300, range: 110, kind: "pmc2" },
-  { x: 7700, y: 1300, range: 90, kind: "sgtrooper" },
-  { x: 8300, y: 1300, range: 0, kind: "turret" },
-  { x: 8800, y: 1300, range: 120, kind: "pmc" },
-  { x: 9400, y: 1300, range: 80, kind: "shield" },
-  { x: 10000, y: 1300, range: 110, kind: "pmc2" },
-  { x: 10600, y: 1300, range: 0, kind: "turret" },
-  { x: 11100, y: 1300, range: 90, kind: "sgtrooper" },
-  { x: 11600, y: 1300, range: 100, kind: "pmc2" },
-  { x: 11700, y: 600, range: 60, kind: "shield" },
-  { x: 11300, y: 600, range: 60, kind: "rocket" },
-  { x: 10800, y: 600, range: 0, kind: "turret" },
+  { x: 700, y: 3000, range: 130, kind: "pmc" },
+  { x: 1450, y: 3000, range: 90, kind: "sgtrooper" },
+  { x: 2300, y: 3000, range: 120, kind: "pmc" },
+  { x: 3100, y: 3000, range: 110, kind: "pmc2" },
+  { x: 4200, y: 3000, range: 90, kind: "sgtrooper" },
+  { x: 5200, y: 3000, range: 110, kind: "pmc" },
+  { x: 7400, y: 3000, range: 110, kind: "pmc2" },
+  { x: 8600, y: 3000, range: 60, kind: "rocket" },
+  { x: 9900, y: 3000, range: 90, kind: "sgtrooper" },
+  { x: 11500, y: 3000, range: 80, kind: "shield" },
+  { x: 13000, y: 3000, range: 110, kind: "pmc2" },
+  { x: 14500, y: 3000, range: 60, kind: "rocket" },
+  { x: 1200, y: 2400, range: 0, kind: "turret" },
+  { x: 2500, y: 2400, range: 110, kind: "pmc2" },
+  { x: 3800, y: 2400, range: 80, kind: "shield" },
+  { x: 5100, y: 2400, range: 90, kind: "sgtrooper" },
+  { x: 6600, y: 2400, range: 0, kind: "turret" },
+  { x: 7900, y: 2400, range: 120, kind: "pmc" },
+  { x: 9200, y: 2400, range: 110, kind: "pmc2" },
+  { x: 10700, y: 2400, range: 80, kind: "shield" },
+  { x: 12300, y: 2400, range: 60, kind: "rocket" },
+  { x: 13600, y: 2400, range: 100, kind: "pmc2" },
+  { x: 900, y: 1800, range: 90, kind: "sgtrooper" },
+  { x: 1900, y: 1800, range: 60, kind: "rocket" },
+  { x: 3000, y: 1800, range: 80, kind: "shield" },
+  { x: 4900, y: 1800, range: 110, kind: "pmc2" },
+  { x: 5700, y: 1800, range: 0, kind: "turret" },
+  { x: 6600, y: 1800, range: 120, kind: "pmc" },
+  { x: 7500, y: 1800, range: 90, kind: "sgtrooper" },
+  { x: 8900, y: 1800, range: 0, kind: "turret" },
+  { x: 10100, y: 1800, range: 80, kind: "shield" },
+  { x: 12100, y: 1800, range: 110, kind: "pmc2" },
+  { x: 13300, y: 1800, range: 60, kind: "rocket" },
+  { x: 14400, y: 1800, range: 70, kind: "shield" },
+  { x: 1300, y: 1200, range: 60, kind: "rocket" },
+  { x: 2500, y: 1200, range: 110, kind: "pmc2" },
+  { x: 3700, y: 1200, range: 80, kind: "shield" },
+  { x: 4900, y: 1200, range: 60, kind: "rocket" },
+  { x: 5700, y: 1200, range: 0, kind: "turret" },
+  { x: 8600, y: 1200, range: 110, kind: "pmc2" },
+  { x: 9800, y: 1200, range: 80, kind: "shield" },
+  { x: 11000, y: 1200, range: 60, kind: "rocket" },
+  { x: 12200, y: 1200, range: 0, kind: "turret" },
+  { x: 12900, y: 600, range: 60, kind: "shield" },
+  { x: 11900, y: 600, range: 60, kind: "rocket" },
+  { x: 11000, y: 600, range: 0, kind: "turret" },
   { x: 10300, y: 600, range: 70, kind: "shield" },
-  { x: 9800, y: 600, range: 60, kind: "rocket" },
-  { x: 9300, y: 600, range: 0, kind: "turret" },
-  { x: 8900, y: 600, range: 100, kind: "pmc2" },
-  { x: 8300, y: 600, range: 90, kind: "sgtrooper" },
-  { x: 7700, y: 600, range: 120, kind: "pmc" },
-  { x: 7100, y: 600, range: 60, kind: "rocket" },
-  { x: 6500, y: 600, range: 110, kind: "pmc2" },
-  { x: 5900, y: 600, range: 80, kind: "shield" },
-  { x: 5300, y: 600, range: 120, kind: "pmc" },
-  { x: 4700, y: 600, range: 90, kind: "sgtrooper" },
-  { x: 4100, y: 600, range: 100, kind: "pmc2" },
-  { x: 3500, y: 600, range: 70, kind: "shield" },
-  { x: 3000, y: 600, range: 60, kind: "rocket" },
+  { x: 9300, y: 600, range: 60, kind: "rocket" },
+  { x: 8300, y: 600, range: 0, kind: "turret" },
+  { x: 7300, y: 600, range: 100, kind: "pmc2" },
+  { x: 6300, y: 600, range: 70, kind: "shield" },
+  { x: 5300, y: 600, range: 60, kind: "rocket" },
+  { x: 4300, y: 600, range: 100, kind: "pmc2" },
+  { x: 3600, y: 600, range: 50, kind: "shield" },
 ];
 const enemies = ENEMY_SPAWNS.map(s => ({
   kind: s.kind, home: s.x, range: s.range,
@@ -1333,6 +1384,7 @@ function layoutUI() {              // 視寬變動時重排右錨/置中 UI
 uiReady = true;
 layoutUI();
 fitCanvas();   // UI 常數就緒後重算一次（套用實際螢幕比例）
+buildMinimap();
 const ROVER_FX = { file: "assets_fx/rover.png", w: 72, h: 29 };   // 麻痺小車
 const ROVER_SPEED = 260;
 const rovers = [];
@@ -1721,12 +1773,15 @@ function updateEffects(dt) {
   akoBuffT = Math.max(0, akoBuffT - dt);
   playerBlockT = Math.max(0, playerBlockT - dt);
   if (!selectScreen && !bossCleared) speedrunT += dt;   // Speedrun 計時（通關即停）
-  if (!checkpoint.active && player.deathT <= 0 &&
-      Math.abs(player.x - checkpoint.x) < 26 && Math.abs(player.y - checkpoint.y) < 60) {
-    checkpoint.active = true;
-    costPops.push({ x: checkpoint.x, y: checkpoint.y - 150, t: 0.9, text: "存檔完成", color: "#2ab6d9" });
-    for (let k = 0; k < 6; k++) {
-      impacts.push({ x: checkpoint.x + (Math.random() - .5) * 40, y: checkpoint.y - Math.random() * 130, t: 0.15 + Math.random() * 0.1 });
+  for (const cp of CHECKPOINTS) {
+    if (!cp.active && player.deathT <= 0 &&
+        Math.abs(player.x - cp.x) < 26 && Math.abs(player.y - cp.y) < 60) {
+      cp.active = true;
+      checkpoint.x = cp.x; checkpoint.y = cp.y; checkpoint.active = true;
+      costPops.push({ x: cp.x, y: cp.y - 150, t: 0.9, text: "存檔完成", color: "#2ab6d9" });
+      for (let k = 0; k < 6; k++) {
+        impacts.push({ x: cp.x + (Math.random() - .5) * 40, y: cp.y - Math.random() * 130, t: 0.15 + Math.random() * 0.1 });
+      }
     }
   }
   // 支援被動（30 秒循環；只有開局選中的支援生效）
@@ -2232,8 +2287,7 @@ function draw() {
     ctx.fill();
   }
   // 存檔點柱（未啟用灰 / 啟用後青色脈動）
-  {
-    const cp = checkpoint;
+  for (const cp of CHECKPOINTS) {
     const on = cp.active;
     ctx.fillStyle = on ? "#1d4e66" : "#55555e";
     ctx.fillRect(cp.x - 5, cp.y - 118, 10, 118);
@@ -2343,6 +2397,7 @@ function draw() {
     ctx.fillStyle = `rgba(8,8,12,${Math.min(1, a)})`;
     ctx.fillRect(0, 0, VIEW_W, 540);
   }
+  drawMinimap();
   if (vpad.on && !selectScreen) drawVpad();
   if (selectScreen) drawSelectScreen();
   dbg.textContent = `state=${player.state} frame=${fi} hp=${player.hp} ammo=${player.ammo} ground=${player.onGround} cam=${Math.round(cam.x)},${Math.round(cam.y)}`;
@@ -2703,6 +2758,47 @@ function drawTargetingWorld() {
       ctx.stroke();
     }
   }
+}
+
+// ---- 探索小地圖（左上；M 切換；離屏預渲染地形）----
+let minimapCv = null, minimapOn = true;
+const MM_SC = 64;   // 1 小地圖 px = 64 世界 px
+function buildMinimap() {
+  if (!document.createElement) return;
+  minimapCv = document.createElement("canvas");
+  minimapCv.width = Math.ceil(WORLD.w / MM_SC);
+  minimapCv.height = Math.ceil(WORLD.h / MM_SC);
+  const g = minimapCv.getContext("2d");
+  g.fillStyle = "rgba(16,24,40,.9)";
+  g.fillRect(0, 0, minimapCv.width, minimapCv.height);
+  g.fillStyle = "#7f8aa0";
+  for (const s of SOLIDS) {
+    g.fillRect(s.x / MM_SC, s.y / MM_SC, Math.max(1, s.w / MM_SC), Math.max(1, s.h / MM_SC));
+  }
+  g.fillStyle = "#c9a13b";                 // 電梯
+  for (const el of ELEVATORS) g.fillRect(el.x / MM_SC - 1, el.top / MM_SC, 3, (el.bottom - el.top) / MM_SC);
+}
+
+function drawMinimap() {
+  if (!minimapCv || !minimapOn || selectScreen) return;
+  const mw = minimapCv.width, mh = minimapCv.height;
+  const x0 = 14, y0 = 86;
+  ctx.globalAlpha = 0.88;
+  ctx.drawImage(minimapCv, x0, y0);
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = "rgba(120,150,190,.5)";
+  ctx.strokeRect(x0 - .5, y0 - .5, mw + 1, mh + 1);
+  for (const cp of CHECKPOINTS) {          // 存檔點
+    ctx.fillStyle = cp.active ? "#59d5f2" : "#8a93a8";
+    ctx.fillRect(x0 + cp.x / MM_SC - 1, y0 + cp.y / MM_SC - 2, 3, 3);
+  }
+  ctx.fillStyle = "#e8544a";               // Boss
+  ctx.fillRect(x0 + BOSS_ROOM.homeX / MM_SC - 2, y0 + L4_Y / MM_SC - 3, 4, 4);
+  ctx.fillStyle = "#fff";                  // 玩家（脈動）
+  const pr = 1.5 + Math.sin(uiTime * 6) * 0.8;
+  ctx.beginPath();
+  ctx.arc(x0 + player.x / MM_SC, y0 + player.y / MM_SC - 1, pr, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 let weaponShadow = null;
