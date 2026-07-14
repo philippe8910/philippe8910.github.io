@@ -315,20 +315,25 @@ function applyUpgrades() {
   player.hp = Math.min(player.hp, player.maxHp);
 }
 const CREDIT_VALUE = { pmc: 10, sgtrooper: 12, pmc2: 15, turret: 15, rocket: 18, shield: 20 };
-const SUPPORT_PRICE = 300;         // 招募未選支援角色的價格
+const SUPPORT_PRICES = { 4: 300, 5: 300, 6: 300, 7: 1000 };   // 日鞠：商店限定高價角
+const SUPPORT_IDS = [4, 5, 6, 7];
 const SUPPORT_POOL_MAX = 2;        // 卡池同時最多裝備的支援卡數（含開局選擇）
 function supportsInPool() {
-  return [4, 5, 6].filter(i => deckQueue.includes(i) || hand.includes(i)).length;
+  return SUPPORT_IDS.filter(i => deckQueue.includes(i) || hand.includes(i)).length;
+}
+function supportEquipped(idx) {    // 在卡池（手牌或牌庫）中才算裝備
+  return deckQueue.includes(idx) || hand.includes(idx);
 }
 let purchasedSupports = [];        // 已購支援卡 index（4/5/6）
 let benchedSupports = [];          // 已購但移出卡池（被動仍生效，僅不進輪替）
-function ownedSupport(skill) {     // 該被動的支援是否在隊上（開局選擇或後續招募）
-  const idx = { heal: 4, buff: 5, crit: 6 }[skill];
-  return chosenSupport === idx || purchasedSupports.includes(idx);
+function ownedSupport(skill) {     // 該被動的支援是否「裝備中」（移出卡池即停用被動）
+  const idx = { heal: 4, buff: 5, crit: 6, atk: 7 }[skill];
+  return supportEquipped(idx);
 }
 function buySupport(idx) {
-  if (credits < SUPPORT_PRICE || purchasedSupports.includes(idx) || chosenSupport === idx) return false;
-  credits -= SUPPORT_PRICE;
+  const price = SUPPORT_PRICES[idx] || 300;
+  if (credits < price || purchasedSupports.includes(idx) || chosenSupport === idx) return false;
+  credits -= price;
   purchasedSupports.push(idx);
   if (supportsInPool() < SUPPORT_POOL_MAX) {
     benchedSupports = benchedSupports.filter(i => i !== idx);
@@ -367,7 +372,7 @@ function loadGame() {
     if (v) {
       credits = v.credits | 0;
       for (const k in upgrades) upgrades[k] = (v.upgrades && v.upgrades[k]) | 0;
-      if (Array.isArray(v.owned)) purchasedSupports = v.owned.filter(i => i >= 4 && i <= 6);
+      if (Array.isArray(v.owned)) purchasedSupports = v.owned.filter(i => i >= 4 && i <= 7);
       if (Array.isArray(v.benched)) benchedSupports = v.benched.filter(i => purchasedSupports.includes(i));
     }
   } catch (e) {}
@@ -886,7 +891,7 @@ function respawnPlayer() {
   player.vx = 0; player.vy = 0;
   player.hp = player.maxHp; player.hpGhost = player.maxHp;
   player.invulnT = 1.5; player.ammo = MAG_SIZE; player.reloadT = 0;
-  player.shieldHp = 0; player.buffT = 0; player.shieldT = 0; akoBuffT = 0;
+  player.shieldHp = 0; player.buffT = 0; player.shieldT = 0; akoBuffT = 0; atkBuffT = 0;
   healPacks.length = 0;
   setState("idle");
   bossBullets.length = 0;
@@ -1490,7 +1495,10 @@ let uiTime = 0;                     // UI 動畫時鐘（低血量脈動等）
 const COST_MAX = 10;
 const COST_PER_HIT = 1 / 20;       // 空洞騎士式：子彈命中敵人才累積，20 發命中 = 1 Cost
 let costPopT = 0, prevCostInt = 0; // Cost 整數跳格時數字放大亮起
-function gainCostOnHit() { cost = Math.min(COST_MAX, cost + COST_PER_HIT); }
+function gainCostOnHit() {
+  const mult = supportEquipped(7) ? 1.8 : 1;   // 日鞠被動：Cost 獲得 ×1.8
+  cost = Math.min(COST_MAX, cost + COST_PER_HIT * mult);
+}
 const TARGETING_TIMESCALE = 0.25;   // 瞄準中的子彈時間（Cost 回復同步變慢）
 let cost = 4;
 let snipeCharge = false;            // 狙擊蓄力：第二次使用傷害雙倍
@@ -1499,19 +1507,22 @@ const CARDS = [   // crop：半身構圖（源圖臉在中段，整幅即半身�
   { name: "美遊・麻痺小車", file: "assets_cards/card2.png", cost: 2, skill: "stun",     flashT: 0, dealT: 0, crop: { sx: 0, sy: 0, sw: 200, sh: 250 } },
   { name: "咲・壓制炮擊",   file: "assets_cards/card3.png", cost: 4, skill: "area",     flashT: 0, dealT: 0, crop: { sx: 0, sy: 0, sw: 200, sh: 250 } },
   { name: "阿露・精準狙擊", file: "assets_cards/card4.png", cost: 3, skill: "snipe",    flashT: 0, dealT: 0, crop: { sx: 0, sy: 0, sw: 200, sh: 250 } },
-  { name: "芹奈・急救血包", file: "assets_cards/card5.png", cost: 2, skill: "heal", selfCast: true, flashT: 0, dealT: 0, crop: { sx: 0, sy: 0, sw: 200, sh: 250 } },
-  { name: "瑪麗・聖盾祝福", file: "assets_cards/card6.png", cost: 2, skill: "buff", selfCast: true, flashT: 0, dealT: 0, crop: { sx: 0, sy: 0, sw: 200, sh: 250 } },
-  { name: "亞子・爆擊指令", file: "assets_cards/card7.png", cost: 3, skill: "crit", selfCast: true, flashT: 0, dealT: 0, crop: { sx: 0, sy: 0, sw: 200, sh: 250 } },
+  { name: "芹奈・急救血包", file: "assets_cards/card5.png", cost: 2, skill: "heal", selfCast: true, flashT: 0, dealT: 0, crop: { sx: 0, sy: 0, sw: 200, sh: 250 }, headCrop: { sx: 15, sy: 0, sw: 114, sh: 143 } },
+  { name: "瑪麗・聖盾祝福", file: "assets_cards/card6.png", cost: 2, skill: "buff", selfCast: true, flashT: 0, dealT: 0, crop: { sx: 0, sy: 0, sw: 200, sh: 250 }, headCrop: { sx: 52, sy: 0, sw: 107, sh: 134 } },
+  { name: "亞子・爆擊指令", file: "assets_cards/card7.png", cost: 3, skill: "crit", selfCast: true, flashT: 0, dealT: 0, crop: { sx: 0, sy: 0, sw: 200, sh: 250 }, headCrop: { sx: 30, sy: 40, sw: 95, sh: 119 } },
+  { name: "日鞠・火力支援", file: "assets_cards/card8.png", cost: 3, skill: "atk", selfCast: true, flashT: 0, dealT: 0, crop: { sx: 0, sy: 0, sw: 200, sh: 250 }, headCrop: { sx: 73, sy: 102, sw: 79, sh: 99 } },
 ];
 // 被動（隊伍常駐）：芹奈 每30秒回復1/4血｜瑪麗 每30秒+1/3護盾｜亞子 每30秒+1/5護盾(持續15秒)
 const passiveT = { heal: 30, buff: 30, crit: 30 };
 let akoBuffT = 0;                  // 亞子主動：爆擊率+30%/爆傷+50% 剩餘秒數
+let atkBuffT = 0;                  // 日鞠主動：攻擊力 +20% 剩餘秒數
 let playerBlockT = 0;              // 玩家護盾擋彈波紋
 const CRIT_DMG = 1.5;                       // 爆傷倍率；爆擊率 = BASE_CRIT + 升級
 
 function rollPlayerDmg() {
   const crit = Math.random() < BASE_CRIT + upgrades.crit * 0.03 + (akoBuffT > 0 ? 0.30 : 0);
-  return { dmg: PLAYER_DMG * (crit ? CRIT_DMG + (akoBuffT > 0 ? 0.5 : 0) : 1), crit };
+  const atk = atkBuffT > 0 ? 1.2 : 1;                     // 日鞠：攻擊力 +20%
+  return { dmg: PLAYER_DMG * atk * (crit ? CRIT_DMG + (akoBuffT > 0 ? 0.5 : 0) : 1), crit };
 }
 
 function addPlayerShield(amt, dur) {
@@ -1691,6 +1702,12 @@ function castCard(i, wx, wy) {
     for (let k = 0; k < 8; k++) {
       impacts.push({ x: player.x + (Math.random() - .5) * 50, y: player.y - Math.random() * 110, t: 0.15 + Math.random() * 0.1 });
     }
+    return true;
+  }
+  if (c.skill === "atk") {           // 日鞠：火力支援（30 秒攻擊力 +20%）
+    cost -= c.cost; c.flashT = 0.3;
+    atkBuffT = 30;
+    costPops.push({ x: player.x, y: player.y - 145, t: 0.9, text: "攻擊UP", color: "#e8544a" });
     return true;
   }
   if (c.skill === "crit") {          // 亞子：爆擊指令（10 秒內爆擊率+30%、爆傷+50%）
@@ -1963,6 +1980,7 @@ function updateEffects(dt) {
     if (player.shieldT <= 0) { player.shieldT = 0; player.shieldHp = 0; }  // 護盾到期
   }
   akoBuffT = Math.max(0, akoBuffT - dt);
+  atkBuffT = Math.max(0, atkBuffT - dt);
   playerBlockT = Math.max(0, playerBlockT - dt);
   if (!selectScreen && !bossCleared) speedrunT += dt;   // Speedrun 計時（通關即停）
   for (const cp of CHECKPOINTS) {
@@ -2659,7 +2677,7 @@ function drawPanel() {
   }
   if (panel.tab === 1) {           // ---- 招募頁（未選的支援角色，300C 加入卡池）----
     let row = 0;
-    for (const idx of [4, 5, 6]) {
+    for (const idx of SUPPORT_IDS) {
       if (idx === chosenSupport) continue;
       const c = CARDS[idx];
       const ownedP = purchasedSupports.includes(idx);
@@ -2683,24 +2701,24 @@ function drawPanel() {
       ctx.fillText(c.name, px + 94, ry + 26);
       ctx.font = `bold 11.5px ${UI_FONT}`;
       ctx.fillStyle = "rgba(43,58,85,.6)";
-      ctx.fillText("加入卡池輪換，被動同時生效", px + 94, ry + 46);
+      ctx.fillText(idx === 7 ? "商店限定：Cost獲得×1.8（被動）" : "裝備後被動生效（上限 2 張）", px + 94, ry + 46);
       const benched = benchedSupports.includes(idx);
       const poolFull = supportsInPool() >= SUPPORT_POOL_MAX;
       const bx = px + PW - 150, bw = 108, bh = 34, by = ry + 15;
       slantPath(bx, by, bw, bh, 8);
       ctx.fillStyle = ownedP ? (benched ? (poolFull ? "rgba(140,152,170,.9)" : UI_BLUE) : "rgba(232,84,74,.9)")
-                             : credits >= SUPPORT_PRICE ? UI_BLUE : "rgba(140,152,170,.9)";
+                             : credits >= SUPPORT_PRICES[idx] ? UI_BLUE : "rgba(140,152,170,.9)";
       ctx.fill();
       ctx.textAlign = "center";
       ctx.font = `italic 900 14px ${UI_FONT}`;
       ctx.fillStyle = "#fff";
-      ctx.fillText(ownedP ? (benched ? (poolFull ? "卡池已滿" : "加回卡池") : "移出卡池") : `${SUPPORT_PRICE} C`, bx + bw / 2, by + 23);
+      ctx.fillText(ownedP ? (benched ? (poolFull ? "卡池已滿" : "加回卡池") : "移出卡池") : `${SUPPORT_PRICES[idx]} C`, bx + bw / 2, by + 23);
       if (ownedP) panel.btns.push({ x: bx, y: by, w: bw, h: bh, fn: (ii => () => toggleSupportInPool(ii))(idx) });
       else panel.btns.push({ x: bx, y: by, w: bw, h: bh, fn: (ii => () => buySupport(ii))(idx) });
       if (ownedP && benched) {
         ctx.font = `bold 11px ${UI_FONT}`;
         ctx.fillStyle = "rgba(43,58,85,.55)";
-        ctx.fillText("已移出（被動仍生效）", bx + bw / 2, by + 46);
+        ctx.fillText("已移出（被動停用）", bx + bw / 2, by + 46);
       }
       row++;
     }
@@ -3330,6 +3348,15 @@ function drawHUD() {
       ctx.textAlign = "left";
     }
   }
+  if (atkBuffT > 0) {          // 日鞠攻擊 buff 指示
+    ctx.font = `italic 900 11px ${UI_FONT}`;
+    ctx.strokeStyle = "rgba(255,255,255,.85)";
+    ctx.lineWidth = 3;
+    ctx.strokeText(`攻擊UP ${Math.ceil(atkBuffT)}s`, 284, 54);
+    ctx.fillStyle = "#e8544a";
+    ctx.fillText(`攻擊UP ${Math.ceil(atkBuffT)}s`, 284, 54);
+    ctx.lineWidth = 1;
+  }
   if (akoBuffT > 0) {          // 亞子爆擊 buff 指示
     ctx.font = `italic 900 11px ${UI_FONT}`;
     ctx.strokeStyle = "rgba(255,255,255,.85)";
@@ -3405,7 +3432,8 @@ function drawHUD() {
     g.addColorStop(1, "#eef6ff");
     ctx.fillStyle = g;
     ctx.fillRect(x - 4, y, CW + 14, CH);
-    if (c.img) ctx.drawImage(c.img, c.crop.sx, c.crop.sy, c.crop.sw, c.crop.sh, x - 6, y + 2, CW + 12, (CW + 12) * 1.25);
+    const cardCrop = c.headCrop || c.crop;   // 支援卡手牌顯示大頭
+    if (c.img) ctx.drawImage(c.img, cardCrop.sx, cardCrop.sy, cardCrop.sw, cardCrop.sh, x - 6, y + 2, CW + 12, (CW + 12) * 1.25);
     if (!afford) { ctx.fillStyle = "rgba(35,45,65,.55)"; ctx.fillRect(x - 4, y, CW + 14, CH); }
     if (c.flashT > 0) { ctx.fillStyle = `rgba(255,255,255,${c.flashT / 0.3})`; ctx.fillRect(x - 4, y, CW + 14, CH); }
     ctx.restore();
