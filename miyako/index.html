@@ -190,10 +190,10 @@ function updateCamera(dt) {
   else if (ty < cam.y - dzY) gy = ty + dzY;
   cam.x += (gx - cam.x) * (1 - Math.exp(-dt * 5));             // x damping
   cam.y += (gy - cam.y) * (1 - Math.exp(-dt * 3.2));           // y damping (softer)
-  cam.x = Math.max(480, Math.min(WORLD.w - 480, cam.x));       // world bounds
+  cam.x = Math.max(VIEW_W / 2, Math.min(WORLD.w - VIEW_W / 2, cam.x));   // world bounds
   cam.y = Math.max(270, Math.min(WORLD.h - 270, cam.y));
   if (boss.active && boss.deadT <= 0) {                        // Boss 戰：跟隨但鉗在房內
-    const lockX = Math.max(BOSS_ROOM.left + 480, Math.min(BOSS_ROOM.right - 480, player.x));
+    const lockX = Math.max(BOSS_ROOM.left + VIEW_W / 2, Math.min(BOSS_ROOM.right - VIEW_W / 2, player.x));
     cam.x += (lockX - cam.x) * (1 - Math.exp(-dt * 4));
   }
 }
@@ -206,15 +206,19 @@ const HITBOX_W = 36, HITBOX_H = 105, HITBOX_H_CROUCH = 70;   // ×0.7 同步縮�
 
 const cv = document.getElementById("cv"), ctx = cv.getContext("2d");
 const dbg = document.getElementById("dbg");
-// 高解析度渲染：canvas 實際解析度 = 顯示尺寸 × devicePixelRatio，邏輯座標維持 960×540
-let RES = 1;
+// 高解析度渲染：邏輯高固定 540，邏輯寬依螢幕比例自適應（16:9 手機以外也滿版）
+let RES = 1, VIEW_W = 960, uiReady = false;
+const VIEW_H = 540;
 function fitCanvas() {
   const dpr = (typeof devicePixelRatio === "number" && devicePixelRatio) || 1;
   const cw = cv.clientWidth || 960, ch = cv.clientHeight || 540;
-  RES = Math.max(1, Math.min(cw * dpr / 960, ch * dpr / 540));
-  cv.width = Math.round(960 * RES);
-  cv.height = Math.round(540 * RES);
+  const aspect = Math.max(4 / 3, Math.min(2.4, cw / ch));   // 超出範圍才留黑邊
+  VIEW_W = Math.round(VIEW_H * aspect);
+  RES = Math.max(1, Math.min(cw * dpr / VIEW_W, ch * dpr / VIEW_H));
+  cv.width = Math.round(VIEW_W * RES);
+  cv.height = Math.round(VIEW_H * RES);
   ctx.imageSmoothingEnabled = false;   // 重設尺寸會清空 context 狀態
+  if (uiReady) layoutUI();   // 右錨 UI 重排（UI 常數就緒後才可呼叫）
 }
 fitCanvas();
 addEventListener("resize", fitCanvas);
@@ -256,8 +260,8 @@ addEventListener("keyup", e => keys[e.code] = false);
 if (cv.addEventListener) {
   cv.addEventListener("mousemove", e => {
     const r = cv.getBoundingClientRect();
-    const s = Math.min(r.width / 960, r.height / 540);
-    mouse.sx = (e.clientX - r.left - (r.width - 960 * s) / 2) / s;
+    const s = Math.min(r.width / VIEW_W, r.height / 540);
+    mouse.sx = (e.clientX - r.left - (r.width - VIEW_W * s) / 2) / s;
     mouse.sy = (e.clientY - r.top - (r.height - 540 * s) / 2) / s;
   });
   function selectClickAt(px, py) {    // 開局選擇：點卡片彈起聚焦，點確認鈕才定案
@@ -295,8 +299,8 @@ if (cv.addEventListener) {
   // ---- 觸控（多點：搖桿 + 按鈕 + 卡片/瞄準）----
   function touchPos(t) {
     const r = cv.getBoundingClientRect();
-    const s = Math.min(r.width / 960, r.height / 540);
-    return { x: (t.clientX - r.left - (r.width - 960 * s) / 2) / s,
+    const s = Math.min(r.width / VIEW_W, r.height / 540);
+    return { x: (t.clientX - r.left - (r.width - VIEW_W * s) / 2) / s,
              y: (t.clientY - r.top - (r.height - 540 * s) / 2) / s };
   }
   cv.addEventListener("touchstart", e => {
@@ -319,7 +323,7 @@ if (cv.addEventListener) {
       }
       if (cardTapAt(p.x, p.y)) continue;
       if (targeting) { confirmTargeting(); continue; }
-      if (p.x < 430 && vpad.joyId === null) {   // 左半屏：浮動搖桿
+      if (p.x < VIEW_W * 0.45 && vpad.joyId === null) {   // 左半屏：浮動搖桿
         vpad.joyId = t.identifier;
         vpad.joyBaseX = p.x; vpad.joyBaseY = p.y;
         vpad.joyDx = 0; vpad.joyDy = 0;
@@ -776,13 +780,14 @@ const ALLY_KINDS = {
   },
 };
 const SNIPER_PORTRAIT = { file: "assets_ally3/portrait.png" };
-const SNIPER_SX = 902, SNIPER_SY = 152, SNIPER_R = 34;   // 大頭肖像的螢幕座標/半徑
+let SNIPER_SX = 902;
+const SNIPER_SY = 152, SNIPER_R = 34;   // 大頭肖像的螢幕座標/半徑
 const SNIPER_LOCK_T = 4.2, SNIPER_FIRE_T = 5, SNIPER_MAX_SHOTS = 3;
 const SNIPER_DMG = 3, SNIPER_HIT_R = 46;
 const sniperBeams = [];            // 擊發光束 { x0,y0,x1,y1,t }
 
 function sniperPortraitWorld() {   // 肖像固定在螢幕上 → 世界座標跟著攝影機
-  return { x: cam.x - 480 + SNIPER_SX, y: cam.y - 270 + SNIPER_SY };
+  return { x: cam.x - VIEW_W / 2 + SNIPER_SX, y: cam.y - 270 + SNIPER_SY };
 }
 const ALLY_SPOT_X = 900;            // gunner 固定射擊位（Boss 房左段）
 const ALLY_PELLETS = 5, ALLY_FIRE_CD = 1.6;
@@ -810,7 +815,7 @@ function summonAlly(kind) {
   const K = ALLY_KINDS[selected];
   const a = {
     kind: selected, mode: "enter",
-    x: Math.max(BOSS_ROOM.left - 60, boss.x - 480), y: F3_Y, facing: 1,   // 從房間深處（左）進場
+    x: Math.max(BOSS_ROOM.left - 60, boss.x - VIEW_W / 2 - 60), y: F3_Y, facing: 1,   // 從房間深處（左）畫面外進場
     state: "run", t: 0, hp: K.hp, maxHp: K.hp, fireT: 0, flashT: 0,
     stunT: 0, blindCd: 1, burnT: 0,
   };
@@ -971,7 +976,7 @@ function updateOneAlly(a, dt) {
     a.facing = -1;
     a.state = "run";
     a.x -= 240 * dt;
-    if (a.x < BOSS_ROOM.left - 80 || a.x < cam.x - 560) removeAlly(a);   // 向左出鏡即移除
+    if (a.x < BOSS_ROOM.left - 80 || a.x < cam.x - VIEW_W / 2 - 80) removeAlly(a);   // 向左出鏡即移除
   }
   const hh = player.crouching ? HITBOX_H_CROUCH : HITBOX_H;
   if (player.invulnT <= 0 && player.deathT <= 0 &&
@@ -1312,6 +1317,22 @@ function chooseSupport(i) {      // 確認選擇（由確認按鈕/Enter 呼叫�
   selectScreen = false;
 }
 const CARD_UI = { w: 62, h: 78, gap: 10, x: 930 - (62 * 3 + 10 * 2), y: 402 };
+
+function layoutUI() {              // 視寬變動時重排右錨/置中 UI
+  CARD_UI.x = VIEW_W - 30 - (CARD_UI.w * 3 + CARD_UI.gap * 2);
+  SNIPER_SX = VIEW_W - 58;
+  VBTN.fire.x = VIEW_W - 86;
+  VBTN.jump.x = VIEW_W - 182;
+  VBTN.reload.x = VIEW_W - 78;
+  const off = (VIEW_W - 960) / 2;  // 選人畫面整組置中
+  SELECT_OPTS[0].x = 96 + off;
+  SELECT_OPTS[1].x = 374 + off;
+  SELECT_OPTS[2].x = 652 + off;
+  CONFIRM_BTN.x = 380 + off;
+}
+uiReady = true;
+layoutUI();
+fitCanvas();   // UI 常數就緒後重算一次（套用實際螢幕比例）
 const ROVER_FX = { file: "assets_fx/rover.png", w: 72, h: 29 };   // 麻痺小車
 const ROVER_SPEED = 260;
 const rovers = [];
@@ -1373,7 +1394,7 @@ function cancelTargeting() {
 }
 
 function mouseWorld() {
-  return { wx: mouse.sx + cam.x - 480, wy: mouse.sy + cam.y - 270 };
+  return { wx: mouse.sx + cam.x - VIEW_W / 2, wy: mouse.sy + cam.y - 270 };
 }
 
 // 游標選取單體目標；maxDist = 與玩家的最大距離限制
@@ -1444,7 +1465,7 @@ function castCard(i, wx, wy) {
   }
   if (c.skill === "area") {          // 鋼盔：畫面外拋出閃光彈，旋轉飛行 → 落地才引爆（傷害 + 暈眩 2 秒）
     cost -= c.cost; c.flashT = 0.3;
-    const sx = wx < cam.x ? cam.x + 480 + 40 : cam.x - 480 - 40;
+    const sx = wx < cam.x ? cam.x + VIEW_W / 2 + 40 : cam.x - VIEW_W / 2 - 40;
     const sy = cam.y - 270 + 60;   // 從目標反方向的畫面外側拋出
     grenades.push({
       x: sx, y: sy,
@@ -1460,7 +1481,7 @@ function castCard(i, wx, wy) {
     const dir = Math.sign(wx - player.x) || player.facing;
     const a = player.x + dir * 20, b = player.x + dir * 380;
     helis.push({ gy: floorYAt(player.y),
-      x: cam.x - 480 - HELI_FX.w,    // 從畫面左緣外進場
+      x: cam.x - VIEW_W / 2 - HELI_FX.w,    // 從畫面左緣外進場
       x0: Math.min(a, b), x1: Math.max(a, b),
       zone: null, t: 0,
     });
@@ -1864,7 +1885,7 @@ function updateEffects(dt) {
       h.zone.x1 = nx;
       h.zone.t = 5;                            // 鋪完起算殘留 5 秒
     }
-    if (h.x > cam.x + 480 + HELI_FX.w + 60) helis.splice(i, 1);
+    if (h.x > cam.x + VIEW_W / 2 + HELI_FX.w + 60) helis.splice(i, 1);
   }
   // 火焰殘留區：站在裡面的目標重新點燃
   for (let i = flameZones.length - 1; i >= 0; i--) {
@@ -2141,11 +2162,11 @@ const FG = [
 
 // 以視差係數 f 平鋪一條水平層，bottomY = 該層底邊的世界 y（f=1 時）
 function drawStrip(img, f, bottomY, s) {
-  const camL = cam.x - 480, camT = cam.y - 270;
+  const camL = cam.x - VIEW_W / 2, camT = cam.y - 270;
   const w = img.width * s, h = img.height * s;
   const y = bottomY - h - CAM_T0 * (1 - f) - camT * f;
   const phase = ((camL * f) % w + w) % w;
-  for (let x = -phase - w; x < 960 + w; x += w) {
+  for (let x = -phase - w; x < VIEW_W + w; x += w) {
     ctx.drawImage(img, Math.round(x), Math.round(y), Math.round(w), Math.round(h));
   }
 }
@@ -2165,12 +2186,12 @@ function tileRow(img, x0, y0, wTotal, s, srcH) {
 }
 
 function draw() {
-  ctx.setTransform(RES, 0, 0, RES, 0, 0);   // 邏輯座標 960×540 → 實際解析度
-  ctx.clearRect(0, 0, 960, 540);
-  const camL = Math.round(cam.x - 480), camT = Math.round(cam.y - 270);
+  ctx.setTransform(RES, 0, 0, RES, 0, 0);   // 邏輯座標 VIEW_W×540 → 實際解析度
+  ctx.clearRect(0, 0, VIEW_W, 540);
+  const camL = Math.round(cam.x - VIEW_W / 2), camT = Math.round(cam.y - 270);
 
   ctx.fillStyle = "#2f2f36";
-  ctx.fillRect(0, 0, 960, 540);
+  ctx.fillRect(0, 0, VIEW_W, 540);
 
   ctx.save();
   let jx = 0, jy = 0;
@@ -2275,27 +2296,27 @@ function draw() {
   // 子彈時間：藍色暗角 + 上下黑邊
   if (targeting) {
     ctx.fillStyle = "rgba(25,50,100,.16)";
-    ctx.fillRect(0, 0, 960, 540);
+    ctx.fillRect(0, 0, VIEW_W, 540);
     ctx.fillStyle = "rgba(8,10,16,.55)";
-    ctx.fillRect(0, 0, 960, 26);
-    ctx.fillRect(0, 514, 960, 26);
+    ctx.fillRect(0, 0, VIEW_W, 26);
+    ctx.fillRect(0, 514, VIEW_W, 26);
     ctx.textAlign = "center";
     ctx.font = `bold 14px ${UI_FONT}`;
     ctx.fillStyle = "#fff";
-    ctx.fillText(`${CARDS[hand[targeting.slot]].name} — 左鍵確認 · J/射擊鍵 快速施放 · 右鍵取消`, 480, 532);
+    ctx.fillText(`${CARDS[hand[targeting.slot]].name} — 左鍵確認 · J/射擊鍵 快速施放 · 右鍵取消`, VIEW_W / 2, 532);
     ctx.textAlign = "left";
   }
 
   // 受傷紅閃（世界層之上、HUD 之下）
   if (hurtFlash > 0) {
     ctx.fillStyle = `rgba(255,50,40,${(hurtFlash / 0.3) * 0.25})`;
-    ctx.fillRect(0, 0, 960, 540);
+    ctx.fillRect(0, 0, VIEW_W, 540);
   }
   // 閃光盾致盲：先全白再漸退（HUD 之下，血條/卡片仍可見）
   if (blindT > 0) {
     const a = blindT > BLIND_DUR - 0.5 ? 1 : Math.min(1, blindT / (BLIND_DUR - 0.5));
     ctx.fillStyle = `rgba(255,255,255,${a * 0.96})`;
-    ctx.fillRect(0, 0, 960, 540);
+    ctx.fillRect(0, 0, VIEW_W, 540);
   }
   // 低血量警示：四邊紅色暈影脈動
   if (player.hp / player.maxHp <= 0.25 && player.deathT <= 0) {
@@ -2303,16 +2324,16 @@ function draw() {
     const d = 72, col = a => `rgba(255,38,28,${a})`;
     let g = ctx.createLinearGradient(0, 0, 0, d);
     g.addColorStop(0, col(0.55 * pulse)); g.addColorStop(1, col(0));
-    ctx.fillStyle = g; ctx.fillRect(0, 0, 960, d);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, VIEW_W, d);
     g = ctx.createLinearGradient(0, 540, 0, 540 - d);
     g.addColorStop(0, col(0.55 * pulse)); g.addColorStop(1, col(0));
-    ctx.fillStyle = g; ctx.fillRect(0, 540 - d, 960, d);
+    ctx.fillStyle = g; ctx.fillRect(0, 540 - d, VIEW_W, d);
     g = ctx.createLinearGradient(0, 0, d, 0);
     g.addColorStop(0, col(0.55 * pulse)); g.addColorStop(1, col(0));
     ctx.fillStyle = g; ctx.fillRect(0, 0, d, 540);
-    g = ctx.createLinearGradient(960, 0, 960 - d, 0);
+    g = ctx.createLinearGradient(VIEW_W, 0, VIEW_W - d, 0);
     g.addColorStop(0, col(0.55 * pulse)); g.addColorStop(1, col(0));
-    ctx.fillStyle = g; ctx.fillRect(960 - d, 0, d, 540);
+    ctx.fillStyle = g; ctx.fillRect(VIEW_W - d, 0, d, 540);
   }
   drawHUD();
   drawSkillCut();
@@ -2320,7 +2341,7 @@ function draw() {
   if (player.deathT > 0) {
     const a = player.deathT > 0.7 ? (1.4 - player.deathT) / 0.7 : player.deathT / 0.7;
     ctx.fillStyle = `rgba(8,8,12,${Math.min(1, a)})`;
-    ctx.fillRect(0, 0, 960, 540);
+    ctx.fillRect(0, 0, VIEW_W, 540);
   }
   if (vpad.on && !selectScreen) drawVpad();
   if (selectScreen) drawSelectScreen();
@@ -2367,18 +2388,19 @@ function drawVpad() {
 function drawSelectScreen() {
   ctx.save();
   ctx.fillStyle = "rgba(16,26,44,.62)";
-  ctx.fillRect(0, 0, 960, 540);
+  ctx.fillRect(0, 0, VIEW_W, 540);
+  // 卡片/按鈕座標已由 layoutUI 依視寬置中，直接以絕對座標繪製
   // 標題名牌
   ctx.shadowColor = "rgba(20,40,80,.4)";
   ctx.shadowBlur = 10;
   ctx.shadowOffsetY = 3;
-  slantPath(330, 40, 300, 46, 12);
+  slantPath(VIEW_W / 2 - 150, 40, 300, 46, 12);
   ctx.fillStyle = UI_NAVY;
   ctx.fill();
   ctx.shadowColor = "transparent";
   ctx.shadowBlur = 0;
   ctx.shadowOffsetY = 0;
-  slantPath(330, 40, 300, 46, 12);
+  slantPath(VIEW_W / 2 - 150, 40, 300, 46, 12);
   ctx.strokeStyle = UI_BLUE;
   ctx.lineWidth = 2;
   ctx.stroke();
@@ -2386,7 +2408,7 @@ function drawSelectScreen() {
   ctx.textAlign = "center";
   ctx.font = `italic 900 22px ${UI_FONT}`;
   ctx.fillStyle = "#fff";
-  ctx.fillText("選擇支援學生", 480, 71);
+  ctx.fillText("選擇支援學生", VIEW_W / 2, 71);
   const DESCS = {
     heal: ["主動：血包回復 1/3 生命", "被動：每30秒回復 1/4 生命"],
     buff: ["主動：1/2 護盾+霸體(30秒)", "被動：每30秒獲得 1/3 護盾"],
@@ -2746,14 +2768,14 @@ function drawHUD() {
   ctx.strokeStyle = "rgba(255,255,255,.85)";
   ctx.lineWidth = 3;
   const tShow = bossCleared ? bossClearT : speedrunT;
-  ctx.strokeText(fmtTime(tShow), 946, 26);
+  ctx.strokeText(fmtTime(tShow), VIEW_W - 14, 26);
   ctx.fillStyle = bossCleared ? UI_YELLOW : UI_NAVY;
-  ctx.fillText(fmtTime(tShow), 946, 26);
+  ctx.fillText(fmtTime(tShow), VIEW_W - 14, 26);
   ctx.lineWidth = 1;
   if (bestClearT !== null) {
     ctx.font = `bold 10px ${UI_FONT}`;
     ctx.fillStyle = "rgba(43,58,85,.75)";
-    ctx.fillText(`BEST ${fmtTime(bestClearT)}`, 946, 40);
+    ctx.fillText(`BEST ${fmtTime(bestClearT)}`, VIEW_W - 14, 40);
   }
   ctx.textAlign = "left";
   if (bossCleared) {           // 通關橫幅（頂部中央，Boss 血條位置空出後顯示）
@@ -2763,9 +2785,9 @@ function drawHUD() {
       ctx.strokeStyle = "rgba(255,255,255,.9)";
       ctx.lineWidth = 4;
       const msg = `通關時間 ${fmtTime(bossClearT)}` + (bossClearT === bestClearT ? "　新紀錄!" : "");
-      ctx.strokeText(msg, 480, 40);
+      ctx.strokeText(msg, VIEW_W / 2, 40);
       ctx.fillStyle = "#c98a1b";
-      ctx.fillText(msg, 480, 40);
+      ctx.fillText(msg, VIEW_W / 2, 40);
       ctx.lineWidth = 1;
       ctx.textAlign = "left";
     }
@@ -2782,6 +2804,8 @@ function drawHUD() {
 
   // ---- Boss 血條（頂部中央：深藍名牌 + 白面板 + 紅膠囊條）----
   if (boss.active && boss.deadT <= 0) {
+    ctx.save();
+    ctx.translate((VIEW_W - 960) / 2, 0);   // 以 960 基準座標整組置中
     uiPanel(330, 14, 320, 34, 10);
     ctx.shadowColor = "rgba(20,40,80,.3)";
     ctx.shadowBlur = 6;
@@ -2799,6 +2823,7 @@ function drawHUD() {
       [boss.hpGhost / boss.maxHp, "rgba(255,170,90,.9)"],
       [boss.hp / boss.maxHp, UI_RED],
     ]);
+    ctx.restore();
   }
 
   // ---- Cost 卡片系統（右下：三卡槽輪換）----
@@ -3090,7 +3115,7 @@ function drawEffects() {
   }
   // 狙擊：左上角瞄準雷射 → 擊發光束
   for (const s of snipeShots) {
-    const ox = cam.x - 480 + 48, oy = cam.y - 270 + 128;   // cut-in 頭像的世界座標
+    const ox = cam.x - VIEW_W / 2 + 48, oy = cam.y - 270 + 128;   // cut-in 頭像的世界座標
     if (!s.fired) {
       const k = s.t / SNIPE_AIM;
       // 紅色瞄準雷射（微幅閃爍）
