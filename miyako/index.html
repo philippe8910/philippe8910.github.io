@@ -3171,7 +3171,7 @@ buildMinimap();
 function drawMinimap() {
   if (!minimapCv || !minimapOn || selectScreen) return;
   const mw = minimapCv.width, mh = minimapCv.height;
-  const x0 = 14, y0 = 86;
+  const x0 = VIEW_W - mw - 14, y0 = 68;   // 右上角（計時器/點數下方、狙擊肖像上方）
   ctx.globalAlpha = 0.88;
   ctx.drawImage(minimapCv, x0, y0);
   ctx.globalAlpha = 1;
