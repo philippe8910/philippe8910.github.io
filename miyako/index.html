@@ -2710,12 +2710,12 @@ function drawPanel() {
       slantPath(px + 26, ry, PW - 52, 46, 9);
       ctx.strokeStyle = "rgba(120,150,190,.4)";
       ctx.stroke();
-      if (c.img) {                 // 頭像（大頭裁切）
+      if (c.img) {                 // 頭像（大頭裁切，窗與圖同框）
         const hc = c.headCrop || c.crop;
         ctx.save();
-        slantPath(px + 36, ry + 5, 34, 36, 4);
+        slantPath(px + 34, ry + 3, 40, 40, 4);
         ctx.clip();
-        ctx.drawImage(c.img, hc.sx, hc.sy, hc.sw, hc.sh, px + 32, ry + 3, 42, 52);
+        ctx.drawImage(c.img, hc.sx, hc.sy, hc.sw, hc.sh, px + 34, ry + 3, 40, 50);
         ctx.restore();
       }
       ctx.textAlign = "left";
@@ -3453,8 +3453,14 @@ function drawHUD() {
     g.addColorStop(1, "#eef6ff");
     ctx.fillStyle = g;
     ctx.fillRect(x - 4, y, CW + 14, CH);
-    const cardCrop = c.headCrop || c.crop;   // 支援卡手牌顯示大頭
-    if (c.img) ctx.drawImage(c.img, cardCrop.sx, cardCrop.sy, cardCrop.sw, cardCrop.sh, x - 6, y + 2, CW + 12, (CW + 12) * 1.25);
+    if (c.img) {
+      if (c.headCrop) {              // 支援卡：大頭貼合卡面（不出血，避免切頭）
+        const hc = c.headCrop;
+        ctx.drawImage(c.img, hc.sx, hc.sy, hc.sw, hc.sh, x, y + 2, CW, CW * 1.25);
+      } else {
+        ctx.drawImage(c.img, c.crop.sx, c.crop.sy, c.crop.sw, c.crop.sh, x - 6, y + 2, CW + 12, (CW + 12) * 1.25);
+      }
+    }
     if (!afford) { ctx.fillStyle = "rgba(35,45,65,.55)"; ctx.fillRect(x - 4, y, CW + 14, CH); }
     if (c.flashT > 0) { ctx.fillStyle = `rgba(255,255,255,${c.flashT / 0.3})`; ctx.fillRect(x - 4, y, CW + 14, CH); }
     ctx.restore();
