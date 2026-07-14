@@ -1456,7 +1456,9 @@ const SHAKE_DUR = 0.3;
 let uiTime = 0;                     // UI 動畫時鐘（低血量脈動等）
 
 // ---- Cost 卡片系統（BA 風：Cost 上限 10 自動回復；出卡 → 子彈時間滑鼠瞄準 → 左鍵確認/右鍵取消）----
-const COST_MAX = 10, COST_REGEN = 0.6;
+const COST_MAX = 10;
+const COST_PER_HIT = 1 / 20;       // 空洞騎士式：子彈命中敵人才累積，20 發命中 = 1 Cost
+function gainCostOnHit() { cost = Math.min(COST_MAX, cost + COST_PER_HIT); }
 const TARGETING_TIMESCALE = 0.25;   // 瞄準中的子彈時間（Cost 回復同步變慢）
 let cost = 4;
 let snipeCharge = false;            // 狙擊蓄力：第二次使用傷害雙倍
@@ -1817,9 +1819,7 @@ function damageEnemy(e, dmg, crit) {
   e.flashT = 0.08;
   if (e.hp <= 0) {
     e.state = "death"; e.t = 0; e.deadT = 6;
-    cost = Math.min(COST_MAX, cost + 1);          // 擊殺回饋：+1 Cost
-    costPops.push({ x: e.x, y: e.y - e.h - 10, t: 0.9, text: "+1", color: "#1f9de0" });
-    const cr = CREDIT_VALUE[e.kind] || 10;        // 信用點數
+    const cr = CREDIT_VALUE[e.kind] || 10;        // 信用點數（Cost 改由命中累積）
     credits += cr;
     costPops.push({ x: e.x + 20, y: e.y - e.h - 30, t: 0.9, text: "+" + cr + "C", color: "#e8a417" });
     for (let k = 0; k < 6; k++) {
@@ -1955,7 +1955,6 @@ function updateEffects(dt) {
     }
   }
   // Cost 回復 + 卡片閃光/滑入動畫衰減
-  cost = Math.min(COST_MAX, cost + COST_REGEN * dt);
   for (const c of CARDS) {
     c.flashT = Math.max(0, c.flashT - dt);
     c.dealT = Math.max(0, c.dealT - dt);
@@ -2153,6 +2152,7 @@ function updateEffects(dt) {
       if (Math.abs(b.x - e.x) < e.w / 2 && b.y > e.y - e.h && b.y < e.y) {
         const r = rollPlayerDmg();
         damageEnemy(e, r.dmg, r.crit);
+        gainCostOnHit();
         hit = true;
         break;
       }
@@ -2163,6 +2163,7 @@ function updateEffects(dt) {
         b.y > boss.y - boss.hitH && b.y < boss.y) {
       const r = rollPlayerDmg();
       damageBoss(r.dmg, r.crit);
+      gainCostOnHit();
       hit = true;
     }
     // 打中召喚隊友（盾兵會整發擋下，後面的 Boss 打不到）
@@ -2173,6 +2174,7 @@ function updateEffects(dt) {
             b.y > a.y - ALLY_KINDS[a.kind].hitH && b.y < a.y) {
           const r = rollPlayerDmg();
           damageAlly(a, r.dmg, r.crit);
+          gainCostOnHit();
           hit = true;
           break;
         }
