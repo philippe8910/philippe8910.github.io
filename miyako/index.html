@@ -294,7 +294,7 @@ const GRAV = 2300, MOVE = 340, JUMP_V = 950;
 const COYOTE = 0.08, BUFFER = 0.1;
 const RELOAD_TIME = 1.5;
 // ---- 可升級屬性（存檔點花信用點數強化）----
-const BASE_MAG = 50, BASE_DMG = 0.25, BASE_CRIT = 0.05, BASE_HP = 10;
+const BASE_MAG = 30, BASE_DMG = 0.15, BASE_CRIT = 0.05, BASE_HP = 10;   // 初始削弱：靠升級成長
 let MAG_SIZE = BASE_MAG, PLAYER_DMG = BASE_DMG;
 let credits = 0;
 const upgrades = { hp: 0, dmg: 0, crit: 0, mag: 0 };
@@ -312,9 +312,23 @@ function applyUpgrades() {
   player.hp = Math.min(player.hp, player.maxHp);
 }
 const CREDIT_VALUE = { pmc: 10, sgtrooper: 12, pmc2: 15, turret: 15, rocket: 18, shield: 20 };
+const SUPPORT_PRICE = 300;         // 招募未選支援角色的價格
+let purchasedSupports = [];        // 已購支援卡 index（4/5/6）
+function ownedSupport(skill) {     // 該被動的支援是否在隊上（開局選擇或後續招募）
+  const idx = { heal: 4, buff: 5, crit: 6 }[skill];
+  return chosenSupport === idx || purchasedSupports.includes(idx);
+}
+function buySupport(idx) {
+  if (credits < SUPPORT_PRICE || purchasedSupports.includes(idx) || chosenSupport === idx) return false;
+  credits -= SUPPORT_PRICE;
+  purchasedSupports.push(idx);
+  deckQueue.push(idx);             // 加入卡池輪換
+  saveGame();
+  return true;
+}
 function saveGame() {
   try {
-    localStorage.setItem("miyako_save", JSON.stringify({ credits, upgrades }));
+    localStorage.setItem("miyako_save", JSON.stringify({ credits, upgrades, owned: purchasedSupports }));
   } catch (e) {}
 }
 function loadGame() {
@@ -323,6 +337,7 @@ function loadGame() {
     if (v) {
       credits = v.credits | 0;
       for (const k in upgrades) upgrades[k] = (v.upgrades && v.upgrades[k]) | 0;
+      if (Array.isArray(v.owned)) purchasedSupports = v.owned.filter(i => i >= 4 && i <= 6);
     }
   } catch (e) {}
 }
@@ -379,7 +394,7 @@ addEventListener("keydown", e => {
     if (panel.open) closePanel();
     else if (!selectScreen && nearCheckpoint()) openPanel();
   }
-  if (panel.open && e.code === "Tab") { panel.tab = 1 - panel.tab; e.preventDefault(); }
+  if (panel.open && e.code === "Tab") { panel.tab = (panel.tab + 1) % 3; e.preventDefault(); }
   if (panel.open && e.code.startsWith("Digit")) {     // 1-4 快速購買
     const n = +e.code.slice(5);
     if (panel.tab === 0 && n >= 1 && n <= 4) buyUpgrade(Object.keys(UPGRADE_DEFS)[n - 1]);
@@ -1490,6 +1505,9 @@ function chooseSupport(i) {      // 確認選擇（由確認按鈕/Enter 呼叫�
   if (!opt || !selectScreen) return;
   deckQueue.push(opt.card);        // 選中的支援卡加入牌庫循環
   chosenSupport = opt.card;
+  for (const p of purchasedSupports) {   // 之前招募過的也入池
+    if (p !== opt.card && !deckQueue.includes(p)) deckQueue.push(p);
+  }
   selectScreen = false;
 }
 const CARD_UI = { w: 62, h: 78, gap: 10, x: 930 - (62 * 3 + 10 * 2), y: 402 };
@@ -1915,25 +1933,24 @@ function updateEffects(dt) {
     }
   }
   // 支援被動（30 秒循環；只有開局選中的支援生效）
-  const activeKey = chosenSupport !== null ? CARDS[chosenSupport].skill : null;
   for (const key of ["heal", "buff", "crit"]) {
     passiveT[key] -= dt;
     if (passiveT[key] <= 0) {
       passiveT[key] = 30;
-      if (key !== activeKey) continue;
+      if (!ownedSupport(key)) continue;
       if (player.deathT > 0) continue;
       if (key === "heal") {          // 芹奈：回復 1/4 最大生命
         if (player.hp < player.maxHp) {
           player.hp = Math.min(player.maxHp, player.hp + player.maxHp / 4);
           costPops.push({ x: player.x, y: player.y - 145, t: 0.9, text: "+HP", color: "#3ecf6f" });
-          skillCut = { c: CARDS[chosenSupport], t: 0, dur: 1.2, passive: true };   // 被動演出
+          skillCut = { c: CARDS[{ heal: 4, buff: 5, crit: 6 }[key]], t: 0, dur: 1.2, passive: true };   // 被動演出
         }
       } else if (key === "buff") {   // 瑪麗：+1/3 護盾（30 秒）
         addPlayerShield(player.maxHp / 3, 30);
-        skillCut = { c: CARDS[chosenSupport], t: 0, dur: 1.2, passive: true };
+        skillCut = { c: CARDS[{ heal: 4, buff: 5, crit: 6 }[key]], t: 0, dur: 1.2, passive: true };
       } else {                       // 亞子：+1/5 護盾（15 秒）
         addPlayerShield(player.maxHp / 5, 15);
-        skillCut = { c: CARDS[chosenSupport], t: 0, dur: 1.2, passive: true };
+        skillCut = { c: CARDS[{ heal: 4, buff: 5, crit: 6 }[key]], t: 0, dur: 1.2, passive: true };
       }
     }
   }
@@ -2580,8 +2597,8 @@ function drawPanel() {
   ctx.font = `italic 900 17px ${UI_FONT}`;
   ctx.fillStyle = "#e8a417";
   ctx.fillText(String(credits), px + PW - 120, py + 34);
-  const tabs = ["強化", "傳送"];
-  for (let i = 0; i < 2; i++) {
+  const tabs = ["強化", "招募", "傳送"];
+  for (let i = 0; i < 3; i++) {
     const tx = px + 26 + i * 110, ty = py + 50, tw = 96, th = 28;
     slantPath(tx, ty, tw, th, 7);
     ctx.fillStyle = panel.tab === i ? UI_BLUE : "rgba(140,155,180,.35)";
@@ -2592,7 +2609,45 @@ function drawPanel() {
     ctx.fillText(tabs[i] + (i === 0 ? "（Tab）" : ""), tx + tw / 2, ty + 20);
     panel.btns.push({ x: tx, y: ty, w: tw, h: th, fn: (j => () => panel.tab = j)(i) });
   }
-  if (panel.tab === 0) {           // ---- 強化頁 ----
+  if (panel.tab === 1) {           // ---- 招募頁（未選的支援角色，300C 加入卡池）----
+    let row = 0;
+    for (const idx of [4, 5, 6]) {
+      if (idx === chosenSupport) continue;
+      const c = CARDS[idx];
+      const ownedP = purchasedSupports.includes(idx);
+      const ry = py + 96 + row * 74;
+      slantPath(px + 26, ry, PW - 52, 64, 9);
+      ctx.fillStyle = ownedP ? "rgba(62,207,111,.12)" : "rgba(53,195,240,.08)";
+      ctx.fill();
+      slantPath(px + 26, ry, PW - 52, 64, 9);
+      ctx.strokeStyle = "rgba(120,150,190,.4)";
+      ctx.stroke();
+      if (c.img) {                 // 頭像
+        ctx.save();
+        slantPath(px + 36, ry + 6, 42, 52, 5);
+        ctx.clip();
+        ctx.drawImage(c.img, c.crop.sx, c.crop.sy, c.crop.sw, c.crop.sh, px + 30, ry + 4, 56, 70);
+        ctx.restore();
+      }
+      ctx.textAlign = "left";
+      ctx.font = `italic 900 16px ${UI_FONT}`;
+      ctx.fillStyle = UI_NAVY;
+      ctx.fillText(c.name, px + 94, ry + 26);
+      ctx.font = `bold 11.5px ${UI_FONT}`;
+      ctx.fillStyle = "rgba(43,58,85,.6)";
+      ctx.fillText("加入卡池輪換，被動同時生效", px + 94, ry + 46);
+      const bx = px + PW - 150, bw = 108, bh = 34, by = ry + 15;
+      slantPath(bx, by, bw, bh, 8);
+      ctx.fillStyle = ownedP ? "rgba(62,207,111,.85)" : credits >= SUPPORT_PRICE ? UI_BLUE : "rgba(140,152,170,.9)";
+      ctx.fill();
+      ctx.textAlign = "center";
+      ctx.font = `italic 900 14px ${UI_FONT}`;
+      ctx.fillStyle = "#fff";
+      ctx.fillText(ownedP ? "已加入" : `${SUPPORT_PRICE} C`, bx + bw / 2, by + 23);
+      if (!ownedP) panel.btns.push({ x: bx, y: by, w: bw, h: bh, fn: (ii => () => buySupport(ii))(idx) });
+      row++;
+    }
+  } else if (panel.tab === 0) {    // ---- 強化頁 ----
     const keys = Object.keys(UPGRADE_DEFS);
     for (let i = 0; i < keys.length; i++) {
       const k = keys[i], d = UPGRADE_DEFS[k];
@@ -2624,7 +2679,7 @@ function drawPanel() {
       ctx.fillText(maxed ? "已滿級" : `${cost} C`, bx + bw / 2, by + 23);
       if (!maxed) panel.btns.push({ x: bx, y: by, w: bw, h: bh, fn: (kk => () => buyUpgrade(kk))(k) });
     }
-  } else {                         // ---- 傳送頁 ----
+  } else if (panel.tab === 2) {    // ---- 傳送頁 ----
     let row = 0;
     for (let i = 0; i < CHECKPOINTS.length; i++) {
       const cp = CHECKPOINTS[i];
