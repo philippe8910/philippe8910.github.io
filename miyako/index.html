@@ -293,6 +293,7 @@ function updateCamera(dt) {
 const GRAV = 2300, MOVE = 340, JUMP_V = 950;
 const COYOTE = 0.08, BUFFER = 0.1;
 const RELOAD_TIME = 1.5;
+const BULLET_RANGE = 520;          // 玩家子彈最大飛行距離（防畫面外超遠程擊殺）
 // ---- 可升級屬性（存檔點花信用點數強化）----
 const BASE_MAG = 30, BASE_DMG = 0.15, BASE_CRIT = 0.05, BASE_HP = 10;   // 初始削弱：靠升級成長
 let MAG_SIZE = BASE_MAG, PLAYER_DMG = BASE_DMG;
@@ -1596,19 +1597,25 @@ function mouseWorld() {
   return { wx: mouse.sx + cam.x - VIEW_W / 2, wy: mouse.sy + cam.y - 270 };
 }
 
-// 游標選取單體目標；maxDist = 與玩家的最大距離限制
+function targetOnScreen(x, y) {    // 技能鎖定限制：目標必須在鏡頭畫面內
+  return Math.abs(x - cam.x) < VIEW_W / 2 + 20 && Math.abs(y - cam.y) < 300;
+}
+
+// 游標選取單體目標；maxDist = 與玩家的最大距離限制；僅畫面內目標可選
 function pickTarget(wx, wy, maxDist) {
   let best = null, bd = 70;
   for (const e of enemies) {
     if (e.state === "death") continue;
     if (Math.abs(e.x - player.x) > maxDist) continue;
+    if (!targetOnScreen(e.x, e.y - e.h * 0.5)) continue;
     const dx = Math.abs(e.x - wx);
     if (dx < bd && wy > e.y - e.h - 40 && wy < e.y + 30) {
       best = { e, x: e.x, y: e.y, h: e.h, isBoss: false };
       bd = dx;
     }
   }
-  if (boss.active && boss.deadT <= 0 && Math.abs(boss.x - player.x) <= maxDist) {
+  if (boss.active && boss.deadT <= 0 && Math.abs(boss.x - player.x) <= maxDist &&
+      targetOnScreen(boss.x, boss.y - boss.hitH * 0.5)) {
     const dx = Math.abs(boss.x - wx);
     if (dx < bd && wy > boss.y - boss.hitH - 40 && wy < boss.y + 30) {
       best = { x: boss.x, y: boss.y, h: boss.hitH, isBoss: true };
@@ -1617,6 +1624,7 @@ function pickTarget(wx, wy, maxDist) {
   for (const a of allies) {   // 場上隊友（槍手/盾兵）也可被鎖定
     if (a.kind === "sniper" || a.mode !== "fight") continue;
     if (Math.abs(a.x - player.x) > maxDist) continue;
+    if (!targetOnScreen(a.x, a.y - 60)) continue;
     const K = ALLY_KINDS[a.kind];
     const dx = Math.abs(a.x - wx);
     if (dx < bd && wy > a.y - K.hitH - 40 && wy < a.y + 30) {
@@ -1741,16 +1749,17 @@ function confirmTargeting() {
 function nearestTargetPos() {
   let best = null, bd = Infinity;
   for (const e of enemies) {
-    if (e.state === "death") continue;
+    if (e.state === "death" || !targetOnScreen(e.x, e.y - e.h * 0.5)) continue;
     const d = Math.abs(e.x - player.x);
     if (d < bd) { bd = d; best = { x: e.x, y: e.y - e.h * 0.5 }; }
   }
-  if (boss.active && boss.deadT <= 0) {
+  if (boss.active && boss.deadT <= 0 && targetOnScreen(boss.x, boss.y - boss.hitH * 0.5)) {
     const d = Math.abs(boss.x - player.x);
     if (d < bd) { bd = d; best = { x: boss.x, y: boss.y - boss.hitH * 0.5 }; }
   }
   for (const a of allies) {
     if (a.kind === "sniper" || a.mode !== "fight") continue;
+    if (!targetOnScreen(a.x, a.y - 60)) continue;
     const d = Math.abs(a.x - player.x);
     if (d < bd) { bd = d; best = { x: a.x, y: a.y - ALLY_KINDS[a.kind].hitH * 0.5 }; }
   }
@@ -2144,8 +2153,10 @@ function updateEffects(dt) {
   else boss.hpGhost += (boss.hp - boss.hpGhost) * (1 - Math.exp(-dt * 3.5));
   for (let i = bullets.length - 1; i >= 0; i--) {
     const b = bullets[i];
+    if (b.x0 === undefined) b.x0 = b.x;   // 記錄出膛位置
     b.x += b.vx * dt;
-    let hit = b.x < -20 || b.x > WORLD.w + 20;
+    let hit = b.x < -20 || b.x > WORLD.w + 20 ||
+              Math.abs(b.x - b.x0) > BULLET_RANGE;   // 超射程消散
     // 打中小怪
     for (const e of enemies) {
       if (e.state === "death") continue;
