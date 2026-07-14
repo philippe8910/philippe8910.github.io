@@ -58,7 +58,7 @@ const SKINS = {
 };
 SKINS.swim = {
   label: "泳裝",
-  fw: 240, fh: 247, feet: 0.9822, anchor: 0.4366,
+  fw: 240, fh: 269, feet: 0.9822, anchor: 0.3775,
   anims: {
     idle:         { file: "assets_miyako_swim/idle.png",         count: 14, fps: 8,  loop: true  },
     run:          { file: "assets_miyako_swim/run.png",          count: 9,  fps: 12, loop: true  },
@@ -67,14 +67,14 @@ SKINS.swim = {
     land:         { file: "assets_miyako_swim/land.png",         count: 4,  fps: 20, loop: false },
     hurt:         { file: "assets_miyako_swim/hurt.png",         count: 10, fps: 18, loop: false },
     shoot:        { file: "assets_miyako_swim/shoot.png",        count: 12, fps: 36, loop: true  },
-    crouch_idle:  { file: "assets_miyako_swim/crouch_idle.png",  count: 10, fps: 8,  loop: true  },
+    crouch_idle:  { file: "assets_miyako_swim/crouch_idle.png",  count: 8,  fps: 8,  loop: true  },
     crouch_shoot: { file: "assets_miyako_swim/crouch_shoot.png", count: 12, fps: 36, loop: true  },
-    run_shoot:    { file: "assets_miyako_swim/run_shoot.png",    count: 9,  fps: 12, loop: true  },
+    run_shoot:    { file: "assets_miyako_swim/run_shoot.png",    count: 12, fps: 12, loop: true  },
   },
   muzzle: {
-    shoot:        { fx: 0.925,  fy: 0.4521 },
-    crouch_shoot: { fx: 0.9385, fy: 0.6016 },
-    run_shoot:    { fx: 0.9671, fy: 0.4516 },
+    shoot:        { fx: 0.9087, fy: 0.4518 },
+    crouch_shoot: { fx: 0.9177, fy: 0.6041 },
+    run_shoot:    { fx: 0.9288, fy: 0.4226 },
   },
   eject: {
     shoot:        { fx: 0.62, fy: 0.46 },
@@ -1664,6 +1664,17 @@ const HELI_FX = { file: "assets_fx/heli.png", w: 256, h: 77 };   // 空投直升
 const HELI_SPEED = 620;
 const GREN_FX = { file: "assets_fx/grenade.png", w: 64, h: 131 };  // M-84 閃光彈
 const CREDIT_FX = { file: "assets_fx/credit.png" };   // 信用點數 icon
+// ---- 場景素材（自動切割自 assets_env 素材表）----
+const ENV = {
+  bgWall:   { file: "assets_env/bg_01.png" },    // 遠景廠房牆（視差）
+  corridor: { file: "assets_env/bg_04.png" },    // 走廊門（視差近層）
+  floorTop: { file: "assets_env/plat_08.png" },  // 黃線平台條（厚板頂緣）
+  wallFill: { file: "assets_env/tile_19.png" },  // 牆板填充
+  platSkin: { file: "assets_env/float_11.png" }, // 薄平台皮
+  platSkin2:{ file: "assets_env/float_04.png" }, // 薄平台皮（帶欄杆款）
+  crate:    { file: "assets_env/plat_43.png" },  // 貨箱（裝飾）
+  lamp:     { file: "assets_env/prop_09.png" },  // 紅色警示燈柱（裝飾）
+};
 const GREN_G = 1500, GREN_FLIGHT = 0.9;
 const grenades = [];
 let targeting = null;               // { slot } 瞄準中的卡槽
@@ -2533,7 +2544,7 @@ function draw() {
   ctx.clearRect(0, 0, VIEW_W, 540);
   const camL = Math.round(cam.x - VIEW_W / 2), camT = Math.round(cam.y - 270);
 
-  ctx.fillStyle = "#2f2f36";
+  ctx.fillStyle = "#141114";
   ctx.fillRect(0, 0, VIEW_W, 540);
 
   ctx.save();
@@ -2545,13 +2556,83 @@ function draw() {
   }
   ctx.translate(-camL + jx, -camT + jy);
 
-  // graybox 地形
+  // 場景背景：每層樓一條走廊帶（x 視差 0.5），其上遠景牆帶
+  if (ENV.corridor.img && ENV.corridor.img.width) {
+    const bgS = 1.7;
+    const bw = Math.round(625 * bgS), bh = Math.round(170 * bgS);
+    const ww2 = Math.round(625 * 1.2), wh2 = Math.round(234 * 1.2);
+    const par = camL * 0.5;
+    for (const fy of [L0_Y, L1_Y, L2_Y, L3_Y, L4_Y]) {
+      const by = fy - bh;
+      let bx = Math.floor((camL - par) / bw) * bw + Math.floor(par / bw) * bw;
+      bx = camL - ((camL * 0.5) % bw) - bw;
+      for (let x = bx; x < camL + VIEW_W + bw; x += bw) {
+        ctx.drawImage(ENV.corridor.img, x, by, bw, bh);
+      }
+      if (ENV.bgWall.img && ENV.bgWall.img.width) {   // 走廊帶上方遠景牆
+        const wy = by - wh2;
+        let wx = camL - ((camL * 0.3) % ww2) - ww2;
+        for (let x = wx; x < camL + VIEW_W + ww2; x += ww2) {
+          ctx.drawImage(ENV.bgWall.img, x, wy, ww2, wh2);
+        }
+      }
+    }
+  }
+  // 地形：素材換皮（薄平台=平台皮；厚板=牆板填充+黃線頂緣；窄牆=直鋪牆板）
   for (const s of SOLIDS) {
-    if (s.deco || s.hidden) continue;
-    ctx.fillStyle = (s === bossGate || s.gate) ? "#b4483c" : s.h <= 30 ? "#9a9aa4" : "#8a8a92";  // 閘門紅色
-    ctx.fillRect(s.x, s.y, s.w, s.h);
-    ctx.strokeStyle = "#3c3c42";
-    ctx.strokeRect(s.x + .5, s.y + .5, s.w - 1, s.h - 1);
+    if (s.deco || s.hidden || s.elevator) continue;
+    if (s === bossGate || s.gate) {
+      ctx.fillStyle = "#b4483c";
+      ctx.fillRect(s.x, s.y, s.w, s.h);
+      ctx.strokeStyle = "#3c3c42";
+      ctx.strokeRect(s.x + .5, s.y + .5, s.w - 1, s.h - 1);
+      continue;
+    }
+    const themed = ENV.platSkin.img && ENV.platSkin.img.width;
+    if (!themed) {   // 素材未載入（無頭測試）：灰盒退回
+      ctx.fillStyle = s.h <= 30 ? "#9a9aa4" : "#8a8a92";
+      ctx.fillRect(s.x, s.y, s.w, s.h);
+      continue;
+    }
+    if (s.h <= 30) {                       // 薄平台
+      const skin = s.w >= 170 ? ENV.platSkin2.img : ENV.platSkin.img;
+      ctx.drawImage(skin, s.x - 3, s.y - 3, s.w + 6, Math.max(26, s.h + 18));
+    } else if (s.w > s.h * 1.2) {          // 厚板/地板/掩體
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(s.x, s.y, s.w, s.h);
+      ctx.clip();
+      const tw = 124, th = 127;            // tile_19 155x159 縮 0.8
+      for (let ty = s.y; ty < s.y + s.h; ty += th) {
+        for (let tx = s.x - (s.x % tw); tx < s.x + s.w; tx += tw) {
+          ctx.drawImage(ENV.wallFill.img, tx, ty, tw, th);
+        }
+      }
+      ctx.restore();
+      ctx.drawImage(ENV.floorTop.img, s.x, s.y - 2, s.w, 20);   // 頂緣黃線
+    } else {                               // 窄高牆
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(s.x, s.y, s.w, s.h);
+      ctx.clip();
+      const tw = s.w, th = Math.round(159 * s.w / 155);
+      for (let ty = s.y; ty < s.y + s.h; ty += th) {
+        ctx.drawImage(ENV.wallFill.img, s.x, ty, tw, th);
+      }
+      ctx.restore();
+    }
+  }
+  // 裝飾：存檔點旁警示燈、電梯底貨箱
+  if (ENV.lamp.img && ENV.lamp.img.width) {
+    for (const cp of CHECKPOINTS) {
+      const lh = 74, lw = Math.round(ENV.lamp.img.width * lh / ENV.lamp.img.height) || 24;
+      ctx.drawImage(ENV.lamp.img, cp.x - 66, cp.y - lh, lw, lh);
+    }
+    if (ENV.crate.img && ENV.crate.img.width) {
+      for (const el of ELEVATORS) {
+        ctx.drawImage(ENV.crate.img, el.x - 84, el.bottom - 58, 72, 58);
+      }
+    }
   }
   // 電梯（琥珀平台 + 紅三角 + 井道虛線）
   for (const el of ELEVATORS) {
@@ -3881,7 +3962,7 @@ for (const n of TILE_NAMES) TILES[n] = { file: `assets_miyako/tiles/${n}.png` };
 let loaded = 0;
 const assets = [...Object.values(ANIMS), ...Object.values(SKINS.swim.anims), ...Object.values(TILES), ...Object.values(BOSS_ANIMS),
   ...Object.values(ALLY_KINDS).flatMap(k => Object.values(k.anims)), SNIPER_PORTRAIT,
-  ...Object.values(ENEMY_KINDS).flatMap(k => Object.values(k.anims)), ...CARDS, FIRE_FX, HELI_FX, GREN_FX, ROVER_FX, CREDIT_FX];
+  ...Object.values(ENEMY_KINDS).flatMap(k => Object.values(k.anims)), ...CARDS, FIRE_FX, HELI_FX, GREN_FX, ROVER_FX, CREDIT_FX, ...Object.values(ENV)];
 const total = assets.length;
 for (const a of assets) {
   a.img = new Image();
