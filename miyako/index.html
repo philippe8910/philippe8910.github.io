@@ -62,10 +62,12 @@ const BOSS_ROOM = { left: 440, right: 2800, camX: 1600, triggerX: 2700, homeX: 1
 const bossGate = { x: 2760, y: 100, w: 40, h: 500 };   // 右側閘門（從右進房）
 // ---- Boss 前存檔點 ----
 const checkpoint = { x: 120, y: L0_Y, active: false };   // 目前重生點（觸碰站點時更新）
-const CHECKPOINTS = [
-  { x: 7100,  y: L2_Y, active: false },   // 中央大廳
-  { x: 12470, y: L3_Y, active: false },   // 東塔 E4 前
-  { x: 2950,  y: L4_Y, active: false },   // Boss 門前
+const CHECKPOINTS = [                     // 每層一個（依進度排序）
+  { x: 5500,  y: L0_Y, active: false },   // L0 起始平原・電梯前
+  { x: 4500,  y: L1_Y, active: false },   // L1 下水道中段
+  { x: 7100,  y: L2_Y, active: false },   // L2 中央大廳
+  { x: 12470, y: L3_Y, active: false },   // L3 東塔電梯前
+  { x: 2950,  y: L4_Y, active: false },   // L4 Boss 門前
 ];
 // ---- Speedrun 計時（確認選人後起算；擊倒 Boss 記錄）----
 let speedrunT = 0, bossCleared = false, bossClearT = 0, bestClearT = null;
@@ -315,6 +317,7 @@ function applyUpgrades() {
 const CREDIT_VALUE = { pmc: 10, sgtrooper: 12, pmc2: 15, turret: 15, rocket: 18, shield: 20 };
 const SUPPORT_PRICE = 300;         // 招募未選支援角色的價格
 let purchasedSupports = [];        // 已購支援卡 index（4/5/6）
+let benchedSupports = [];          // 已購但移出卡池（被動仍生效，僅不進輪替）
 function ownedSupport(skill) {     // 該被動的支援是否在隊上（開局選擇或後續招募）
   const idx = { heal: 4, buff: 5, crit: 6 }[skill];
   return chosenSupport === idx || purchasedSupports.includes(idx);
@@ -323,13 +326,30 @@ function buySupport(idx) {
   if (credits < SUPPORT_PRICE || purchasedSupports.includes(idx) || chosenSupport === idx) return false;
   credits -= SUPPORT_PRICE;
   purchasedSupports.push(idx);
+  benchedSupports = benchedSupports.filter(i => i !== idx);
   deckQueue.push(idx);             // 加入卡池輪換
+  saveGame();
+  return true;
+}
+
+function toggleSupportInPool(idx) {   // 已購角色：移出/加回卡池（被動不受影響）
+  if (!purchasedSupports.includes(idx)) return false;
+  if (benchedSupports.includes(idx)) {          // 加回
+    benchedSupports = benchedSupports.filter(i => i !== idx);
+    if (!deckQueue.includes(idx) && !hand.includes(idx)) deckQueue.push(idx);
+  } else {                                      // 移出
+    benchedSupports.push(idx);
+    const qi = deckQueue.indexOf(idx);
+    if (qi >= 0) deckQueue.splice(qi, 1);
+    const hi = hand.indexOf(idx);
+    if (hi >= 0 && deckQueue.length > 0) hand[hi] = deckQueue.shift();   // 手牌中：換下一張補位
+  }
   saveGame();
   return true;
 }
 function saveGame() {
   try {
-    localStorage.setItem("miyako_save", JSON.stringify({ credits, upgrades, owned: purchasedSupports }));
+    localStorage.setItem("miyako_save", JSON.stringify({ credits, upgrades, owned: purchasedSupports, benched: benchedSupports }));
   } catch (e) {}
 }
 function loadGame() {
@@ -339,6 +359,7 @@ function loadGame() {
       credits = v.credits | 0;
       for (const k in upgrades) upgrades[k] = (v.upgrades && v.upgrades[k]) | 0;
       if (Array.isArray(v.owned)) purchasedSupports = v.owned.filter(i => i >= 4 && i <= 6);
+      if (Array.isArray(v.benched)) benchedSupports = v.benched.filter(i => purchasedSupports.includes(i));
     }
   } catch (e) {}
 }
@@ -1459,6 +1480,7 @@ let uiTime = 0;                     // UI 動畫時鐘（低血量脈動等）
 // ---- Cost 卡片系統（BA 風：Cost 上限 10 自動回復；出卡 → 子彈時間滑鼠瞄準 → 左鍵確認/右鍵取消）----
 const COST_MAX = 10;
 const COST_PER_HIT = 1 / 20;       // 空洞騎士式：子彈命中敵人才累積，20 發命中 = 1 Cost
+let costPopT = 0, prevCostInt = 0; // Cost 整數跳格時數字放大亮起
 function gainCostOnHit() { cost = Math.min(COST_MAX, cost + COST_PER_HIT); }
 const TARGETING_TIMESCALE = 0.25;   // 瞄準中的子彈時間（Cost 回復同步變慢）
 let cost = 4;
@@ -1508,8 +1530,8 @@ function chooseSupport(i) {      // 確認選擇（由確認按鈕/Enter 呼叫�
   if (!opt || !selectScreen) return;
   deckQueue.push(opt.card);        // 選中的支援卡加入牌庫循環
   chosenSupport = opt.card;
-  for (const p of purchasedSupports) {   // 之前招募過的也入池
-    if (p !== opt.card && !deckQueue.includes(p)) deckQueue.push(p);
+  for (const p of purchasedSupports) {   // 之前招募過的也入池（移出者除外）
+    if (p !== opt.card && !deckQueue.includes(p) && !benchedSupports.includes(p)) deckQueue.push(p);
   }
   selectScreen = false;
 }
@@ -1899,6 +1921,9 @@ function updateEffects(dt) {
   hurtFlash = Math.max(0, hurtFlash - dt);
   shakeT = Math.max(0, shakeT - dt);
   uiTime += dt;
+  if ((cost | 0) > prevCostInt) costPopT = 0.28;   // Cost 跳格 → 數字彈跳
+  prevCostInt = cost | 0;
+  costPopT = Math.max(0, costPopT - dt);
   // 血包：落地 → 觸碰回復 1/3 最大生命 → 逾時消失
   for (let i = healPacks.length - 1; i >= 0; i--) {
     const p = healPacks[i];
@@ -2580,7 +2605,7 @@ function draw() {
 }
 
 // ---- 存檔點面板繪製（強化 / 傳送）----
-const CP_NAMES = ["中央大廳", "東塔電梯前", "Boss 門前"];
+const CP_NAMES = ["起始平原・電梯前", "下水道中段", "中央大廳", "東塔電梯前", "Boss 門前"];
 function drawPanel() {
   if (!panel.open) return;
   panel.btns = [];
@@ -2649,15 +2674,23 @@ function drawPanel() {
       ctx.font = `bold 11.5px ${UI_FONT}`;
       ctx.fillStyle = "rgba(43,58,85,.6)";
       ctx.fillText("加入卡池輪換，被動同時生效", px + 94, ry + 46);
+      const benched = benchedSupports.includes(idx);
       const bx = px + PW - 150, bw = 108, bh = 34, by = ry + 15;
       slantPath(bx, by, bw, bh, 8);
-      ctx.fillStyle = ownedP ? "rgba(62,207,111,.85)" : credits >= SUPPORT_PRICE ? UI_BLUE : "rgba(140,152,170,.9)";
+      ctx.fillStyle = ownedP ? (benched ? UI_BLUE : "rgba(232,84,74,.9)")
+                             : credits >= SUPPORT_PRICE ? UI_BLUE : "rgba(140,152,170,.9)";
       ctx.fill();
       ctx.textAlign = "center";
       ctx.font = `italic 900 14px ${UI_FONT}`;
       ctx.fillStyle = "#fff";
-      ctx.fillText(ownedP ? "已加入" : `${SUPPORT_PRICE} C`, bx + bw / 2, by + 23);
-      if (!ownedP) panel.btns.push({ x: bx, y: by, w: bw, h: bh, fn: (ii => () => buySupport(ii))(idx) });
+      ctx.fillText(ownedP ? (benched ? "加回卡池" : "移出卡池") : `${SUPPORT_PRICE} C`, bx + bw / 2, by + 23);
+      if (ownedP) panel.btns.push({ x: bx, y: by, w: bw, h: bh, fn: (ii => () => toggleSupportInPool(ii))(idx) });
+      else panel.btns.push({ x: bx, y: by, w: bw, h: bh, fn: (ii => () => buySupport(ii))(idx) });
+      if (ownedP && benched) {
+        ctx.font = `bold 11px ${UI_FONT}`;
+        ctx.fillStyle = "rgba(43,58,85,.55)";
+        ctx.fillText("已移出（被動仍生效）", bx + bw / 2, by + 46);
+      }
       row++;
     }
   } else if (panel.tab === 0) {    // ---- 強化頁 ----
@@ -2697,33 +2730,33 @@ function drawPanel() {
     for (let i = 0; i < CHECKPOINTS.length; i++) {
       const cp = CHECKPOINTS[i];
       if (!cp.active) continue;
-      const ry = py + 96 + row * 58;
+      const ry = py + 88 + row * 52;
       const here = Math.abs(player.x - cp.x) < 70 && Math.abs(player.y - cp.y) < 90;
-      slantPath(px + 26, ry, PW - 52, 48, 9);
+      slantPath(px + 26, ry, PW - 52, 44, 9);
       ctx.fillStyle = here ? "rgba(53,195,240,.2)" : "rgba(53,195,240,.08)";
       ctx.fill();
-      slantPath(px + 26, ry, PW - 52, 48, 9);
+      slantPath(px + 26, ry, PW - 52, 44, 9);
       ctx.strokeStyle = "rgba(120,150,190,.4)";
       ctx.stroke();
       ctx.textAlign = "left";
-      ctx.font = `italic 900 16px ${UI_FONT}`;
+      ctx.font = `italic 900 15px ${UI_FONT}`;
       ctx.fillStyle = UI_NAVY;
-      ctx.fillText(CP_NAMES[i] || `站點 ${i + 1}`, px + 44, ry + 30);
+      ctx.fillText(CP_NAMES[i] || `站點 ${i + 1}`, px + 44, ry + 28);
       if (!here) {
-        const bx = px + PW - 150, bw = 108, bh = 34, by = ry + 7;
+        const bx = px + PW - 150, bw = 108, bh = 32, by = ry + 6;
         slantPath(bx, by, bw, bh, 8);
         ctx.fillStyle = UI_BLUE;
         ctx.fill();
         ctx.textAlign = "center";
         ctx.font = `italic 900 14px ${UI_FONT}`;
         ctx.fillStyle = "#fff";
-        ctx.fillText("傳送", bx + bw / 2, by + 23);
+        ctx.fillText("傳送", bx + bw / 2, by + 22);
         panel.btns.push({ x: bx, y: by, w: bw, h: bh, fn: (c => () => teleportTo(c))(cp) });
       } else {
         ctx.textAlign = "right";
         ctx.font = `bold 13px ${UI_FONT}`;
         ctx.fillStyle = "rgba(43,58,85,.6)";
-        ctx.fillText("目前位置", px + PW - 44, ry + 30);
+        ctx.fillText("目前位置", px + PW - 44, ry + 28);
       }
       row++;
     }
@@ -3429,9 +3462,10 @@ function drawHUD() {
   slantPath(baseX + 2, barY + 9, 44, 24, 5);
   ctx.strokeStyle = "rgba(140,200,255,.5)";
   ctx.stroke();
-  ctx.font = `italic 900 19px ${UI_FONT}`;
-  ctx.fillStyle = "#fff";
-  ctx.fillText(String(cost | 0), baseX + 25, barY + 27);
+  const cpk = costPopT / 0.28;                     // 1→0
+  ctx.font = `italic 900 ${Math.round(19 + 9 * cpk)}px ${UI_FONT}`;
+  ctx.fillStyle = cpk > 0.01 ? "#8ef0ff" : "#fff";
+  ctx.fillText(String(cost | 0), baseX + 25, barY + 27 + cpk * 2);
   ctx.textAlign = "left";
   const segX = baseX + 56, segTotal = CW * HAND_SIZE + GAP * (HAND_SIZE - 1) - 56;
   const segW = (segTotal - 2 * 9) / 10;
