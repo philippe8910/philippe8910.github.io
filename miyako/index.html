@@ -2703,34 +2703,34 @@ function drawPanel() {
     for (const idx of SUPPORT_IDS) {
       const c = CARDS[idx];
       const ownedP = purchasedSupports.includes(idx) || idx === chosenSupport;   // 已選角色視同擁有
-      const ry = py + 90 + row * 52;
-      slantPath(px + 26, ry, PW - 52, 46, 9);
+      const ry = py + 84 + row * 46;
+      slantPath(px + 26, ry, PW - 52, 40, 8);
       ctx.fillStyle = ownedP ? "rgba(62,207,111,.12)" : "rgba(53,195,240,.08)";
       ctx.fill();
-      slantPath(px + 26, ry, PW - 52, 46, 9);
+      slantPath(px + 26, ry, PW - 52, 40, 8);
       ctx.strokeStyle = "rgba(120,150,190,.4)";
       ctx.stroke();
       if (c.img) {                 // 頭像（每位獨立的方形裁切，正方對正方）
         const sc = c.shopCrop;
         ctx.save();
-        slantPath(px + 34, ry + 3, 40, 40, 4);
+        slantPath(px + 33, ry + 3, 34, 34, 4);
         ctx.clip();
-        if (sc) ctx.drawImage(c.img, sc.sx, sc.sy, sc.s, sc.s, px + 34, ry + 3, 40, 40);
-        else ctx.drawImage(c.img, c.crop.sx, c.crop.sy, c.crop.sw, c.crop.sh, px + 34, ry + 3, 40, 50);
+        if (sc) ctx.drawImage(c.img, sc.sx, sc.sy, sc.s, sc.s, px + 33, ry + 3, 34, 34);
+        else ctx.drawImage(c.img, c.crop.sx, c.crop.sy, c.crop.sw, c.crop.sh, px + 33, ry + 3, 34, 43);
         ctx.restore();
       }
       ctx.textAlign = "left";
-      ctx.font = `italic 900 14px ${UI_FONT}`;
+      ctx.font = `italic 900 13.5px ${UI_FONT}`;
       ctx.fillStyle = UI_NAVY;
-      ctx.fillText(c.name, px + 84, ry + 20);
-      ctx.font = `bold 11px ${UI_FONT}`;
+      ctx.fillText(c.name, px + 78, ry + 17);
+      ctx.font = `bold 10.5px ${UI_FONT}`;
       ctx.fillStyle = "rgba(43,58,85,.6)";
       const descs = { 4: "被動：每30秒回復1/4生命", 5: "被動：每30秒獲得1/3護盾", 6: "被動：每30秒+1/5護盾(15s)",
                       7: "被動：Cost獲得×1.8", 8: "被動：防禦力+30%", 9: "被動：Cost+10%・全卡-1費" };
-      ctx.fillText((idx === chosenSupport ? "〔開局選擇〕" : "") + (descs[idx] || ""), px + 84, ry + 38);
+      ctx.fillText((idx === chosenSupport ? "〔開局選擇〕" : "") + (descs[idx] || ""), px + 78, ry + 33);
       const benched = benchedSupports.includes(idx);
       const poolFull = supportsInPool() >= SUPPORT_POOL_MAX;
-      const bx = px + PW - 150, bw = 108, bh = 32, by = ry + 7;
+      const bx = px + PW - 142, bw = 102, bh = 28, by = ry + 6;
       slantPath(bx, by, bw, bh, 8);
       ctx.fillStyle = ownedP ? (benched ? (poolFull ? "rgba(140,152,170,.9)" : UI_BLUE) : "rgba(232,84,74,.9)")
                              : credits >= SUPPORT_PRICES[idx] ? UI_BLUE : "rgba(140,152,170,.9)";
@@ -2738,7 +2738,7 @@ function drawPanel() {
       ctx.textAlign = "center";
       ctx.font = `italic 900 14px ${UI_FONT}`;
       ctx.fillStyle = "#fff";
-      ctx.fillText(ownedP ? (benched ? (poolFull ? "卡池已滿" : "加回卡池") : "移出卡池") : `${SUPPORT_PRICES[idx]} C`, bx + bw / 2, by + 22);
+      ctx.fillText(ownedP ? (benched ? (poolFull ? "卡池已滿" : "加回卡池") : "移出卡池") : `${SUPPORT_PRICES[idx]} C`, bx + bw / 2, by + 20);
       if (ownedP) panel.btns.push({ x: bx, y: by, w: bw, h: bh, fn: (ii => () => toggleSupportInPool(ii))(idx) });
       else panel.btns.push({ x: bx, y: by, w: bw, h: bh, fn: (ii => () => buySupport(ii))(idx) });
 
