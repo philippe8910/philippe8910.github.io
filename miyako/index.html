@@ -10,6 +10,7 @@
                touch-action: none; -webkit-user-select: none; user-select: none; overscroll-behavior: none; }
   canvas { display: block; width: 100vw; height: 100vh; object-fit: contain; background: #55555c; touch-action: none; }
   #hud { position: fixed; left: 0; right: 0; bottom: 0; text-align: center; color: #2b3a55; padding: 6px; font-size: 13px; font-family: "Segoe UI", "Noto Sans TC", sans-serif; font-weight: 600; background: rgba(244,248,252,.88); border-top: 1px solid rgba(120,150,190,.35); pointer-events: none; }
+  @media (pointer: coarse) { #hud { display: none; } }   /* 手機：隱藏底部鍵盤說明列 */
 </style>
 </head>
 <body>
@@ -300,6 +301,7 @@ if (cv.addEventListener) {
   }
   cv.addEventListener("touchstart", e => {
     e.preventDefault();
+    if (!vpad.on) { const h = document.getElementById("hud"); if (h) h.style.display = "none"; }
     vpad.on = true;
     for (const t of e.changedTouches) {
       const p = touchPos(t);
