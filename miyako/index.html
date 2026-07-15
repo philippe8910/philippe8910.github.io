@@ -84,6 +84,7 @@ SKINS.swim = {
 };
 SKINS.conv = {
   label: "便利商店打工",
+  hint: "商店累計消費 200C 解鎖",
   fw: 240, fh: 248, feet: 0.9728, anchor: 0.4031,
   anims: {
     idle:         { file: "assets_miyako_conv/idle.png",         count: 10, fps: 8,  loop: true  },
@@ -128,6 +129,33 @@ SKINS.yuuka = {
     shoot:        { fx: 0.9083, fy: 0.3538 },
     crouch_shoot: { fx: 0.9438, fy: 0.5666 },
     run_shoot:    { fx: 0.9167, fy: 0.3550 },
+  },
+  eject: {
+    shoot:        { fx: 0.62, fy: 0.46 },
+    crouch_shoot: { fx: 0.63, fy: 0.61 },
+    run_shoot:    { fx: 0.65, fy: 0.46 },
+  },
+};
+SKINS.momoi = {
+  label: "桃井",
+  hint: "6分鐘內通關解鎖",
+  fw: 240, fh: 221, feet: 0.9825, anchor: 0.4332, drawH: 150,
+  anims: {
+    idle:         { file: "assets_miyako_momoi/idle.png",         count: 11, fps: 8,  loop: true  },
+    run:          { file: "assets_miyako_momoi/run.png",          count: 8,  fps: 12, loop: true  },
+    rise:         { file: "assets_miyako_momoi/rise.png",         count: 5,  fps: 20, loop: false },
+    fall:         { file: "assets_miyako_momoi/fall.png",         count: 3,  fps: 12, loop: false },
+    land:         { file: "assets_miyako_momoi/land.png",         count: 4,  fps: 20, loop: false },
+    hurt:         { file: "assets_miyako_momoi/hurt.png",         count: 10, fps: 18, loop: false },
+    shoot:        { file: "assets_miyako_momoi/shoot.png",        count: 12, fps: 36, loop: true  },
+    crouch_idle:  { file: "assets_miyako_momoi/crouch_idle.png",  count: 8,  fps: 6,  loop: true  },
+    crouch_shoot: { file: "assets_miyako_momoi/crouch_shoot.png", count: 12, fps: 36, loop: true  },
+    run_shoot:    { file: "assets_miyako_momoi/run_shoot.png",    count: 12, fps: 12, loop: true  },
+  },
+  muzzle: {
+    shoot:        { fx: 0.9153, fy: 0.4193 },
+    crouch_shoot: { fx: 0.9500, fy: 0.5584 },
+    run_shoot:    { fx: 0.9597, fy: 0.3859 },
   },
   eject: {
     shoot:        { fx: 0.62, fy: 0.46 },
@@ -573,7 +601,7 @@ let shopSpent = 0;                 // 商店累計消費（隱藏解鎖條件用
 let yuukaShots = 0;                // 優香彩蛋：離開存檔點後的累計開槍數（不存檔）
 function trackSpend(n) {
   shopSpent += n;
-  if (shopSpent >= 2000 && !unlocks.skins.includes("conv")) {
+  if (shopSpent >= 200 && !unlocks.skins.includes("conv")) {
     unlocks.skins.push("conv");
     pickupToasts.push({ text: "造型解鎖：便利商店打工（存檔點可更換）", t: 3.5 });
   }
@@ -2642,6 +2670,11 @@ function damageBoss(dmg, crit) {
         bestClearT = bossClearT;
         try { localStorage.setItem("miyako_best", String(bestClearT)); } catch (e) {}
       }
+      if (bossClearT <= 360 && SKINS.momoi && !unlocks.skins.includes("momoi")) {   // 桃井：6 分鐘內通關
+        unlocks.skins.push("momoi");
+        pickupToasts.push({ text: "造型解鎖：桃井（6分鐘內通關達成！存檔點可更換）", t: 4 });
+        saveGame();
+      }
     }
     retreatAllies();   // Boss 倒下 → 隊友撤離
     allySummonT = 3; lastSummonKind = null;
@@ -3738,7 +3771,7 @@ function drawPanel() {
         ctx.fillStyle = "rgba(43,58,85,.5)";
         ctx.fillText("？？？", px + 88, ry + 24);
         ctx.font = `bold 11px ${UI_FONT}`;
-        ctx.fillText("隱藏道具解鎖", px + 88, ry + 40);
+        ctx.fillText(s.hint || "隱藏道具解鎖", px + 88, ry + 40);
         row++;
         continue;
       }
