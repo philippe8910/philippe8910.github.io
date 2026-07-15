@@ -417,6 +417,29 @@ function saveGame() {
     localStorage.setItem("miyako_save", JSON.stringify({ credits, upgrades, owned: purchasedSupports, benched: benchedSupports, skin: currentSkin }));
   } catch (e) {}
 }
+// ---- 存檔碼匯出/匯入（跨裝置備份；MYK1. 前綴 + base64(JSON)）----
+function exportSave() {
+  saveGame();
+  let best = null;
+  try { best = localStorage.getItem("miyako_best"); } catch (e) {}
+  const data = { save: JSON.stringify({ credits, upgrades, owned: purchasedSupports, benched: benchedSupports, skin: currentSkin }), best };
+  const code = "MYK1." + btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+  try { navigator.clipboard && navigator.clipboard.writeText(code); } catch (e) {}
+  prompt("存檔碼（已嘗試複製到剪貼簿，也可手動全選複製保存）：", code);
+}
+function importSave() {
+  const s = prompt("貼上存檔碼：");
+  if (!s) return;
+  try {
+    const t = s.trim();
+    if (!t.startsWith("MYK1.")) throw 0;
+    const data = JSON.parse(decodeURIComponent(escape(atob(t.slice(5)))));
+    JSON.parse(data.save);                       // 驗證內層格式
+    localStorage.setItem("miyako_save", data.save);
+    if (data.best != null) localStorage.setItem("miyako_best", data.best);
+    location.reload();                           // 重載套用（最乾淨）
+  } catch (e) { alert("存檔碼無效"); }
+}
 function loadGame() {
   try {
     const v = JSON.parse(localStorage.getItem("miyako_save"));
@@ -1654,6 +1677,7 @@ SKINS.default.anims = ANIMS;
 SKINS.default.muzzle = MUZZLE;
 SKINS.default.eject = EJECT;
 loadGame();
+try { if (typeof navigator !== "undefined" && navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
 applyUpgrades();
 if (currentSkin !== "default") applySkin(currentSkin);
 const ROVER_FX = { file: "assets_fx/rover.png", w: 72, h: 29 };   // 麻痺小車
@@ -3009,6 +3033,18 @@ function drawPanel() {
     }
   }
   const cbx = px + PW - 46, cby = py + 12, cbs = 30;
+  // 存檔碼匯出/匯入（跨裝置備份）
+  for (const [i, [label, fn]] of [["匯出檔", exportSave], ["匯入檔", importSave]].entries()) {
+    const ex = cbx - 76 * (2 - i) - 8, ew = 68;
+    slantPath(ex, cby, ew, cbs, 6);
+    ctx.fillStyle = UI_BLUE;
+    ctx.fill();
+    ctx.textAlign = "center";
+    ctx.font = `italic 900 13px ${UI_FONT}`;
+    ctx.fillStyle = "#fff";
+    ctx.fillText(label, ex + ew / 2, cby + 20);
+    panel.btns.push({ x: ex, y: cby, w: ew, h: cbs, fn });
+  }
   slantPath(cbx, cby, cbs, cbs, 6);
   ctx.fillStyle = UI_RED;
   ctx.fill();
