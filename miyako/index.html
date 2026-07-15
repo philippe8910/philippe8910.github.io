@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
-<title>Miyako — 像素橫向動作</title>
+<title>卡班諾的兔子 We Were RABBITs!</title>
 <style>
   html, body { margin: 0; height: 100%; background: #1a1a1e; overflow: hidden; font-family: Consolas, monospace;
                touch-action: none; -webkit-user-select: none; user-select: none; overscroll-behavior: none; }
@@ -1917,7 +1917,7 @@ function setVolume(v) {
   }
 }
 const I18N = {
-  zh: { title: "宮子大作戰", sub: "Blue Archive 同人像素動作", newGame: "新遊戲", cont: "繼續遊戲",
+  zh: { title: "卡班諾的兔子 We Were RABBITs!", sub: "Blue Archive 同人像素動作", newGame: "新遊戲", cont: "繼續遊戲",
         settings: "設定", back: "返回", volume: "音量", language: "語言 Language",
         confirmNew: "清除本地進度並開始新遊戲？（速通紀錄保留）",
         pasteOpt: "貼上存檔碼（留空＝使用本機存檔）：", noSave: "沒有本機存檔，請先貼上存檔碼", loadSave: "讀檔", progress: "進度", cheat: "作弊碼", cheatPrompt: "輸入作弊碼（BOSS/GOD/MONEY/HEAL/COST/AMMO/KEYS/UNLOCK/KILL/CP）：",
@@ -1928,7 +1928,7 @@ const I18N = {
         op3: "【開場文本待補：正式文本之後替換】",
         bcN1: "宮子", bc1: "目標已壓制……任務完成！",
         bc2: "【結尾文本待補：正式文本之後替換】", narrator: "旁白" },
-  en: { title: "MIYAKO OPERATION", sub: "A Blue Archive fan pixel action game", newGame: "New Game", cont: "Continue",
+  en: { title: "We Were RABBITs!", sub: "A Blue Archive fan pixel action game", newGame: "New Game", cont: "Continue",
         settings: "Settings", back: "Back", volume: "Volume", language: "Language",
         confirmNew: "Clear local progress and start a new game? (speedrun record kept)",
         pasteOpt: "Paste save code (leave empty to use local save):", noSave: "No local save. Paste a save code first.", loadSave: "Load", progress: "Progress", cheat: "Cheat Code", cheatPrompt: "Enter cheat (BOSS/GOD/MONEY/HEAL/COST/AMMO/KEYS/UNLOCK/KILL/CP):",
@@ -1939,7 +1939,7 @@ const I18N = {
         op3: "[Opening text placeholder: to be replaced]",
         bcN1: "Miyako", bc1: "Target suppressed... mission complete!",
         bc2: "[Ending text placeholder: to be replaced]", narrator: "Narrator" },
-  ja: { title: "ミヤコ大作戦", sub: "ブルーアーカイブ二次創作ピクセルアクション", newGame: "ニューゲーム", cont: "つづきから",
+  ja: { title: "We Were RABBITs!", sub: "ブルーアーカイブ二次創作ピクセルアクション", newGame: "ニューゲーム", cont: "つづきから",
         settings: "設定", back: "戻る", volume: "音量", language: "言語 Language",
         confirmNew: "ローカルの進行データを消去して新しく始めますか？（タイム記録は保持）",
         pasteOpt: "セーブコードを貼り付け（空欄＝ローカルセーブ使用）：", noSave: "ローカルセーブがありません。", loadSave: "ロード", progress: "進行度", cheat: "チートコード", cheatPrompt: "チート入力（BOSS/GOD/MONEY/HEAL/COST/AMMO/KEYS/UNLOCK/KILL/CP）：",
@@ -1950,7 +1950,7 @@ const I18N = {
         op3: "【オープニングテキスト（仮）：後で差し替え】",
         bcN1: "ミヤコ", bc1: "目標を制圧……任務完了！",
         bc2: "【エンディングテキスト（仮）：後で差し替え】", narrator: "ナレーション" },
-  ko: { title: "미야코 대작전", sub: "블루 아카이브 팬 픽셀 액션", newGame: "새 게임", cont: "이어하기",
+  ko: { title: "We Were RABBITs!", sub: "블루 아카이브 팬 픽셀 액션", newGame: "새 게임", cont: "이어하기",
         settings: "설정", back: "뒤로", volume: "볼륨", language: "언어 Language",
         confirmNew: "로컬 진행 데이터를 삭제하고 새로 시작할까요? (스피드런 기록 유지)",
         pasteOpt: "세이브 코드 붙여넣기 (비워두면 로컬 세이브 사용):", noSave: "로컬 세이브가 없습니다.", loadSave: "로드", progress: "진행도", cheat: "치트 코드", cheatPrompt: "치트 입력 (BOSS/GOD/MONEY/HEAL/COST/AMMO/KEYS/UNLOCK/KILL/CP):",
@@ -2082,6 +2082,8 @@ function drawMenu() {
   if (menuScreen === "main") {
     ctx.textAlign = "center";
     ctx.font = `italic 900 52px ${UI_FONT}`;
+    const titleW = ctx.measureText(T("title")).width;
+    if (titleW > 880) ctx.font = `italic 900 ${Math.floor(52 * 880 / titleW)}px ${UI_FONT}`;
     ctx.fillStyle = "#2b3a55";
     ctx.fillText(T("title"), cx, 158);
     ctx.font = `italic 700 17px ${UI_FONT}`;
