@@ -1296,9 +1296,12 @@ function summonAlly(kind) {
   const selected = kind && available.includes(kind) ? kind : available[Math.random() * available.length | 0];
   lastSummonKind = selected;
   const K = ALLY_KINDS[selected];
+  const spotX = selected === "gunner"
+    ? BOSS_ROOM.left + 180 + Math.random() * 1700          // 妮可：房內隨機站位
+    : boss.x + (Math.sign(player.x - boss.x) || -1) * SHIELD_GAP;
   const a = {
-    kind: selected, mode: "enter",
-    x: Math.max(BOSS_ROOM.left - 60, boss.x - VIEW_W / 2 - 60), y: F3_Y, facing: 1,   // 從房間深處（左）畫面外進場
+    kind: selected, mode: "enter", spotX,
+    x: spotX, y: F3_Y - 470, facing: 1,                    // 空降：站位正上方畫面外垂降
     state: "run", t: 0, hp: K.hp, maxHp: K.hp, fireT: 0, flashT: 0,
     stunT: 0, blindCd: 1, burnT: 0,
   };
@@ -1310,10 +1313,6 @@ function summonAlly(kind) {
     return true;
   }
   allies.push(a);
-  const fx = a.kind === "gunner" ? ALLY_SPOT_X : boss.x;
-  for (let k = 0; k < 6; k++) {
-    impacts.push({ x: fx + (Math.random() - .5) * 60, y: F3_Y - Math.random() * 130, t: 0.15 + Math.random() * 0.1 });
-  }
   return true;
 }
 
@@ -1337,7 +1336,7 @@ function allyRetreat(a) {
 }
 
 function allySpotX(a) {
-  if (a.kind === "gunner") return ALLY_SPOT_X;
+  if (a.kind === "gunner") return a.spotX || ALLY_SPOT_X;
   return boss.x + (Math.sign(player.x - boss.x) || -1) * SHIELD_GAP;
 }
 
@@ -1415,12 +1414,15 @@ function updateOneAlly(a, dt) {
     return;
   }
   if (a.mode === "enter") {
-    const spot = allySpotX(a);
-    a.facing = Math.sign(spot - a.x) || -1;
-    a.x += a.facing * 200 * dt;
-    if (Math.abs(a.x - spot) <= 6) {
-      a.x = spot;
+    a.facing = Math.sign(player.x - a.x) || -1;
+    a.y += 760 * dt;                       // 空降垂直落下
+    if (a.y >= F3_Y) {
+      a.y = F3_Y;
       a.mode = "fight"; a.state = K.fightAnim; a.t = 0; a.fireT = 0.8;
+      shakeT = Math.max(shakeT, 0.15);
+      for (let k = 0; k < 8; k++) {
+        impacts.push({ x: a.x + (Math.random() - .5) * 70, y: F3_Y - Math.random() * 40, t: 0.12 + Math.random() * 0.12 });
+      }
     }
   } else if (a.mode === "fight") {
     a.facing = Math.sign(player.x - a.x) || -1;
