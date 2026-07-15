@@ -382,6 +382,46 @@ function collectItem(i) {
   }
   saveGame();
 }
+// ---- 單向門（黑魂捷徑）：牆體＋單側觸發區，從該側踩到即永久開啟 ----
+const GATES = [
+];
+let openedGates = [];
+for (let i = 0; i < GATES.length; i++) {
+  const g = GATES[i];
+  g.solid = { x: g.x, y: g.y, w: g.w, h: g.h, gate: true };
+  SOLIDS.push(g.solid);
+}
+function gateTrigger(g) {          // 觸發區：牆的開啟側、貼地一段
+  const tw = 70;
+  return { x: g.side === "left" ? g.x - tw : g.x + g.w, y: g.y, w: tw, h: g.h };
+}
+function updateGates() {
+  for (let i = 0; i < GATES.length; i++) {
+    if (openedGates.includes(i)) continue;
+    const t = gateTrigger(GATES[i]);
+    const hh = player.crouching ? HITBOX_H_CROUCH : HITBOX_H;
+    if (player.x > t.x - HITBOX_W / 2 && player.x < t.x + t.w + HITBOX_W / 2 &&
+        player.y > t.y && player.y - hh < t.y + t.h) {
+      openedGates.push(i);
+      const si = SOLIDS.indexOf(GATES[i].solid);
+      if (si >= 0) SOLIDS.splice(si, 1);
+      for (let k = 0; k < 8; k++) {
+        impacts.push({ x: GATES[i].x + GATES[i].w / 2 + (Math.random() - .5) * 40,
+                       y: GATES[i].y + Math.random() * GATES[i].h, t: 0.12 + Math.random() * 0.15 });
+      }
+      shakeT = Math.max(shakeT, 0.15);
+      pickupToasts.push({ text: "捷徑已開啟", t: 3 });
+      saveGame();
+    }
+  }
+}
+function applyOpenedGates() {      // 讀檔後移除已開的門
+  for (const i of openedGates) {
+    if (!GATES[i]) continue;
+    const si = SOLIDS.indexOf(GATES[i].solid);
+    if (si >= 0) SOLIDS.splice(si, 1);
+  }
+}
 function updateItems(dt) {
   for (let i = 0; i < ITEM_SPAWNS.length; i++) {
     if (collectedItems.includes(i)) continue;
@@ -508,7 +548,7 @@ function toggleSupportInPool(idx) {   // 已購/已選角色：移出/加回卡�
 }
 function saveGame() {
   try {
-    localStorage.setItem("miyako_save", JSON.stringify({ credits, upgrades, owned: purchasedSupports, benched: benchedSupports, skin: currentSkin, unlocks, items: collectedItems }));
+    localStorage.setItem("miyako_save", JSON.stringify({ credits, upgrades, owned: purchasedSupports, benched: benchedSupports, skin: currentSkin, unlocks, items: collectedItems, gates: openedGates }));
   } catch (e) {}
 }
 // ---- 存檔碼匯出/匯入（跨裝置備份；MYK1. 前綴 + base64(JSON)）----
@@ -516,7 +556,7 @@ function exportSave() {
   saveGame();
   let best = null;
   try { best = localStorage.getItem("miyako_best"); } catch (e) {}
-  const data = { save: JSON.stringify({ credits, upgrades, owned: purchasedSupports, benched: benchedSupports, skin: currentSkin, unlocks, items: collectedItems }), best };
+  const data = { save: JSON.stringify({ credits, upgrades, owned: purchasedSupports, benched: benchedSupports, skin: currentSkin, unlocks, items: collectedItems, gates: openedGates }), best };
   const code = "MYK1." + btoa(unescape(encodeURIComponent(JSON.stringify(data))));
   try { navigator.clipboard && navigator.clipboard.writeText(code); } catch (e) {}
   prompt("存檔碼（已嘗試複製到剪貼簿，也可手動全選複製保存）：", code);
@@ -545,6 +585,7 @@ function loadGame() {
       if (v.skin && SKINS[v.skin]) currentSkin = v.skin;   // applySkin 於資產載入後執行
       if (v.unlocks) unlocks = { skins: v.unlocks.skins || [], keys: v.unlocks.keys || [] };
       if (Array.isArray(v.items)) collectedItems = v.items.filter(i => i >= 0 && i < ITEM_SPAWNS.length);
+      if (Array.isArray(v.gates)) openedGates = v.gates.filter(i => i >= 0);
       if (currentSkin !== "default" && !unlocks.skins.includes(currentSkin)) unlocks.skins.push(currentSkin);   // 舊檔遷移
       for (const c of purchasedSupports) {   // 舊檔已購 7/8/9 → 視同已拾取對應道具
         const ii = ITEM_SPAWNS.findIndex((it, j) => it.type === "char" && it.card === c && !collectedItems.includes(j));
@@ -1800,6 +1841,7 @@ SKINS.default.anims = ANIMS;
 SKINS.default.muzzle = MUZZLE;
 SKINS.default.eject = EJECT;
 loadGame();
+applyOpenedGates();
 try { if (typeof navigator !== "undefined" && navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
 applyUpgrades();
 if (currentSkin !== "default") applySkin(currentSkin);
@@ -2548,6 +2590,7 @@ function physics(dt) {
   updateElevators(dt);
   updateMovers(dt);
   updateItems(dt);
+  updateGates();
   const left = keys.ArrowLeft || keys.KeyA || vpad.joyDx < -0.35;
   const right = keys.ArrowRight || keys.KeyD || vpad.joyDx > 0.35;
   const jumpKey = keys.Space || keys.KeyW || keys.ArrowUp || vpad.jump;
@@ -2840,6 +2883,29 @@ function draw() {
       ctx.fillText(el.lock, lx, ly + 28);
       ctx.textAlign = "left";
     }
+  }
+  // 單向門
+  for (let i = 0; i < GATES.length; i++) {
+    if (openedGates.includes(i)) continue;
+    const g = GATES[i];
+    ctx.fillStyle = "#372c47";
+    ctx.fillRect(g.x, g.y, g.w, g.h);
+    ctx.strokeStyle = "#5a4a75";
+    ctx.strokeRect(g.x + .5, g.y + .5, g.w - 1, g.h - 1);
+    for (let yy = g.y + 14; yy < g.y + g.h - 6; yy += 26) {   // 鉚釘橫紋
+      ctx.fillStyle = "#4a3d61";
+      ctx.fillRect(g.x + 3, yy, g.w - 6, 3);
+    }
+    const openSide = g.side === "left" ? g.x : g.x + g.w;     // 開啟側光縫
+    ctx.fillStyle = `rgba(220,170,255,${0.5 + 0.3 * Math.sin(uiTime * 3)})`;
+    ctx.fillRect(openSide - 2, g.y, 4, g.h);
+    const ax = g.side === "left" ? g.x - 18 : g.x + g.w + 18;  // 開啟側箭頭（指向門）
+    const dir = g.side === "left" ? 1 : -1;
+    ctx.fillStyle = `rgba(220,170,255,${0.6 + 0.3 * Math.sin(uiTime * 3)})`;
+    const ay = g.y + g.h - 60;
+    ctx.beginPath();
+    ctx.moveTo(ax + dir * 10, ay); ctx.lineTo(ax - dir * 4, ay - 9); ctx.lineTo(ax - dir * 4, ay + 9);
+    ctx.closePath(); ctx.fill();
   }
   // 地圖道具（漂浮菱形 + 光暈）
   for (let i = 0; i < ITEM_SPAWNS.length; i++) {
