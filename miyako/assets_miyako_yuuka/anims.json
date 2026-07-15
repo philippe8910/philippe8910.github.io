@@ -11,7 +11,7 @@
   "file": "run.png",
   "frameW": 240,
   "frameH": 354,
-  "count": 12,
+  "count": 10,
   "fps": 12,
   "loop": true
  },
@@ -79,18 +79,18 @@
   "fps": 20,
   "loop": false
  },
- "_feetRatio": 0.9881,
+ "_feetRatio": 0.9904,
  "_anchorX": 0.4568,
  "_muzzle_shoot": {
   "fx": 0.8615,
-  "fy": 0.335
+  "fy": 0.3356
  },
  "_muzzle_crouch_shoot": {
   "fx": 0.9479,
-  "fy": 0.5075
+  "fy": 0.5087
  },
  "_muzzle_run_shoot": {
   "fx": 0.9899,
-  "fy": 0.3434
+  "fy": 0.3441
  }
 }

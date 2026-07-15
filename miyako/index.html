@@ -34,7 +34,7 @@ let ANIMS = {
 let FRAME_W = 240, FRAME_H = 288;
 let FEET_Y = 0.9880;     // feet line, relative to frame height
 let ANCHOR_X = 0.4145;   // body axis, relative to frame width
-const DRAW_H = 154;      // 220 * 0.7 整體縮小
+let DRAW_H = 154;        // 220 * 0.7 整體縮小；skin 可用 drawH 覆寫（本體佔幀比例不同時校正視覺身高）
 // muzzle points per stance — measured from packed strips (tools/measure_muzzle.py)
 let MUZZLE = {
   shoot:        { fx: 0.9733, fy: 0.4265 },
@@ -110,10 +110,11 @@ SKINS.conv = {
 };
 SKINS.yuuka = {
   label: "優香",
-  fw: 240, fh: 354, feet: 0.9880, anchor: 0.4572,
+  fw: 240, fh: 354, feet: 0.9904, anchor: 0.4568, drawH: 144,   // 本體佔幀比例高，縮到與制服同視覺身高
+
   anims: {
     idle:         { file: "assets_miyako_yuuka/idle.png",         count: 18, fps: 6,  loop: true  },
-    run:          { file: "assets_miyako_yuuka/run.png",          count: 12, fps: 12, loop: true  },
+    run:          { file: "assets_miyako_yuuka/run.png",          count: 10, fps: 12, loop: true  },
     rise:         { file: "assets_miyako_yuuka/rise.png",         count: 5,  fps: 20, loop: false },
     fall:         { file: "assets_miyako_yuuka/fall.png",         count: 3,  fps: 12, loop: false },
     land:         { file: "assets_miyako_yuuka/land.png",         count: 4,  fps: 20, loop: false },
@@ -124,9 +125,9 @@ SKINS.yuuka = {
     run_shoot:    { file: "assets_miyako_yuuka/run_shoot.png",    count: 12, fps: 12, loop: true  },
   },
   muzzle: {
-    shoot:        { fx: 0.8615, fy: 0.3335 },
-    crouch_shoot: { fx: 0.9479, fy: 0.5064 },
-    run_shoot:    { fx: 0.9899, fy: 0.3416 },
+    shoot:        { fx: 0.8615, fy: 0.3356 },
+    crouch_shoot: { fx: 0.9479, fy: 0.5087 },
+    run_shoot:    { fx: 0.9899, fy: 0.3441 },
   },
   eject: {
     shoot:        { fx: 0.62, fy: 0.46 },
@@ -142,6 +143,7 @@ function applySkin(id) {
   ANIMS = s.anims;
   FRAME_W = s.fw; FRAME_H = s.fh;
   FEET_Y = s.feet; ANCHOR_X = s.anchor;
+  DRAW_H = s.drawH || 154;
   MUZZLE = s.muzzle; EJECT = s.eject;
   return true;
 }
