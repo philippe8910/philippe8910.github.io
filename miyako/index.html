@@ -3961,7 +3961,8 @@ function drawEffects() {
 
 for (const n of TILE_NAMES) TILES[n] = { file: `assets_miyako/tiles/${n}.png` };
 let loaded = 0;
-const assets = [...Object.values(ANIMS), ...Object.values(SKINS.swim.anims), ...Object.values(TILES), ...Object.values(BOSS_ANIMS),
+// 用 SKINS.default.anims 而非 ANIMS：存檔為泳裝時開機已 applySkin，ANIMS 已不指向制服
+const assets = [...Object.values(SKINS.default.anims), ...Object.values(SKINS.swim.anims), ...Object.values(TILES), ...Object.values(BOSS_ANIMS),
   ...Object.values(ALLY_KINDS).flatMap(k => Object.values(k.anims)), SNIPER_PORTRAIT,
   ...Object.values(ENEMY_KINDS).flatMap(k => Object.values(k.anims)), ...CARDS, FIRE_FX, HELI_FX, GREN_FX, ROVER_FX, CREDIT_FX, ...Object.values(ENV)];
 const total = assets.length;
