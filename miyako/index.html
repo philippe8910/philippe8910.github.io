@@ -1566,8 +1566,8 @@ function updateBoss(dt) {
     return;
   }
   if (!boss.active) {          // 在房內待命，玩家（從右側）越過門線才開戰（落閘）
-    if (player.x < BOSS_ROOM.triggerX && player.y <= F3_Y + 5) {
-      boss.active = true; setGate(true); bossSetState("run");
+    if (player.x > BOSS_ROOM.left && player.x < BOSS_ROOM.triggerX && player.y <= F3_Y + 5) {
+      boss.active = true; setGate(true); bossSetState("run");   // 需在房內（左牆以右）：西側秘密區不觸發
     }
     return;
   }
