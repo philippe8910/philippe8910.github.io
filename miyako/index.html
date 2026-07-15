@@ -58,7 +58,7 @@ const SKINS = {
 };
 SKINS.swim = {
   label: "泳裝",
-  fw: 240, fh: 250, feet: 0.9822, anchor: 0.3499,
+  fw: 240, fh: 250, feet: 0.9810, anchor: 0.3499,
   anims: {
     idle:         { file: "assets_miyako_swim/idle.png",         count: 14, fps: 8,  loop: true  },
     run:          { file: "assets_miyako_swim/run.png",          count: 9,  fps: 12, loop: true  },
@@ -72,9 +72,9 @@ SKINS.swim = {
     run_shoot:    { file: "assets_miyako_swim/run_shoot.png",    count: 12, fps: 12, loop: true  },
   },
   muzzle: {
-    shoot:        { fx: 0.9038, fy: 0.3733 },
-    crouch_shoot: { fx: 0.8247, fy: 0.6280 },
-    run_shoot:    { fx: 0.9229, fy: 0.3408 },
+    shoot:        { fx: 0.9038, fy: 0.3732 },
+    crouch_shoot: { fx: 0.8434, fy: 0.6102 },
+    run_shoot:    { fx: 0.9229, fy: 0.3405 },
   },
   eject: {
     shoot:        { fx: 0.62, fy: 0.46 },
@@ -294,6 +294,7 @@ const ELEVATORS = [
   { x: 11360, w: 140, top: L2_Y, bottom: L1_Y, y: L1_Y, idleT: 0 },   // E2 下水道東 → 東迴廊
   { x: 660,   w: 140, top: L3_Y, bottom: L2_Y, y: L2_Y, idleT: 0 },   // E3 西洞窟 → 西高地
   { x: 12560, w: 140, top: L4_Y, bottom: L3_Y, y: L3_Y, idleT: 0 },   // E4 東塔 → 天頂迴廊
+  { x: 8060,  w: 140, top: L3_Y, bottom: L2_Y, y: L2_Y, idleT: 0 },   // E5 中央大廳東 → 高地東（主線：L3 大廳斷口無法跳越）
 ];
 for (const el of ELEVATORS) {
   el.solid = { x: el.x, y: el.y, w: el.w, h: 14, elevator: true };

@@ -79,18 +79,18 @@
   "fps": 20,
   "loop": false
  },
- "_feetRatio": 0.9822,
+ "_feetRatio": 0.981,
  "_anchorX": 0.3499,
  "_muzzle_shoot": {
   "fx": 0.9038,
-  "fy": 0.3733
+  "fy": 0.3732
  },
  "_muzzle_crouch_shoot": {
-  "fx": 0.8247,
-  "fy": 0.628
+  "fx": 0.8434,
+  "fy": 0.6102
  },
  "_muzzle_run_shoot": {
   "fx": 0.9229,
-  "fy": 0.3408
+  "fy": 0.3405
  }
 }
