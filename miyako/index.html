@@ -1279,6 +1279,7 @@ function respawnPlayer() {
     boss.x = BOSS_ROOM.homeX; boss.facing = -1; boss.vy = 0;
     boss.stunT = 0; boss.burnT = 0;
     bossSetState("shoot"); setGate(false);
+    bossResetFight();
     allies.length = 0; allySummonT = 3; blindT = 0; lastSummonKind = null;
   }
 }
@@ -1354,7 +1355,30 @@ const boss = {
   deadT: 0, volley: 0, fireT: 0, flashT: 0, jumpCd: 4,
   stunT: 0, burnT: 0,
   hitW: 53, hitH: 140,
+  // 三階段戰鬥系統（見 BOSS_PHASES）
+  phase: 1, phasePauseT: 0,       // 轉階段短暫僵直（給玩家喘息＋讀出節奏變化）
+  telT: 0, telKind: null,         // 預警：大招前 0.45s 頭上「!」，可被打斷（暈眩）
+  dashT: 0, dashCd: 0,            // 衝刺突進
+  backCd: 0,                      // 貼身反跳
+  aboveT: 0, jsPending: false,    // 玩家高台蹲點計時 → 跳射反制
+  dashDir: 1,
 };
+// 階段參數：HP >2/3 → 1；>1/3 → 2；其餘 3。越後期越快、加解鎖衝刺/扇形彈/跳射
+const BOSS_PHASES = [null,
+  { speed: 150, fireCd: 0.35, volleyMin: 4, volleyRnd: 3, jumpCdMin: 4,   jumpCdRnd: 3,   summonCd: 8,   fan: false, dash: false },
+  { speed: 195, fireCd: 0.29, volleyMin: 5, volleyRnd: 3, jumpCdMin: 3,   jumpCdRnd: 2,   summonCd: 6,   fan: true,  dash: true  },
+  { speed: 235, fireCd: 0.23, volleyMin: 6, volleyRnd: 3, jumpCdMin: 2.5, jumpCdRnd: 1.5, summonCd: 4.5, fan: true,  dash: true  },
+];
+function bossPhase() {
+  return boss.hp > boss.maxHp * 2 / 3 ? 1 : boss.hp > boss.maxHp / 3 ? 2 : 3;
+}
+function bossResetFight() {        // 戰鬥欄位歸零（重生/玩家死亡共用）
+  boss.phase = 1; boss.phasePauseT = 0;
+  boss.telT = 0; boss.telKind = null;
+  boss.dashT = 0; boss.dashCd = 0; boss.backCd = 0;
+  boss.aboveT = 0; boss.jsPending = false;
+  boss.volley = 0; boss.fireT = 0; boss.jumpCd = 4;
+}
 const bossBullets = [];
 
 // ---- Boss 召喚隊友（assets_ally*/，tools/ally_pack.py + ally2_pack.py 打包）----
@@ -1689,6 +1713,7 @@ function updateBoss(dt) {
       boss.x = BOSS_ROOM.homeX; boss.facing = -1;
       boss.stunT = 0; boss.burnT = 0;
       boss.active = false; bossSetState("shoot");
+      bossResetFight();
     }
     return;
   }
@@ -1698,17 +1723,32 @@ function updateBoss(dt) {
     }
     return;
   }
+  const P = BOSS_PHASES[boss.phase];
+  if (bossPhase() !== boss.phase) {  // 轉階段：短暫僵直 + 震撼 + 第三階段立即補召喚
+    boss.phase = bossPhase();
+    boss.phasePauseT = 0.9;
+    boss.volley = 0; boss.telT = 0; boss.telKind = null; boss.dashT = 0; boss.jsPending = false;
+    costPops.push({ x: boss.x, y: boss.y - boss.hitH - 34, t: 0.9, text: "!!", color: "#e8544a" });
+    for (let k = 0; k < 8; k++) {
+      impacts.push({ x: boss.x + (Math.random() - .5) * 90, y: boss.y - Math.random() * boss.hitH, t: 0.15 + Math.random() * 0.12 });
+    }
+    if (boss.phase === 3) { summonAlly(); allySummonT = BOSS_PHASES[3].summonCd; }
+  }
   if (allies.length < ALLY_MAX_ACTIVE) {
     allySummonT -= dt;
     if (allySummonT <= 0) {
-      if (summonAlly()) allySummonT = 6;
+      if (summonAlly()) allySummonT = P.summonCd;
       else allySummonT = 1;
     }
   }
   const stunned = boss.stunT > 0;
-  if (stunned) boss.stunT -= dt;
-  else boss.t += dt;                 // 暈眩：凍結動畫
+  if (stunned) {
+    boss.stunT -= dt;
+    boss.telT = 0; boss.telKind = null; boss.dashT = 0;   // 暈眩打斷預警/衝刺
+  } else boss.t += dt;               // 暈眩：凍結動畫
   boss.flashT = Math.max(0, boss.flashT - dt);
+  boss.dashCd = Math.max(0, boss.dashCd - dt);
+  boss.backCd = Math.max(0, boss.backCd - dt);
   const dist = player.x - boss.x;
 
   // 物理：重力 + 平台碰撞（單向：只從上方落下站立）
@@ -1731,23 +1771,70 @@ function updateBoss(dt) {
     boss.x += boss.vx * dt;
     if (boss.vy < 0) bossSetState("rise");
     else bossSetState("fall");
+    if (boss.jsPending && boss.vy > -180) {          // 跳射：近頂點朝玩家撒 3 發扇形
+      boss.jsPending = false;
+      const m = bossMuzzle();
+      const base = Math.atan2((player.y - 60) - m.y, player.x - m.x);
+      for (const off of [-0.22, 0, 0.22]) {
+        bossBullets.push({ x: m.x, y: m.y, vx: Math.cos(base + off) * 640, vy: Math.sin(base + off) * 640, dmg: 2 });
+      }
+      boss.flashT = 0.08;
+    }
   } else if (boss.state === "rise" || boss.state === "fall") {
     bossSetState("land");
     boss.vx = 0;
+    boss.jsPending = false;
   } else if (boss.state === "land") {
     if (animDone(BOSS_ANIMS.land, boss.t)) bossSetState("run");
   } else if (stunned) {
     // 暈眩硬直：不移動不開火
+  } else if (boss.phasePauseT > 0) {   // 轉階段僵直：站定蓄力
+    boss.phasePauseT -= dt;
+    boss.facing = Math.sign(dist) || 1;
+    bossSetState("shoot");
+    boss.volley = 0; boss.fireT = 1;
+  } else if (boss.telT > 0) {          // 大招預警：定住 0.45s，頭上「!」
+    boss.telT -= dt;
+    boss.facing = Math.sign(dist) || 1;
+    bossSetState("run");               // 原地踏步蓄勢
+    if (boss.telT <= 0) {
+      if (boss.telKind === "dash") {
+        boss.dashT = 0.5;
+        boss.dashDir = Math.sign(dist) || 1;
+      } else if (boss.telKind === "jumpshot") {
+        boss.vy = -950;
+        boss.vx = (Math.sign(dist) || 1) * 140;
+        boss.jsPending = true;
+        boss.jumpCd = P.jumpCdMin + Math.random() * P.jumpCdRnd;
+      }
+      boss.telKind = null;
+    }
+  } else if (boss.dashT > 0) {         // 衝刺突進：高速壓向玩家，結束立刻接彈幕
+    boss.dashT -= dt;
+    boss.facing = boss.dashDir;
+    bossSetState("run");
+    boss.t += dt;                      // 跑步動畫雙倍速（衝刺感）
+    boss.x += boss.dashDir * 520 * dt;
+    if (boss.dashT <= 0) {
+      boss.volley = P.volleyMin + (Math.random() * P.volleyRnd | 0);
+      boss.fireT = 0.18;
+      boss.facing = Math.sign(player.x - boss.x) || 1;
+      bossSetState(player.crouching ? "crouch_shoot" : "shoot");
+    }
   } else if (boss.state === "shoot" || boss.state === "crouch_shoot") {
     boss.facing = Math.sign(dist) || 1;
     boss.fireT -= dt;
     if (boss.fireT <= 0 && boss.volley > 0) {
       const m = bossMuzzle();
       bossBullets.push({ x: m.x, y: m.y, vx: boss.facing * 700, dmg: 2 });
+      if (P.fan && boss.volley === 1) {            // 二階段起：最後一發帶上下扇形
+        bossBullets.push({ x: m.x, y: m.y, vx: boss.facing * 660, vy: -150, dmg: 2 });
+        bossBullets.push({ x: m.x, y: m.y, vx: boss.facing * 660, vy: 150, dmg: 2 });
+      }
       spawnEnemyShell(m.x - boss.facing * BOSS_FW * (BOSS_DRAW_H / BOSS_FH) * 0.25, m.y + 2, boss.facing);
       boss.flashT = 0.06;
       boss.volley--;
-      boss.fireT = 0.35;
+      boss.fireT = P.fireCd;
     }
     if (boss.volley <= 0 && boss.fireT <= -0.6) bossSetState("run");
   } else if (allyShieldUp()) {   // 盾兵掩護中：躲到盾後定點射擊，不追擊不跳
@@ -1758,7 +1845,7 @@ function updateBoss(dt) {
       bossSetState("run");
       boss.x += Math.sign(hideX - boss.x) * 160 * dt;
     } else {
-      boss.volley = 3 + (Math.random() * 3 | 0);
+      boss.volley = P.volleyMin - 1 + (Math.random() * P.volleyRnd | 0);
       boss.fireT = 0.4;
       bossSetState(Math.random() < 0.4 ? "crouch_shoot" : "shoot");
     }
@@ -1767,16 +1854,28 @@ function updateBoss(dt) {
     boss.jumpCd -= dt;
     const playerAbove = player.y < boss.y - 80 && Math.abs(dist) < 420;
     const inRange = Math.abs(dist) <= 430 && Math.abs(player.y - boss.y) < 60;
-    if (inRange) {                          // 同高度且進射程 → 彈幕
-      boss.volley = 4 + (Math.random() * 3 | 0);
+    boss.aboveT = playerAbove ? boss.aboveT + dt : 0;   // 高台蹲點計時
+    if (P.dash && boss.backCd <= 0 && Math.abs(dist) < 70 && Math.abs(player.y - boss.y) < 60) {
+      boss.vy = -520;                       // 貼身反跳拉開距離（二階段起）
+      boss.vx = -(Math.sign(dist) || 1) * 300;
+      boss.backCd = 3;
+    } else if (P.dash && boss.aboveT > 2.5) {           // 高台蹲點 → 跳射反制
+      boss.telT = 0.45; boss.telKind = "jumpshot"; boss.aboveT = 0;
+    } else if (inRange) {                   // 同高度且進射程 → 彈幕（七成機率針對玩家姿勢選高低彈道）
+      boss.volley = P.volleyMin + (Math.random() * P.volleyRnd | 0);
       boss.fireT = 0.25;
-      bossSetState(Math.random() < 0.4 ? "crouch_shoot" : "shoot");
+      const counter = Math.random() < 0.7 ? player.crouching : !player.crouching;
+      bossSetState(counter ? "crouch_shoot" : "shoot");
+    } else if (P.dash && boss.dashCd <= 0 && Math.abs(dist) > 260 && Math.abs(dist) < 680 &&
+               Math.abs(player.y - boss.y) < 60 && Math.random() < 0.5) {
+      boss.telT = 0.45; boss.telKind = "dash";          // 中距離 → 衝刺預警
+      boss.dashCd = 5;
     } else {
-      boss.x += boss.facing * 150 * dt;
+      boss.x += boss.facing * P.speed * dt;
       if (playerAbove || boss.jumpCd <= 0) {   // 玩家在上方 → 跳台；或定期跳躍
         boss.vy = -950;
         boss.vx = boss.facing * (playerAbove ? 120 : 180);
-        boss.jumpCd = 4 + Math.random() * 3;
+        boss.jumpCd = P.jumpCdMin + Math.random() * P.jumpCdRnd;
       }
     }
   }
@@ -1861,6 +1960,15 @@ function drawBoss() {
     for (let k = 0; k < 3; k++) {
       const a2 = boss.stunT * 6 + k * 2.1;
       ctx.fillRect(boss.x + Math.cos(a2) * 17 - 2, boss.y - boss.hitH - 14 + Math.sin(a2) * 4 - 2, 4, 4);
+    }
+  }
+  if (boss.telT > 0) {                             // 大招預警「!」（閃爍紅色）
+    if (Math.floor(boss.telT * 12) % 2 === 0) {
+      ctx.textAlign = "center";
+      ctx.font = `900 30px ${UI_FONT}`;
+      ctx.fillStyle = "#e8544a";
+      ctx.fillText("!", boss.x, boss.y - boss.hitH - 20);
+      ctx.textAlign = "left";
     }
   }
   // boss 子彈（紅色曳光）／火箭彈（橄欖彈體+尾焰）
@@ -4525,6 +4633,9 @@ function drawHUD() {
       [boss.hpGhost / boss.maxHp, "rgba(255,170,90,.9)"],
       [boss.hp / boss.maxHp, UI_RED],
     ]);
+    ctx.fillStyle = "rgba(255,255,255,.75)";           // 階段刻度（1/3、2/3）
+    ctx.fillRect(412 + 224 / 3 - 1, 26, 2, 10);
+    ctx.fillRect(412 + 224 * 2 / 3 - 1, 26, 2, 10);
     ctx.restore();
   }
 
