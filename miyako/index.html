@@ -109,11 +109,11 @@ const BOSS_ROOM = { left: 440, right: 2800, camX: 1600, triggerX: 2700, homeX: 1
 const bossGate = { x: 2760, y: 100, w: 40, h: 500 };   // 右側閘門（從右進房）
 // ---- Boss 前存檔點 ----
 const checkpoint = { x: 120, y: L0_Y, active: false };   // 目前重生點（觸碰站點時更新）
-const CHECKPOINTS = [                     // 每層一個（依進度排序）
+const CHECKPOINTS = [
   { x: 5500,  y: L0_Y, active: false },   // L0 起始平原・電梯前
   { x: 4500,  y: L1_Y, active: false },   // L1 下水道中段
   { x: 7100,  y: L2_Y, active: false },   // L2 中央大廳
-  { x: 12470, y: L3_Y, active: false },   // L3 東塔電梯前
+  { x: 12470,  y: L3_Y, active: false },   // L3 東塔電梯前
   { x: 2950,  y: L4_Y, active: false },   // L4 Boss 門前
 ];
 // ---- Speedrun 計時（確認選人後起算；擊倒 Boss 記錄）----
@@ -290,11 +290,11 @@ function setGate(on) {
 // ---- Cinemachine-style camera: per-axis damped follow + lookahead + dead zone ----
 // ---- 電梯（紅三角標記；站上去升到上層，離開 2 秒後回到下層）----
 const ELEVATORS = [
-  { x: 5760,  w: 140, top: L1_Y, bottom: L0_Y, y: L0_Y, idleT: 0 },   // E1 起始平原 → 下水道
+  { x: 5760, w: 140, top: L1_Y, bottom: L0_Y, y: L0_Y, idleT: 0 },   // E1 起始平原 → 下水道
   { x: 11360, w: 140, top: L2_Y, bottom: L1_Y, y: L1_Y, idleT: 0 },   // E2 下水道東 → 東迴廊
-  { x: 660,   w: 140, top: L3_Y, bottom: L2_Y, y: L2_Y, idleT: 0 },   // E3 西洞窟 → 西高地
+  { x: 660, w: 140, top: L3_Y, bottom: L2_Y, y: L2_Y, idleT: 0 },   // E3 西洞窟 → 西高地
   { x: 12560, w: 140, top: L4_Y, bottom: L3_Y, y: L3_Y, idleT: 0 },   // E4 東塔 → 天頂迴廊
-  { x: 8060,  w: 140, top: L3_Y, bottom: L2_Y, y: L2_Y, idleT: 0 },   // E5 中央大廳東 → 高地東（主線：L3 大廳斷口無法跳越）
+  { x: 8060, w: 140, top: L3_Y, bottom: L2_Y, y: L2_Y, idleT: 0 },   // E5 中央大廳東 → 高地東（主線：L3 大廳斷口無法跳越）
 ];
 for (const el of ELEVATORS) {
   el.solid = { x: el.x, y: el.y, w: el.w, h: 14, elevator: true };
