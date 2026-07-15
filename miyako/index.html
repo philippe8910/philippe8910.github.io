@@ -763,7 +763,7 @@ addEventListener("keydown", e => {
     if (panel.open) closePanel();
     else if (!selectScreen && nearCheckpoint()) openPanel();
   }
-  if (panel.open && e.code === "Tab") { panel.tab = (panel.tab + 1) % 4; e.preventDefault(); }
+  if (panel.open && e.code === "Tab") { panel.tab = (panel.tab + 1) % 4; panel.scroll = 0; e.preventDefault(); }
   if (panel.open && e.code.startsWith("Digit")) {     // 1-4 快速購買
     const n = +e.code.slice(5);
     if (panel.tab === 0 && n >= 1 && n <= 4) buyUpgrade(Object.keys(UPGRADE_DEFS)[n - 1]);
@@ -817,6 +817,12 @@ if (cv.addEventListener) {
     }
     return false;
   }
+  cv.addEventListener("wheel", e => {          // 補給站面板：滾輪捲動內容
+    if (panel.open) {
+      panel.scroll = Math.max(0, Math.min((panel.scroll || 0) + e.deltaY * 0.6, panel.maxScroll || 0));
+      e.preventDefault();
+    }
+  }, { passive: false });
   cv.addEventListener("mousedown", e => {
     if (e.button !== 0) return;
     if (menuScreen) { menuClickAt(mouse.sx, mouse.sy); return; }
@@ -3545,21 +3551,6 @@ function draw() {
     ctx.lineWidth = 1;
     ctx.textAlign = "left";
   }
-  // 存檔點互動提示
-  {
-    const ncp = nearCheckpoint();
-    if (ncp && !panel.open) {
-      ctx.textAlign = "center";
-      ctx.font = `italic 900 13px ${UI_FONT}`;
-      ctx.strokeStyle = "rgba(255,255,255,.9)";
-      ctx.lineWidth = 3;
-      ctx.strokeText("E / 點擊 互動", ncp.x, ncp.y - 160);
-      ctx.fillStyle = UI_NAVY;
-      ctx.fillText("E / 點擊 互動", ncp.x, ncp.y - 160);
-      ctx.lineWidth = 1;
-      ctx.textAlign = "left";
-    }
-  }
   // 存檔點柱（未啟用灰 / 啟用後青色脈動）
   for (const cp of CHECKPOINTS) {
     const on = cp.active;
@@ -3707,10 +3698,10 @@ function drawPanel() {
   ctx.font = `italic 900 20px ${UI_FONT}`;
   ctx.fillStyle = UI_NAVY;
   ctx.fillText("補給站", px + 26, py + 34);
-  if (CREDIT_FX.img) ctx.drawImage(CREDIT_FX.img, px + PW - 150, py + 16, 24, 21);
+  if (CREDIT_FX.img) ctx.drawImage(CREDIT_FX.img, px + 130, py + 16, 24, 21);   // 移到標題右側（原本被匯出/匯入鈕擋住）
   ctx.font = `italic 900 17px ${UI_FONT}`;
   ctx.fillStyle = "#e8a417";
-  ctx.fillText(String(credits), px + PW - 120, py + 34);
+  ctx.fillText(String(credits), px + 160, py + 34);
   const tabs = ["強化", "招募", "傳送", "造型"];
   for (let i = 0; i < 4; i++) {
     const tx = px + 26 + i * 100, ty = py + 50, tw = 88, th = 28;
@@ -3720,16 +3711,24 @@ function drawPanel() {
     ctx.textAlign = "center";
     ctx.font = `italic 900 15px ${UI_FONT}`;
     ctx.fillStyle = panel.tab === i ? "#fff" : UI_NAVY;
-    ctx.fillText(tabs[i] + (i === 0 ? "（Tab）" : ""), tx + tw / 2, ty + 20);
-    panel.btns.push({ x: tx, y: ty, w: tw, h: th, fn: (j => () => panel.tab = j)(i) });
+    ctx.fillText(tabs[i], tx + tw / 2, ty + 20);
+    panel.btns.push({ x: tx, y: ty, w: tw, h: th, fn: (j => () => { panel.tab = j; panel.scroll = 0; })(i) });
   }
+  // 內容區：滾輪捲動＋遮罩裁切（超出面板的列被 clip 掉，捲出可視範圍的按鈕不可點）
+  const scy = panel.scroll || 0;
+  const clipTop = py + 84, clipBottom = py + PH - 12;
+  const btnsBeforeContent = panel.btns.length;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(px + 2, clipTop, PW - 4, clipBottom - clipTop);
+  ctx.clip();
   if (panel.tab === 1) {           // ---- 招募頁（未選的支援角色，300C 加入卡池）----
     let row = 0;
     for (const idx of SUPPORT_IDS) {
       const c = CARDS[idx];
       const ownedP = purchasedSupports.includes(idx) || idx === chosenSupport;   // 已選角色視同擁有
       const mystery = idx >= 7 && !ownedP;         // 日鞠/風華/三千留：地圖道具解鎖，不販售
-      const ry = py + 84 + row * 46;
+      const ry = py + 84 + row * 46 - scy;
       if (mystery) {
         slantPath(px + 26, ry, PW - 52, 40, 8);
         ctx.fillStyle = "rgba(90,100,120,.10)";
@@ -3790,7 +3789,7 @@ function drawPanel() {
     const keys = Object.keys(UPGRADE_DEFS);
     for (let i = 0; i < keys.length; i++) {
       const k = keys[i], d = UPGRADE_DEFS[k];
-      const ry = py + 96 + i * 58;
+      const ry = py + 96 + i * 58 - scy;
       slantPath(px + 26, ry, PW - 52, 48, 9);
       ctx.fillStyle = "rgba(53,195,240,.08)";
       ctx.fill();
@@ -3823,7 +3822,7 @@ function drawPanel() {
     for (let i = 0; i < CHECKPOINTS.length; i++) {
       const cp = CHECKPOINTS[i];
       if (!cp.active) continue;
-      const ry = py + 88 + row * 52;
+      const ry = py + 88 + row * 52 - scy;
       const here = Math.abs(player.x - cp.x) < 70 && Math.abs(player.y - cp.y) < 90;
       slantPath(px + 26, ry, PW - 52, 44, 9);
       ctx.fillStyle = here ? "rgba(53,195,240,.2)" : "rgba(53,195,240,.08)";
@@ -3864,7 +3863,7 @@ function drawPanel() {
     for (const id in SKINS) {
       const s = SKINS[id];
       if (!s.anims) continue;
-      const ry = py + 96 + row * 58;
+      const ry = py + 96 + row * 58 - scy;
       const active = currentSkin === id;
       const lockedSkin = id !== "default" && !unlocks.skins.includes(id);
       if (lockedSkin) {
@@ -3912,6 +3911,27 @@ function drawPanel() {
       if (!active) panel.btns.push({ x: bx, y: by, w: bw, h: bh, fn: (ii => () => { applySkin(ii); saveGame(); })(id) });
       row++;
     }
+  }
+  ctx.restore();   // 內容區遮罩結束
+  // 內容總高（未捲動座標）→ 可捲動上限；夾住目前捲動量
+  let contentBottomY;
+  if (panel.tab === 0) contentBottomY = py + 96 + Object.keys(UPGRADE_DEFS).length * 58;
+  else if (panel.tab === 1) contentBottomY = py + 84 + SUPPORT_IDS.length * 46;
+  else if (panel.tab === 2) contentBottomY = py + 88 + CHECKPOINTS.filter(c => c.active).length * 52;
+  else contentBottomY = py + 96 + Object.values(SKINS).filter(s => s.anims).length * 58;
+  panel.maxScroll = Math.max(0, contentBottomY + 6 - clipBottom);
+  panel.scroll = Math.max(0, Math.min(scy, panel.maxScroll));
+  // 捲出可視範圍的內容按鈕不可點
+  panel.btns = panel.btns.slice(0, btnsBeforeContent).concat(
+    panel.btns.slice(btnsBeforeContent).filter(b => b.y + b.h > clipTop + 2 && b.y < clipBottom - 2));
+  if (panel.maxScroll > 0) {       // 捲軸指示
+    const trackH = clipBottom - clipTop;
+    const thumbH = Math.max(28, trackH * trackH / (trackH + panel.maxScroll));
+    const thumbY = clipTop + (trackH - thumbH) * (panel.scroll / panel.maxScroll);
+    ctx.fillStyle = "rgba(43,58,85,.12)";
+    ctx.fillRect(px + PW - 12, clipTop, 4, trackH);
+    ctx.fillStyle = "rgba(43,58,85,.35)";
+    ctx.fillRect(px + PW - 12, thumbY, 4, thumbH);
   }
   const cbx = px + PW - 46, cby = py + 12, cbs = 30;
   // 存檔碼匯出/匯入（跨裝置備份）
@@ -4307,7 +4327,7 @@ function nearCheckpoint() {
   return null;
 }
 function openPanel() {                 // 互動＝休息：回滿血、敵人重生、存檔
-  panel.open = true; panel.tab = 0;
+  panel.open = true; panel.tab = 0; panel.scroll = 0;
   player.hp = player.maxHp;
   resetEnemies();
   bossBullets.length = 0;
