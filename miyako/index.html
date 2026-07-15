@@ -84,7 +84,7 @@ SKINS.swim = {
 };
 SKINS.conv = {
   label: "便利商店打工",
-  fw: 240, fh: 241, feet: 0.9732, anchor: 0.3848,
+  fw: 240, fh: 265, feet: 0.9728, anchor: 0.4242,
   anims: {
     idle:         { file: "assets_miyako_conv/idle.png",         count: 10, fps: 8,  loop: true  },
     run:          { file: "assets_miyako_conv/run.png",          count: 8,  fps: 12, loop: true  },
@@ -98,9 +98,35 @@ SKINS.conv = {
     run_shoot:    { file: "assets_miyako_conv/run_shoot.png",    count: 12, fps: 12, loop: true  },
   },
   muzzle: {
-    shoot:        { fx: 0.8382, fy: 0.3607 },
-    crouch_shoot: { fx: 0.8538, fy: 0.6082 },
-    run_shoot:    { fx: 0.9878, fy: 0.3487 },
+    shoot:        { fx: 0.8681, fy: 0.4246 },
+    crouch_shoot: { fx: 0.9417, fy: 0.6019 },
+    run_shoot:    { fx: 0.8844, fy: 0.4140 },
+  },
+  eject: {
+    shoot:        { fx: 0.62, fy: 0.46 },
+    crouch_shoot: { fx: 0.63, fy: 0.61 },
+    run_shoot:    { fx: 0.65, fy: 0.46 },
+  },
+};
+SKINS.yuuka = {
+  label: "優香",
+  fw: 240, fh: 341, feet: 0.9880, anchor: 0.4429,
+  anims: {
+    idle:         { file: "assets_miyako_yuuka/idle.png",         count: 8,  fps: 8,  loop: true  },
+    run:          { file: "assets_miyako_yuuka/run.png",          count: 11, fps: 12, loop: true  },
+    rise:         { file: "assets_miyako_yuuka/rise.png",         count: 5,  fps: 20, loop: false },
+    fall:         { file: "assets_miyako_yuuka/fall.png",         count: 3,  fps: 12, loop: false },
+    land:         { file: "assets_miyako_yuuka/land.png",         count: 4,  fps: 20, loop: false },
+    hurt:         { file: "assets_miyako_yuuka/hurt.png",         count: 10, fps: 18, loop: false },
+    shoot:        { file: "assets_miyako_yuuka/shoot.png",        count: 12, fps: 36, loop: true  },
+    crouch_idle:  { file: "assets_miyako_yuuka/crouch_idle.png",  count: 9,  fps: 8,  loop: true  },
+    crouch_shoot: { file: "assets_miyako_yuuka/crouch_shoot.png", count: 12, fps: 36, loop: true  },
+    run_shoot:    { file: "assets_miyako_yuuka/run_shoot.png",    count: 12, fps: 12, loop: true  },
+  },
+  muzzle: {
+    shoot:        { fx: 0.8667, fy: 0.3291 },
+    crouch_shoot: { fx: 0.9188, fy: 0.5048 },
+    run_shoot:    { fx: 0.9340, fy: 0.3289 },
   },
   eject: {
     shoot:        { fx: 0.62, fy: 0.46 },
@@ -542,6 +568,7 @@ function cardCost(c) {             // 三千留被動：全卡 Cost -1（最低 
   return supportEquipped(9) ? Math.max(1, c.cost - 1) : c.cost;
 }
 let shopSpent = 0;                 // 商店累計消費（隱藏解鎖條件用）
+let yuukaShots = 0;                // 優香彩蛋：離開存檔點後的累計開槍數（不存檔）
 function trackSpend(n) {
   shopSpent += n;
   if (shopSpent >= 2000 && !unlocks.skins.includes("conv")) {
@@ -2637,6 +2664,20 @@ function gunPoint(ref) {
 function spawnShot() {
   if (player.ammo <= 0) return;
   if (!infAmmo) player.ammo--;
+  // 彩蛋：重生點之間連開 999 發解鎖優香（碰到任一存檔點歸零）
+  if (!unlocks.skins.includes("yuuka")) {
+    yuukaShots++;
+    if (yuukaShots === 333) {
+      pickupToasts.push({ text: "……你的彈藥消耗是不是有點不對勁？", t: 3.5 });
+    } else if (yuukaShots === 666) {
+      pickupToasts.push({ text: "住手！那些都是錢！", t: 3.5 });
+    } else if (yuukaShots === 999) {
+      pickupToasts.push({ text: "在你浪費到四位數之前，我來阻止你", t: 4 });
+      unlocks.skins.push("yuuka");
+      pickupToasts.push({ text: "造型解鎖：優香（存檔點可更換）", t: 4 });
+      saveGame();
+    }
+  }
   const stance = player.state;
   const m = gunPoint(MUZZLE[stance]);
   bullets.push({ x: m.x, y: m.y, vx: player.facing * 1500 });
@@ -2692,6 +2733,7 @@ function updateEffects(dt) {
   playerBlockT = Math.max(0, playerBlockT - dt);
   if (!selectScreen && !bossCleared) speedrunT += dt;   // Speedrun 計時（通關即停）
   for (const cp of CHECKPOINTS) {
+    if (Math.abs(player.x - cp.x) < 26 && Math.abs(player.y - cp.y) < 60) yuukaShots = 0;   // 優香彩蛋：碰存檔點歸零
     if (!cp.active && player.deathT <= 0 &&
         Math.abs(player.x - cp.x) < 26 && Math.abs(player.y - cp.y) < 60) {
       cp.active = true;
