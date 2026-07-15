@@ -95,13 +95,13 @@ SKINS.conv = {
     hurt:         { file: "assets_miyako_conv/hurt.png",         count: 10, fps: 18, loop: false },
     shoot:        { file: "assets_miyako_conv/shoot.png",        count: 12, fps: 36, loop: true  },
     crouch_idle:  { file: "assets_miyako_conv/crouch_idle.png",  count: 8,  fps: 8,  loop: true  },
-    crouch_shoot: { file: "assets_miyako_conv/crouch_shoot.png", count: 12, fps: 36, loop: true  },
+    crouch_shoot: { file: "assets_miyako_conv/crouch_shoot.png", count: 12, fps: 18, loop: true  },
     run_shoot:    { file: "assets_miyako_conv/run_shoot.png",    count: 12, fps: 12, loop: true  },
   },
   muzzle: {
-    shoot:        { fx: 0.8247, fy: 0.4251 },
+    shoot:        { fx: 0.8510, fy: 0.3886 },
     crouch_shoot: { fx: 0.9396, fy: 0.5647 },
-    run_shoot:    { fx: 0.8403, fy: 0.4145 },
+    run_shoot:    { fx: 0.8674, fy: 0.3763 },
   },
   eject: {
     shoot:        { fx: 0.62, fy: 0.46 },
@@ -163,6 +163,33 @@ SKINS.momoi = {
     run_shoot:    { fx: 0.65, fy: 0.46 },
   },
 };
+SKINS.mika = {
+  label: "彌香",
+  hint: "無敵的代名詞…？",
+  fw: 240, fh: 251, feet: 0.9839, anchor: 0.4911, drawH: 157,   // 翅膀佔幀寬，本體對齊宮子視覺身高
+  anims: {
+    idle:         { file: "assets_miyako_mika/idle.png",         count: 10, fps: 8,  loop: true  },
+    run:          { file: "assets_miyako_mika/run.png",          count: 11, fps: 12, loop: true  },
+    rise:         { file: "assets_miyako_mika/rise.png",         count: 5,  fps: 20, loop: false },
+    fall:         { file: "assets_miyako_mika/fall.png",         count: 3,  fps: 12, loop: false },
+    land:         { file: "assets_miyako_mika/land.png",         count: 4,  fps: 20, loop: false },
+    hurt:         { file: "assets_miyako_mika/hurt.png",         count: 10, fps: 18, loop: false },
+    shoot:        { file: "assets_miyako_mika/shoot.png",        count: 12, fps: 36, loop: true  },
+    crouch_idle:  { file: "assets_miyako_mika/crouch_idle.png",  count: 6,  fps: 6,  loop: true  },
+    crouch_shoot: { file: "assets_miyako_mika/crouch_shoot.png", count: 12, fps: 36, loop: true  },
+    run_shoot:    { file: "assets_miyako_mika/run_shoot.png",    count: 10, fps: 12, loop: true  },
+  },
+  muzzle: {
+    shoot:        { fx: 0.9965, fy: 0.3480 },
+    crouch_shoot: { fx: 0.9306, fy: 0.5042 },
+    run_shoot:    { fx: 0.9675, fy: 0.3496 },
+  },
+  eject: {
+    shoot:        { fx: 0.62, fy: 0.46 },
+    crouch_shoot: { fx: 0.63, fy: 0.61 },
+    run_shoot:    { fx: 0.65, fy: 0.46 },
+  },
+};
 let currentSkin = "default";
 function applySkin(id) {
   const s = SKINS[id];
@@ -200,6 +227,7 @@ const CHECKPOINTS = [
 ];
 // ---- Speedrun 計時（確認選人後起算；擊倒 Boss 記錄）----
 let speedrunT = 0, bossCleared = false, bossClearT = 0, bestClearT = null;
+let mikaUsed = false;              // 本輪用過彌香（無敵造型）→ 通關不列入紀錄/不解鎖桃井
 try { const v = localStorage.getItem("miyako_best"); if (v) bestClearT = +v; } catch (e) {}
 function fmtTime(t) {
   const m = (t / 60) | 0, s = t % 60;
@@ -647,7 +675,7 @@ function toggleSupportInPool(idx) {   // 已購/已選角色：移出/加回卡�
 function saveGame() {
   try {
     localStorage.setItem("miyako_save", JSON.stringify({ credits, upgrades, owned: purchasedSupports, benched: benchedSupports, skin: currentSkin, unlocks, items: collectedItems, gates: openedGates,
-      cps: CHECKPOINTS.map(c => c.active ? 1 : 0), lastCp: checkpoint.active ? { x: checkpoint.x, y: checkpoint.y } : null, chosen: chosenSupport, spent: shopSpent }));
+      cps: CHECKPOINTS.map(c => c.active ? 1 : 0), lastCp: checkpoint.active ? { x: checkpoint.x, y: checkpoint.y } : null, chosen: chosenSupport, spent: shopSpent, mikaUsed }));
   } catch (e) {}
 }
 // ---- 存檔碼匯出/匯入（跨裝置備份；MYK1. 前綴 + base64(JSON)）----
@@ -656,10 +684,26 @@ function exportSave() {
   let best = null;
   try { best = localStorage.getItem("miyako_best"); } catch (e) {}
   const data = { save: JSON.stringify({ credits, upgrades, owned: purchasedSupports, benched: benchedSupports, skin: currentSkin, unlocks, items: collectedItems, gates: openedGates,
-    cps: CHECKPOINTS.map(c => c.active ? 1 : 0), lastCp: checkpoint.active ? { x: checkpoint.x, y: checkpoint.y } : null, chosen: chosenSupport, spent: shopSpent }), best };
+    cps: CHECKPOINTS.map(c => c.active ? 1 : 0), lastCp: checkpoint.active ? { x: checkpoint.x, y: checkpoint.y } : null, chosen: chosenSupport, spent: shopSpent, mikaUsed }), best };
   const code = "MYK1." + btoa(unescape(encodeURIComponent(JSON.stringify(data))));
   try { navigator.clipboard && navigator.clipboard.writeText(code); } catch (e) {}
   prompt("存檔碼（已嘗試複製到剪貼簿，也可手動全選複製保存）：", code);
+}
+function tryMikaPassword() {       // 「你想要無敵嗎」：輸入無敵的代名詞解鎖彌香
+  const s = prompt("……無敵的代名詞是？");
+  if (s === null) return;
+  const t = s.trim().toLowerCase();
+  if (["未花", "彌香", "mika", "ミカ", "미카"].includes(t)) {
+    if (!unlocks.skins.includes("mika")) {
+      unlocks.skins.push("mika");
+      pickupToasts.push({ text: "造型解鎖：彌香（存檔點可更換）", t: 4 });
+      saveGame();
+    } else {
+      pickupToasts.push({ text: "彌香已在隊伍中", t: 3 });
+    }
+  } else {
+    pickupToasts.push({ text: "……什麼都沒有發生", t: 2.5 });
+  }
 }
 function importSaveCode(s) {
   try {
@@ -689,6 +733,7 @@ function loadGame() {
       if (Array.isArray(v.benched)) benchedSupports = v.benched.filter(i => i >= 4 && i <= 9);
       if (v.skin && SKINS[v.skin]) currentSkin = v.skin;   // applySkin 於資產載入後執行
       if (v.unlocks) unlocks = { skins: v.unlocks.skins || [], keys: v.unlocks.keys || [] };
+      mikaUsed = !!v.mikaUsed;
       if (Array.isArray(v.items)) collectedItems = v.items.filter(i => i >= 0 && i < ITEM_SPAWNS.length);
       if (Array.isArray(v.gates)) openedGates = v.gates.filter(i => i >= 0);
       if (Array.isArray(v.cps)) for (let i = 0; i < CHECKPOINTS.length; i++) CHECKPOINTS[i].active = !!v.cps[i];
@@ -1233,6 +1278,7 @@ function hurtPlayer(dir, dmg = 1) {
   if (godMode) return;
   if (player.invulnT > 0 || player.deathT > 0) return;   // 無敵幀
   if (supportEquipped(8)) dmg *= 0.7;                     // 風華被動：防禦力 +30%
+  if (currentSkin === "mika") dmg *= 0.5;                 // 彌香被動：受傷減半
   if (player.shieldHp > 0) {         // 護盾先吸收（被動盾也吸；全吸收時不硬直不擊退）
     const absorbed = Math.min(player.shieldHp, dmg);
     player.shieldHp -= absorbed;
@@ -2039,7 +2085,8 @@ let playerBlockT = 0;              // 玩家護盾擋彈波紋
 const CRIT_DMG = 1.5;                       // 爆傷倍率；爆擊率 = BASE_CRIT + 升級
 
 function rollPlayerDmg() {
-  const crit = Math.random() < BASE_CRIT + upgrades.crit * 0.03 + (akoBuffT > 0 ? 0.30 : 0);
+  const crit = currentSkin === "mika" ||   // 彌香被動：普攻必定爆擊
+    Math.random() < BASE_CRIT + upgrades.crit * 0.03 + (akoBuffT > 0 ? 0.30 : 0);
   const atk = atkBuffT > 0 ? 1.2 : 1;                     // 日鞠：攻擊力 +20%
   return { dmg: PLAYER_DMG * atk * (crit ? CRIT_DMG + (akoBuffT > 0 ? 0.5 : 0) : 1), crit };
 }
@@ -2780,14 +2827,18 @@ function damageBoss(dmg, crit) {
     if (!bossCleared) {              // Speedrun：首次通關記錄
       bossCleared = true; bossClearT = speedrunT;
       startDialogue("bossclear");
-      if (bestClearT === null || bossClearT < bestClearT) {
-        bestClearT = bossClearT;
-        try { localStorage.setItem("miyako_best", String(bestClearT)); } catch (e) {}
-      }
-      if (bossClearT <= 360 && SKINS.momoi && !unlocks.skins.includes("momoi")) {   // 桃井：6 分鐘內通關
-        unlocks.skins.push("momoi");
-        pickupToasts.push({ text: "造型解鎖：桃井（6分鐘內通關達成！存檔點可更換）", t: 4 });
-        saveGame();
+      if (mikaUsed) {                // 用過彌香：不列入速通紀錄、不解鎖桃井
+        pickupToasts.push({ text: "使用了無敵造型：本次通關不列入紀錄", t: 4 });
+      } else {
+        if (bestClearT === null || bossClearT < bestClearT) {
+          bestClearT = bossClearT;
+          try { localStorage.setItem("miyako_best", String(bestClearT)); } catch (e) {}
+        }
+        if (bossClearT <= 360 && SKINS.momoi && !unlocks.skins.includes("momoi")) {   // 桃井：6 分鐘內通關
+          unlocks.skins.push("momoi");
+          pickupToasts.push({ text: "造型解鎖：桃井（6分鐘內通關達成！存檔點可更換）", t: 4 });
+          saveGame();
+        }
       }
     }
     retreatAllies();   // Boss 倒下 → 隊友撤離
@@ -2881,6 +2932,7 @@ function updateEffects(dt) {
   atkBuffT = Math.max(0, atkBuffT - dt);
   playerBlockT = Math.max(0, playerBlockT - dt);
   if (!selectScreen && !bossCleared) speedrunT += dt;   // Speedrun 計時（通關即停）
+  if (currentSkin === "mika" && !bossCleared) mikaUsed = true;   // 無敵造型使用標記
   for (const cp of CHECKPOINTS) {
     if (Math.abs(player.x - cp.x) < 26 && Math.abs(player.y - cp.y) < 60) yuukaShots = 0;   // 優香彩蛋：碰存檔點歸零
     if (!cp.active && player.deathT <= 0 &&
@@ -3934,6 +3986,17 @@ function drawPanel() {
     ctx.fillRect(px + PW - 12, thumbY, 4, thumbH);
   }
   const cbx = px + PW - 46, cby = py + 12, cbs = 30;
+  {   // 「你想要無敵嗎」：彌香密語按鈕（匯出檔左側）
+    const mx = cbx - 76 * 2 - 8 - 118, mw = 110;
+    slantPath(mx, cby, mw, cbs, 6);
+    ctx.fillStyle = "#e88fb0";
+    ctx.fill();
+    ctx.textAlign = "center";
+    ctx.font = `italic 900 12px ${UI_FONT}`;
+    ctx.fillStyle = "#fff";
+    ctx.fillText("你想要無敵嗎", mx + mw / 2, cby + 20);
+    panel.btns.push({ x: mx, y: cby, w: mw, h: cbs, fn: tryMikaPassword });
+  }
   // 存檔碼匯出/匯入（跨裝置備份）
   for (const [i, [label, fn]] of [["匯出檔", exportSave], ["匯入檔", importSave]].entries()) {
     const ex = cbx - 76 * (2 - i) - 8, ew = 68;
