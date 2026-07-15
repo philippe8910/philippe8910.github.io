@@ -3,8 +3,8 @@
   "file": "idle.png",
   "frameW": 240,
   "frameH": 354,
-  "count": 8,
-  "fps": 8,
+  "count": 18,
+  "fps": 6,
   "loop": true
  },
  "run": {
@@ -79,18 +79,18 @@
   "fps": 20,
   "loop": false
  },
- "_feetRatio": 0.988,
- "_anchorX": 0.4572,
+ "_feetRatio": 0.9881,
+ "_anchorX": 0.4568,
  "_muzzle_shoot": {
   "fx": 0.8615,
-  "fy": 0.3335
+  "fy": 0.335
  },
  "_muzzle_crouch_shoot": {
   "fx": 0.9479,
-  "fy": 0.5064
+  "fy": 0.5075
  },
  "_muzzle_run_shoot": {
   "fx": 0.9899,
-  "fy": 0.3416
+  "fy": 0.3434
  }
 }
