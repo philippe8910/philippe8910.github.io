@@ -82,6 +82,32 @@ SKINS.swim = {
     run_shoot:    { fx: 0.65, fy: 0.46 },
   },
 };
+SKINS.conv = {
+  label: "便利商店打工",
+  fw: 240, fh: 237, feet: 0.9877, anchor: 0.3848,
+  anims: {
+    idle:         { file: "assets_miyako_conv/idle.png",         count: 10, fps: 8,  loop: true  },
+    run:          { file: "assets_miyako_conv/run.png",          count: 12, fps: 12, loop: true  },
+    rise:         { file: "assets_miyako_conv/rise.png",         count: 5,  fps: 20, loop: false },
+    fall:         { file: "assets_miyako_conv/fall.png",         count: 3,  fps: 12, loop: false },
+    land:         { file: "assets_miyako_conv/land.png",         count: 4,  fps: 20, loop: false },
+    hurt:         { file: "assets_miyako_conv/hurt.png",         count: 10, fps: 18, loop: false },
+    shoot:        { file: "assets_miyako_conv/shoot.png",        count: 12, fps: 36, loop: true  },
+    crouch_idle:  { file: "assets_miyako_conv/crouch_idle.png",  count: 10, fps: 8,  loop: true  },
+    crouch_shoot: { file: "assets_miyako_conv/crouch_shoot.png", count: 12, fps: 36, loop: true  },
+    run_shoot:    { file: "assets_miyako_conv/run_shoot.png",    count: 10, fps: 12, loop: true  },
+  },
+  muzzle: {
+    shoot:        { fx: 0.8382, fy: 0.3667 },
+    crouch_shoot: { fx: 0.8538, fy: 0.6178 },
+    run_shoot:    { fx: 0.9358, fy: 0.3643 },
+  },
+  eject: {
+    shoot:        { fx: 0.62, fy: 0.46 },
+    crouch_shoot: { fx: 0.63, fy: 0.61 },
+    run_shoot:    { fx: 0.65, fy: 0.46 },
+  },
+};
 let currentSkin = "default";
 function applySkin(id) {
   const s = SKINS[id];
@@ -515,6 +541,14 @@ function supportEquipped(idx) {    // 在卡池（手牌或牌庫）中才算裝
 function cardCost(c) {             // 三千留被動：全卡 Cost -1（最低 1）
   return supportEquipped(9) ? Math.max(1, c.cost - 1) : c.cost;
 }
+let shopSpent = 0;                 // 商店累計消費（隱藏解鎖條件用）
+function trackSpend(n) {
+  shopSpent += n;
+  if (shopSpent >= 2000 && !unlocks.skins.includes("conv")) {
+    unlocks.skins.push("conv");
+    pickupToasts.push({ text: "造型解鎖：便利商店打工（存檔點可更換）", t: 3.5 });
+  }
+}
 let purchasedSupports = [];        // 已購支援卡 index（4/5/6）
 let benchedSupports = [];          // 已購但移出卡池（被動仍生效，僅不進輪替）
 function ownedSupport(skill) {     // 該被動的支援是否「裝備中」（移出卡池即停用被動）
@@ -525,6 +559,7 @@ function buySupport(idx) {
   const price = SUPPORT_PRICES[idx] || 300;
   if (credits < price || purchasedSupports.includes(idx) || chosenSupport === idx) return false;
   credits -= price;
+  trackSpend(price);
   purchasedSupports.push(idx);
   if (supportsInPool() < SUPPORT_POOL_MAX) {
     benchedSupports = benchedSupports.filter(i => i !== idx);
@@ -555,7 +590,7 @@ function toggleSupportInPool(idx) {   // 已購/已選角色：移出/加回卡�
 function saveGame() {
   try {
     localStorage.setItem("miyako_save", JSON.stringify({ credits, upgrades, owned: purchasedSupports, benched: benchedSupports, skin: currentSkin, unlocks, items: collectedItems, gates: openedGates,
-      cps: CHECKPOINTS.map(c => c.active ? 1 : 0), lastCp: checkpoint.active ? { x: checkpoint.x, y: checkpoint.y } : null, chosen: chosenSupport }));
+      cps: CHECKPOINTS.map(c => c.active ? 1 : 0), lastCp: checkpoint.active ? { x: checkpoint.x, y: checkpoint.y } : null, chosen: chosenSupport, spent: shopSpent }));
   } catch (e) {}
 }
 // ---- 存檔碼匯出/匯入（跨裝置備份；MYK1. 前綴 + base64(JSON)）----
@@ -564,7 +599,7 @@ function exportSave() {
   let best = null;
   try { best = localStorage.getItem("miyako_best"); } catch (e) {}
   const data = { save: JSON.stringify({ credits, upgrades, owned: purchasedSupports, benched: benchedSupports, skin: currentSkin, unlocks, items: collectedItems, gates: openedGates,
-    cps: CHECKPOINTS.map(c => c.active ? 1 : 0), lastCp: checkpoint.active ? { x: checkpoint.x, y: checkpoint.y } : null, chosen: chosenSupport }), best };
+    cps: CHECKPOINTS.map(c => c.active ? 1 : 0), lastCp: checkpoint.active ? { x: checkpoint.x, y: checkpoint.y } : null, chosen: chosenSupport, spent: shopSpent }), best };
   const code = "MYK1." + btoa(unescape(encodeURIComponent(JSON.stringify(data))));
   try { navigator.clipboard && navigator.clipboard.writeText(code); } catch (e) {}
   prompt("存檔碼（已嘗試複製到剪貼簿，也可手動全選複製保存）：", code);
@@ -600,6 +635,7 @@ function loadGame() {
       if (Array.isArray(v.items)) collectedItems = v.items.filter(i => i >= 0 && i < ITEM_SPAWNS.length);
       if (Array.isArray(v.gates)) openedGates = v.gates.filter(i => i >= 0);
       if (Array.isArray(v.cps)) for (let i = 0; i < CHECKPOINTS.length; i++) CHECKPOINTS[i].active = !!v.cps[i];
+      shopSpent = v.spent | 0;
       if (v.lastCp) { checkpoint.x = v.lastCp.x; checkpoint.y = v.lastCp.y; checkpoint.active = true; }
       if (currentSkin !== "default" && !unlocks.skins.includes(currentSkin)) unlocks.skins.push(currentSkin);   // 舊檔遷移
       for (const c of purchasedSupports) {   // 舊檔已購 7/8/9 → 視同已拾取對應道具
@@ -4096,6 +4132,7 @@ function buyUpgrade(key) {
   const c = upgradeCost(key);
   if (upgrades[key] >= UPGRADE_DEFS[key].max || credits < c) return false;
   credits -= c;
+  trackSpend(c);
   upgrades[key]++;
   applyUpgrades();
   player.hp = player.maxHp;            // 升級順便回滿
@@ -4791,7 +4828,7 @@ function drawEffects() {
 for (const n of TILE_NAMES) TILES[n] = { file: `assets_miyako/tiles/${n}.png` };
 let loaded = 0;
 // 用 SKINS.default.anims 而非 ANIMS：存檔為泳裝時開機已 applySkin，ANIMS 已不指向制服
-const assets = [...Object.values(SKINS.default.anims), ...Object.values(SKINS.swim.anims), ...Object.values(TILES), ...Object.values(BOSS_ANIMS),
+const assets = [...Object.values(SKINS).flatMap(s => s.anims ? Object.values(s.anims) : []), ...Object.values(TILES), ...Object.values(BOSS_ANIMS),
   ...Object.values(ALLY_KINDS).flatMap(k => Object.values(k.anims)), SNIPER_PORTRAIT,
   ...Object.values(ENEMY_KINDS).flatMap(k => Object.values(k.anims)), ...CARDS, FIRE_FX, HELI_FX, GREN_FX, ROVER_FX, CREDIT_FX, ...Object.values(ENV)];
 const total = assets.length;
