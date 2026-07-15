@@ -11,7 +11,7 @@
   "file": "run.png",
   "frameW": 240,
   "frameH": 238,
-  "count": 8,
+  "count": 11,
   "fps": 12,
   "loop": true
  },
@@ -19,7 +19,7 @@
   "file": "crouch_idle.png",
   "frameW": 240,
   "frameH": 238,
-  "count": 10,
+  "count": 8,
   "fps": 8,
   "loop": true
  },
@@ -43,7 +43,7 @@
   "file": "run_shoot.png",
   "frameW": 240,
   "frameH": 238,
-  "count": 10,
+  "count": 8,
   "fps": 12,
   "loop": true
  },
@@ -79,18 +79,18 @@
   "fps": 20,
   "loop": false
  },
- "_feetRatio": 0.9852,
+ "_feetRatio": 0.984,
  "_anchorX": 0.3848,
  "_muzzle_shoot": {
   "fx": 0.8382,
-  "fy": 0.3664
+  "fy": 0.3648
  },
  "_muzzle_crouch_shoot": {
   "fx": 0.8538,
-  "fy": 0.6159
+  "fy": 0.6152
  },
  "_muzzle_run_shoot": {
-  "fx": 0.9358,
-  "fy": 0.3639
+  "fx": 0.8797,
+  "fy": 0.365
  }
 }
