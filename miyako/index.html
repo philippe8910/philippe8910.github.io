@@ -212,8 +212,8 @@ const SOLIDS = [
   { x: 9750, y: 2110, w: 130, h: 16 },
   { x: 10690, y: 2150, w: 120, h: 16 },
   { x: 12220, y: 2150, w: 130, h: 16 },
-  { x: 13450, y: 2110, w: 130, h: 16 },
-  { x: 12790, y: 2160, w: 120, h: 16 },
+  { x: 13460, y: 2070, w: 130, h: 16 },
+  { x: 12800, y: 2100, w: 120, h: 16 },
   { x: 14380, y: 2310, w: 130, h: 16 },
   { x: 700, y: 1450, w: 130, h: 16 },
   { x: 1300, y: 1680, w: 130, h: 16 },
@@ -298,6 +298,10 @@ const SOLIDS = [
   { x: 10670, y: 2950, w: 400, h: 90 },
   { x: 13230, y: 2940, w: 400, h: 90 },
   { x: 15000, y: 2310, w: 400, h: 90 },
+  { x: 10330, y: 1140, w: 400, h: 90 },
+  { x: 10520, y: 660, w: 400, h: 90 },
+  { x: 11310, y: 1170, w: 400, h: 90 },
+  { x: 13640, y: 1740, w: 400, h: 90 },
 ];
 
 function setGate(on) {
@@ -322,7 +326,7 @@ for (const el of ELEVATORS) {
 // ---- 移動平台（編輯器配置；axis x=左右 y=上下 來回）----
 const MOVERS = [
   { x: 6020, y: 1080, w: 180, axis: "x", dist: 2000, speed: 120 },
-  { x: 10480, y: 2050, w: 180, axis: "x", dist: 3600, speed: 120 },
+  { x: 10480, y: 2050, w: 180, axis: "x", dist: 3780, speed: 120 },
   { x: -70, y: 1940, w: 180, axis: "y", dist: -1900, speed: 60 },
 ];
 for (const m of MOVERS) {
@@ -384,6 +388,7 @@ function collectItem(i) {
 }
 // ---- 單向門（黑魂捷徑）：牆體＋單側觸發區，從該側踩到即永久開啟 ----
 const GATES = [
+  { x: 1160, y: 2770, w: 40, h: 230, side: "left" },
 ];
 let openedGates = [];
 for (let i = 0; i < GATES.length; i++) {
@@ -978,8 +983,6 @@ const ENEMY_SPAWNS = [
   { x: 9820, y: 2110, range: 90, kind: "rocket" },
   { x: 14020, y: 3000, range: 410, kind: "shield" },
   { x: 1550, y: 1560, range: 90, kind: "rocket" },
-  { x: 12850, y: 2160, range: 90, kind: "sgtrooper" },
-  { x: 13520, y: 2110, range: 130, kind: "shield" },
   { x: 12980, y: 2400, range: 90, kind: "shield" },
   { x: 14440, y: 2310, range: 90, kind: "turret" },
   { x: 12060, y: 2400, range: 250, kind: "pmc" },
@@ -998,6 +1001,8 @@ const ENEMY_SPAWNS = [
   { x: -370, y: 810, range: 90, kind: "rocket" },
   { x: -390, y: 340, range: 90, kind: "rocket" },
   { x: 6910, y: 3000, range: 90, kind: "pmc2" },
+  { x: 12860, y: 2100, range: 90, kind: "turret" },
+  { x: 13520, y: 2070, range: 90, kind: "turret" },
 ];
 const enemies = ENEMY_SPAWNS.map(s => ({
   kind: s.kind, home: s.x, range: s.range,
