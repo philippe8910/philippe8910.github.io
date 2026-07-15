@@ -95,7 +95,7 @@ function applySkin(id) {
 }
 
 // ---- 大型灰盒測試關卡：左起點 → 中段階梯連跳 → 終點 Boss 房 ----
-const WORLD = { w: 16000, h: 3160 };
+const WORLD = { x0: -500, w: 16000, h: 3160 };   // x0：西側秘密區（負座標）
 // 五層 Metroidvania：L0 起始（底）→ L4 天頂（Boss 在左上）
 const L0_Y = 3000, L1_Y = 2400, L2_Y = 1800, L3_Y = 1200, L4_Y = 600;
 const F1_Y = L0_Y, F3_Y = L4_Y;               // 舊別名：出生層 / Boss 層
@@ -124,7 +124,7 @@ function fmtTime(t) {
   return `${String(m).padStart(2, "0")}:${s < 10 ? "0" : ""}${s.toFixed(2)}`;
 }
 const SOLIDS = [
-  { x: -40, y: 3000, w: 16080, h: 160 },   // L0 地板
+  { x: -460, y: 3000, w: 16500, h: 160 },   // L0 地板
   { x: 800, y: 2400, w: 2160, h: 90 },   // L1 板
   { x: 3110, y: 2400, w: 2640, h: 90 },   // L1 板
   { x: 5900, y: 2400, w: 3840, h: 90 },   // L1 板
@@ -146,13 +146,12 @@ const SOLIDS = [
   { x: 14960, y: 1890, w: 40, h: 510 },   // L2 東端牆
   { x: 9770, y: 2850, w: 110, h: 16 },   // T1
   { x: 9860, y: 2680, w: 110, h: 16 },   // T1
-  { x: 9740, y: 2560, w: 110, h: 16 },   // T1
-  { x: 1570, y: 2250, w: 110, h: 16 },   // T2
+  { x: 9550, y: 2630, w: 110, h: 16 },   // T1
+  { x: 1250, y: 2170, w: 110, h: 16 },   // T2
   { x: 1660, y: 2100, w: 110, h: 16 },   // T2
-  { x: 1570, y: 1950, w: 110, h: 16 },   // T2
+  { x: 570, y: 2200, w: 110, h: 16 },   // T2
   { x: 12770, y: 1050, w: 110, h: 16 },   // T3
   { x: 12860, y: 900, w: 110, h: 16 },   // T3
-  { x: 12770, y: 750, w: 110, h: 16 },   // T3
   { x: 6470, y: 1650, w: 110, h: 16 },   // 大廳西鏈
   { x: 6560, y: 1500, w: 110, h: 16 },   // 大廳西鏈
   { x: 6470, y: 1350, w: 110, h: 16 },   // 大廳西鏈
@@ -207,13 +206,13 @@ const SOLIDS = [
   { x: 6490, y: 2160, w: 120, h: 16 },
   { x: 7200, y: 2270, w: 130, h: 16 },
   { x: 7900, y: 2270, w: 120, h: 16 },
-  { x: 8080, y: 2120, w: 135, h: 16 },
+  { x: 8090, y: 2150, w: 135, h: 16 },
   { x: 8260, y: 2010, w: 120, h: 16 },
   { x: 8900, y: 2270, w: 130, h: 16 },
   { x: 9750, y: 2110, w: 130, h: 16 },
   { x: 10690, y: 2150, w: 120, h: 16 },
   { x: 12220, y: 2150, w: 130, h: 16 },
-  { x: 12600, y: 2280, w: 130, h: 16 },
+  { x: 13450, y: 2110, w: 130, h: 16 },
   { x: 12790, y: 2160, w: 120, h: 16 },
   { x: 14380, y: 2310, w: 130, h: 16 },
   { x: 700, y: 1450, w: 130, h: 16 },
@@ -235,7 +234,7 @@ const SOLIDS = [
   { x: 12400, y: 1680, w: 130, h: 16 },
   { x: 12590, y: 1560, w: 120, h: 16 },
   { x: 13400, y: 1670, w: 130, h: 16 },
-  { x: 14200, y: 1670, w: 130, h: 16 },
+  { x: 14040, y: 1620, w: 130, h: 16 },
   { x: 1100, y: 1070, w: 130, h: 16 },
   { x: 1700, y: 1080, w: 130, h: 16 },
   { x: 1890, y: 960, w: 120, h: 16 },
@@ -279,15 +278,26 @@ const SOLIDS = [
   { x: 1500, y: 490, w: 140, h: 16 },
   { x: 1900, y: 430, w: 130, h: 16 },
   { x: 2300, y: 490, w: 130, h: 16 },
-  { x: 600, y: 2290, w: 130, h: 16 },
-  { x: 380, y: 2170, w: 130, h: 16 },
-  { x: 190, y: 2070, w: 130, h: 16 },
   { x: 7750, y: 2080, w: 130, h: 16 },
   { x: 8410, y: 2120, w: 340, h: 290 },
   { x: 10250, y: 2100, w: 160, h: 310 },
   { x: 10020, y: 2230, w: 130, h: 16 },
   { x: 14440, y: 2100, w: 540, h: 60 },
   { x: 15380, y: 620, w: 400, h: 90 },
+  { x: 12490, y: 2350, w: 200, h: 70 },
+  { x: -490, y: -1810, w: 40, h: 6000 },
+  { x: 300, y: 210, w: 100, h: 40 },
+  { x: 270, y: 960, w: 150, h: 40 },
+  { x: 300, y: 600, w: 110, h: 50 },
+  { x: 280, y: 1260, w: 130, h: 16 },
+  { x: -450, y: 1250, w: 200, h: 90 },
+  { x: -460, y: 820, w: 160, h: 90 },
+  { x: -450, y: 340, w: 140, h: 90 },
+  { x: 6250, y: 2930, w: 400, h: 90 },
+  { x: 9030, y: 2470, w: 400, h: 90 },
+  { x: 10670, y: 2950, w: 400, h: 90 },
+  { x: 13230, y: 2940, w: 400, h: 90 },
+  { x: 15000, y: 2310, w: 400, h: 90 },
 ];
 
 function setGate(on) {
@@ -299,11 +309,11 @@ function setGate(on) {
 // ---- Cinemachine-style camera: per-axis damped follow + lookahead + dead zone ----
 // ---- 電梯（紅三角標記；站上去升到上層，離開 2 秒後回到下層）----
 const ELEVATORS = [
-  { x: 5760, w: 140, top: L1_Y, bottom: L0_Y, y: L0_Y, idleT: 0 },   // E1 起始平原 → 下水道
+  { x: 5760, w: 140, top: L1_Y, bottom: L0_Y, y: L0_Y, lock: "E1", idleT: 0 },   // E1 起始平原 → 下水道
   { x: 11360, w: 140, top: L2_Y, bottom: L1_Y, y: L1_Y, idleT: 0 },   // E2 下水道東 → 東迴廊
-  { x: 660, w: 140, top: L3_Y, bottom: L2_Y, y: L2_Y, idleT: 0 },   // E3 西洞窟 → 西高地
+  { x: 660, w: 140, top: L3_Y, bottom: L2_Y, y: L2_Y, lock: "K1", idleT: 0 },   // E3 西洞窟 → 西高地
   { x: 12560, w: 140, top: L4_Y, bottom: L3_Y, y: L3_Y, idleT: 0 },   // E4 東塔 → 天頂迴廊
-  { x: 15790, w: 150, top: 620, bottom: L0_Y, y: L0_Y, idleT: 0 },
+  { x: 15790, w: 150, top: 620, bottom: L0_Y, y: L0_Y, lock: "E5", idleT: 0 },
 ];
 for (const el of ELEVATORS) {
   el.solid = { x: el.x, y: el.y, w: el.w, h: 14, elevator: true };
@@ -312,6 +322,8 @@ for (const el of ELEVATORS) {
 // ---- 移動平台（編輯器配置；axis x=左右 y=上下 來回）----
 const MOVERS = [
   { x: 6020, y: 1080, w: 180, axis: "x", dist: 2000, speed: 120 },
+  { x: 10480, y: 2050, w: 180, axis: "x", dist: 3600, speed: 120 },
+  { x: -70, y: 1940, w: 180, axis: "y", dist: -1900, speed: 60 },
 ];
 for (const m of MOVERS) {
   m.t = 0;
@@ -321,7 +333,7 @@ for (const m of MOVERS) {
 function updateMovers(dt) {
   for (const m of MOVERS) {
     m.t += dt;
-    const period = (2 * m.dist) / m.speed;
+    const period = (2 * Math.abs(m.dist)) / m.speed;   // dist 可為負（向上/向左）
     const ph = (m.t % period) / period;
     const off = (ph < 0.5 ? ph * 2 : 2 - ph * 2) * m.dist;
     const nx = m.axis === "x" ? m.x + off : m.x;
@@ -335,12 +347,14 @@ function updateMovers(dt) {
 }
 // ---- 地圖道具：char=解鎖角色卡 skin=解鎖造型 key=電梯鑰匙 ----
 const ITEM_SPAWNS = [
-  { x: 14100, y: 2400, type: "char", card: 7 },   // 日鞠：L1 東端
-  { x: 7100, y: 1500, type: "char", card: 8 },   // 風華：大廳中層橋
-  { x: 500, y: 1200, type: "char", card: 9 },   // 三千留：L3 西端短板
-  { x: 9820, y: 2550, type: "skin", skin: "swim" },   // 泳裝：T1 塔頂（隱藏）
+  { x: 14910, y: 2100, type: "char", card: 9 },   // 日鞠：L1 東端
+  { x: 15220, y: 2310, type: "char", card: 8 },   // 風華：大廳中層橋
+  { x: 500, y: 1200, type: "char", card: 7 },   // 三千留：L3 西端短板
   { x: 1510, y: 1800, type: "key", id: "K1" },
   { x: 15580, y: 600, type: "skin", skin: "swim" },
+  { x: 9610, y: 2630, type: "key", id: "E1" },
+  { x: 350, y: 210, type: "key", id: "E5" },
+  { x: 7120, y: 1500, type: "key", id: "K1" },
 ];
 let unlocks = { skins: [], keys: [] };
 let collectedItems = [];           // 已拾取的 ITEM_SPAWNS index
@@ -412,7 +426,7 @@ function updateCamera(dt) {
   else if (ty < cam.y - dzY) gy = ty + dzY;
   cam.x += (gx - cam.x) * (1 - Math.exp(-dt * 5));             // x damping
   cam.y += (gy - cam.y) * (1 - Math.exp(-dt * 3.2));           // y damping (softer)
-  cam.x = Math.max(VIEW_W / 2, Math.min(WORLD.w - VIEW_W / 2, cam.x));   // world bounds
+  cam.x = Math.max(WORLD.x0 + VIEW_W / 2, Math.min(WORLD.w - VIEW_W / 2, cam.x));   // world bounds
   cam.y = Math.max(270, Math.min(WORLD.h - 270, cam.y));
   if (boss.active && boss.deadT <= 0) {                        // Boss 戰：跟隨但鉗在房內
     const lockX = Math.max(BOSS_ROOM.left + VIEW_W / 2, Math.min(BOSS_ROOM.right - VIEW_W / 2, player.x));
@@ -878,7 +892,7 @@ const ENEMY_SPAWNS = [
   { x: 7900, y: 2400, range: 120, kind: "pmc" },
   { x: 9200, y: 2400, range: 370, kind: "pmc2" },
   { x: 10900, y: 2400, range: 360, kind: "shield" },
-  { x: 12290, y: 2140, range: 60, kind: "rocket" },
+  { x: 12290, y: 2160, range: 60, kind: "rocket" },
   { x: 13600, y: 2400, range: 100, kind: "pmc2" },
   { x: 900, y: 1800, range: 90, kind: "sgtrooper" },
   { x: 1900, y: 1800, range: 60, kind: "rocket" },
@@ -922,6 +936,27 @@ const ENEMY_SPAWNS = [
   { x: 8580, y: 2120, range: 150, kind: "shield" },
   { x: 9820, y: 2110, range: 90, kind: "rocket" },
   { x: 14020, y: 3000, range: 410, kind: "shield" },
+  { x: 1550, y: 1560, range: 90, kind: "rocket" },
+  { x: 12850, y: 2160, range: 90, kind: "sgtrooper" },
+  { x: 13520, y: 2110, range: 130, kind: "shield" },
+  { x: 12980, y: 2400, range: 90, kind: "shield" },
+  { x: 14440, y: 2310, range: 90, kind: "turret" },
+  { x: 12060, y: 2400, range: 250, kind: "pmc" },
+  { x: 13350, y: 2400, range: 90, kind: "sgtrooper" },
+  { x: 10750, y: 2150, range: 90, kind: "turret" },
+  { x: 3800, y: 1800, range: 90, kind: "pmc" },
+  { x: 2420, y: 1800, range: 90, kind: "turret" },
+  { x: 8320, y: 2010, range: 90, kind: "turret" },
+  { x: 630, y: 2200, range: 90, kind: "rocket" },
+  { x: 320, y: 600, range: 90, kind: "rocket" },
+  { x: 8570, y: 1080, range: 90, kind: "rocket" },
+  { x: 13000, y: 1200, range: 90, kind: "turret" },
+  { x: 330, y: 960, range: 90, kind: "rocket" },
+  { x: 350, y: 1260, range: 90, kind: "rocket" },
+  { x: -400, y: 1260, range: 90, kind: "rocket" },
+  { x: -370, y: 810, range: 90, kind: "rocket" },
+  { x: -390, y: 340, range: 90, kind: "rocket" },
+  { x: 6910, y: 3000, range: 90, kind: "pmc2" },
 ];
 const enemies = ENEMY_SPAWNS.map(s => ({
   kind: s.kind, home: s.x, range: s.range,
@@ -1596,7 +1631,7 @@ function updateEnemyBullets(dt) {
     }
     b.x += b.vx * dt;
     b.y += (b.vy || 0) * dt;   // 霰彈散射／火箭追蹤用
-    let gone = b.x < -20 || b.x > WORLD.w + 20;
+    let gone = b.x < WORLD.x0 - 20 || b.x > WORLD.w + 20;
     if (!gone && vulnerable &&
         Math.abs(b.x - player.x) < HITBOX_W / 2 + 6 &&
         b.y > player.y - hh - 12 && b.y < player.y) {   // +12 頭部容差：肩射高度的槍口(105-109)仍命中站姿，蹲下(70)可閃
@@ -1610,7 +1645,7 @@ function updateEnemyBullets(dt) {
       }
     }
     if (gone) {
-      if (b.rocket && b.x > -20 && b.x < WORLD.w + 20) rocketBlast(b.x, b.y);
+      if (b.rocket && b.x > WORLD.x0 - 20 && b.x < WORLD.w + 20) rocketBlast(b.x, b.y);
       impacts.push({ x: b.x, y: b.y, t: 0.1 });
       bossBullets.splice(i, 1);
     }
@@ -2290,7 +2325,7 @@ function updateEffects(dt) {
         if (rv.vy >= 0 && prevY <= s.y + 1 && rv.y >= s.y) { rv.y = s.y; rv.vy = 0; }
       }
     }
-    let gone = rv.x < -20 || rv.x > WORLD.w + 20 || rv.y > WORLD.h + 100;
+    let gone = rv.x < WORLD.x0 - 20 || rv.x > WORLD.w + 20 || rv.y > WORLD.h + 100;
     if (!gone) {
       for (const s of SOLIDS) {              // 實心障礙側撞（薄平台不算；要同高度）
         if (s.h > 30 && rv.y > s.y + 2 && rv.y - 14 < s.y + s.h &&
@@ -2427,7 +2462,7 @@ function updateEffects(dt) {
     const b = bullets[i];
     if (b.x0 === undefined) b.x0 = b.x;   // 記錄出膛位置
     b.x += b.vx * dt;
-    let hit = b.x < -20 || b.x > WORLD.w + 20 ||
+    let hit = b.x < WORLD.x0 - 20 || b.x > WORLD.w + 20 ||
               Math.abs(b.x - b.x0) > BULLET_RANGE;   // 超射程消散
     // 打中小怪
     for (const e of enemies) {
@@ -2573,7 +2608,7 @@ function physics(dt) {
       }
     }
   }
-  player.x = Math.max(hw, Math.min(WORLD.w - hw, player.x));
+  player.x = Math.max(WORLD.x0 + hw, Math.min(WORLD.w - hw, player.x));
 
   const prevY = player.y;
   player.y += player.vy * dt;
@@ -3631,17 +3666,17 @@ const MM_SC = 64;   // 1 小地圖 px = 64 世界 px
 function buildMinimap() {
   if (!document.createElement) return;
   minimapCv = document.createElement("canvas");
-  minimapCv.width = Math.ceil(WORLD.w / MM_SC);
+  minimapCv.width = Math.ceil((WORLD.w - WORLD.x0) / MM_SC);
   minimapCv.height = Math.ceil(WORLD.h / MM_SC);
   const g = minimapCv.getContext("2d");
   g.fillStyle = "rgba(16,24,40,.9)";
   g.fillRect(0, 0, minimapCv.width, minimapCv.height);
   g.fillStyle = "#7f8aa0";
   for (const s of SOLIDS) {
-    g.fillRect(s.x / MM_SC, s.y / MM_SC, Math.max(1, s.w / MM_SC), Math.max(1, s.h / MM_SC));
+    g.fillRect((s.x - WORLD.x0) / MM_SC, s.y / MM_SC, Math.max(1, s.w / MM_SC), Math.max(1, s.h / MM_SC));
   }
   g.fillStyle = "#c9a13b";                 // 電梯
-  for (const el of ELEVATORS) g.fillRect(el.x / MM_SC - 1, el.top / MM_SC, 3, (el.bottom - el.top) / MM_SC);
+  for (const el of ELEVATORS) g.fillRect((el.x - WORLD.x0) / MM_SC - 1, el.top / MM_SC, 3, (el.bottom - el.top) / MM_SC);
 }
 buildMinimap();
 
@@ -3656,14 +3691,14 @@ function drawMinimap() {
   ctx.strokeRect(x0 - .5, y0 - .5, mw + 1, mh + 1);
   for (const cp of CHECKPOINTS) {          // 存檔點
     ctx.fillStyle = cp.active ? "#59d5f2" : "#8a93a8";
-    ctx.fillRect(x0 + cp.x / MM_SC - 1, y0 + cp.y / MM_SC - 2, 3, 3);
+    ctx.fillRect(x0 + (cp.x - WORLD.x0) / MM_SC - 1, y0 + cp.y / MM_SC - 2, 3, 3);
   }
   ctx.fillStyle = "#e8544a";               // Boss
-  ctx.fillRect(x0 + BOSS_ROOM.homeX / MM_SC - 2, y0 + L4_Y / MM_SC - 3, 4, 4);
+  ctx.fillRect(x0 + (BOSS_ROOM.homeX - WORLD.x0) / MM_SC - 2, y0 + L4_Y / MM_SC - 3, 4, 4);
   ctx.fillStyle = "#fff";                  // 玩家（脈動）
   const pr = 1.5 + Math.sin(uiTime * 6) * 0.8;
   ctx.beginPath();
-  ctx.arc(x0 + player.x / MM_SC, y0 + player.y / MM_SC - 1, pr, 0, Math.PI * 2);
+  ctx.arc(x0 + (player.x - WORLD.x0) / MM_SC, y0 + player.y / MM_SC - 1, pr, 0, Math.PI * 2);
   ctx.fill();
 }
 
