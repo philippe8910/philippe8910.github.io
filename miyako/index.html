@@ -1163,7 +1163,7 @@ function drawEnemies() {
     const K = ENEMY_KINDS[e.kind];
     const scale = K.drawH / K.fh;
     const dw = K.fw * scale, dh = K.drawH;
-    if (e.state === "death" && animDone(K.anims.death, e.t) && e.deadT < 5.4) continue;  // 屍體停留一下再消失
+    if (e.state === "death" && animDone(K.anims.death, e.t) && e.deadT < 4.2) continue;  // 淡出完才消失
     const a = K.anims[e.state] || K.anims.shoot || K.anims.run || K.anims.idle || K.anims.death;
     if (!a) continue;
     const fi = frameIndex(a, e.t);
@@ -1172,6 +1172,9 @@ function drawEnemies() {
       ctx.translate(e.x, 0); ctx.scale(-1, 1); ctx.translate(-e.x, 0);
     }
     if (e.flashT > 0 && e.state !== "death") ctx.globalAlpha = 0.85;
+    if (e.state === "death" && animDone(K.anims.death, e.t)) {   // 屍體慢慢變透明（1.2 秒淡出）
+      ctx.globalAlpha = Math.max(0, Math.min(1, (e.deadT - 4.2) / 1.2));
+    }
     ctx.drawImage(a.img, fi * K.fw, 0, K.fw, K.fh,
       e.x - K.anchor * dw, e.y - K.feet * dh, dw, dh);
     ctx.restore();
