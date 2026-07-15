@@ -2841,14 +2841,22 @@ function draw() {
       ctx.beginPath();
       ctx.rect(s.x, s.y, s.w, s.h);
       ctx.clip();
-      const tw = 124, th = 127;            // tile_19 155x159 縮 0.8
-      for (let ty = s.y; ty < s.y + s.h; ty += th) {
-        for (let tx = s.x - (s.x % tw); tx < s.x + s.w; tx += tw) {
-          ctx.drawImage(ENV.wallFill.img, tx, ty, tw, th);
+      if (s.h <= 130 && s.w <= 340) {      // 小型塊：磁磚縮放至塊高、貼齊左緣（避免大磁磚被裁出隨機切片）
+        const th2 = s.h, tw2 = Math.max(1, Math.round(124 * s.h / 127));
+        for (let tx = s.x; tx < s.x + s.w; tx += tw2) ctx.drawImage(ENV.wallFill.img, tx, s.y, tw2, th2);
+        ctx.restore();
+        const hs = Math.max(10, Math.min(16, s.h * 0.35));   // 黃條隨塊縮小
+        ctx.drawImage(ENV.floorTop.img, s.x, s.y - Math.round(hs / 3), s.w, hs);
+      } else {
+        const tw = 124, th = 127;          // tile_19 155x159 縮 0.8（磁磚貼齊塊左緣）
+        for (let ty = s.y; ty < s.y + s.h; ty += th) {
+          for (let tx = s.x; tx < s.x + s.w; tx += tw) {
+            ctx.drawImage(ENV.wallFill.img, tx, ty, tw, th);
+          }
         }
+        ctx.restore();
+        ctx.drawImage(ENV.floorTop.img, s.x, s.y - 8, s.w, 24);   // 頂緣黃線（上移讓腳踩在亮條上）
       }
-      ctx.restore();
-      ctx.drawImage(ENV.floorTop.img, s.x, s.y - 8, s.w, 24);   // 頂緣黃線（上移讓腳踩在亮條上，消除身體與地板間縫）
     } else {                               // 窄高牆
       ctx.save();
       ctx.beginPath();
