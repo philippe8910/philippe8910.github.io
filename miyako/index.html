@@ -3954,9 +3954,6 @@ function drawPanel() {
   ctx.fillStyle = "#fff";
   ctx.fillText("×", cbx + cbs / 2, cby + 21);
   panel.btns.push({ x: cbx, y: cby, w: cbs, h: cbs, fn: closePanel });
-  ctx.font = `bold 12px ${UI_FONT}`;
-  ctx.fillStyle = "rgba(43,58,85,.55)";
-  ctx.fillText("休息完成：生命全滿・敵人已重生・進度已存檔（E 關閉）", cx, py + PH - 14);
   ctx.textAlign = "left";
   ctx.restore();
 }
