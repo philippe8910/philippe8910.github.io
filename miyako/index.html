@@ -577,7 +577,8 @@ function importSaveCode(s) {
     JSON.parse(data.save);                       // 驗證內層格式
     localStorage.setItem("miyako_save", data.save);
     if (data.best != null) localStorage.setItem("miyako_best", data.best);
-    location.reload();                           // 重載套用（最乾淨）
+    location.hash = "#start";                    // 重載後跳過主選單直接進遊戲
+    location.reload();
   } catch (e) { alert("存檔碼無效"); }
 }
 function importSave() {
