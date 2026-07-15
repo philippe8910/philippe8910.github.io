@@ -2813,8 +2813,13 @@ function draw() {
       continue;
     }
     if (s.h <= 30) {                       // 薄平台
-      const skin = s.w >= 170 ? ENV.platSkin2.img : ENV.platSkin.img;
-      ctx.drawImage(skin, s.x - 3, s.y - 3, s.w + 6, Math.max(26, s.h + 18));
+      if (s.w >= 170) {
+        // float_04 頂部 21/57 是欄杆：上移讓甲板面(第21列)對齊物理面，欄杆成為背景裝飾
+        const dh2 = Math.max(26, s.h + 18);
+        ctx.drawImage(ENV.platSkin2.img, s.x - 3, s.y - dh2 * 21 / 57, s.w + 6, dh2);
+      } else {
+        ctx.drawImage(ENV.platSkin.img, s.x - 3, s.y - 3, s.w + 6, Math.max(26, s.h + 18));
+      }
     } else if (s.w > s.h * 1.2) {          // 厚板/地板/掩體
       ctx.save();
       ctx.beginPath();
@@ -2827,7 +2832,7 @@ function draw() {
         }
       }
       ctx.restore();
-      ctx.drawImage(ENV.floorTop.img, s.x, s.y - 2, s.w, 20);   // 頂緣黃線
+      ctx.drawImage(ENV.floorTop.img, s.x, s.y - 8, s.w, 24);   // 頂緣黃線（上移讓腳踩在亮條上，消除身體與地板間縫）
     } else {                               // 窄高牆
       ctx.save();
       ctx.beginPath();
