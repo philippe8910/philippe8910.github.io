@@ -2,7 +2,7 @@
  "idle": {
   "file": "idle.png",
   "frameW": 240,
-  "frameH": 341,
+  "frameH": 354,
   "count": 8,
   "fps": 8,
   "loop": true
@@ -10,23 +10,23 @@
  "run": {
   "file": "run.png",
   "frameW": 240,
-  "frameH": 341,
-  "count": 11,
+  "frameH": 354,
+  "count": 12,
   "fps": 12,
   "loop": true
  },
  "crouch_idle": {
   "file": "crouch_idle.png",
   "frameW": 240,
-  "frameH": 341,
-  "count": 9,
+  "frameH": 354,
+  "count": 8,
   "fps": 8,
   "loop": true
  },
  "shoot": {
   "file": "shoot.png",
   "frameW": 240,
-  "frameH": 341,
+  "frameH": 354,
   "count": 12,
   "fps": 36,
   "loop": true
@@ -34,7 +34,7 @@
  "crouch_shoot": {
   "file": "crouch_shoot.png",
   "frameW": 240,
-  "frameH": 341,
+  "frameH": 354,
   "count": 12,
   "fps": 36,
   "loop": true
@@ -42,7 +42,7 @@
  "run_shoot": {
   "file": "run_shoot.png",
   "frameW": 240,
-  "frameH": 341,
+  "frameH": 354,
   "count": 12,
   "fps": 12,
   "loop": true
@@ -50,7 +50,7 @@
  "hurt": {
   "file": "hurt.png",
   "frameW": 240,
-  "frameH": 341,
+  "frameH": 354,
   "count": 10,
   "fps": 18,
   "loop": false
@@ -58,7 +58,7 @@
  "rise": {
   "file": "rise.png",
   "frameW": 240,
-  "frameH": 341,
+  "frameH": 354,
   "count": 5,
   "fps": 20,
   "loop": false
@@ -66,7 +66,7 @@
  "fall": {
   "file": "fall.png",
   "frameW": 240,
-  "frameH": 341,
+  "frameH": 354,
   "count": 3,
   "fps": 12,
   "loop": false
@@ -74,23 +74,23 @@
  "land": {
   "file": "land.png",
   "frameW": 240,
-  "frameH": 341,
+  "frameH": 354,
   "count": 4,
   "fps": 20,
   "loop": false
  },
  "_feetRatio": 0.988,
- "_anchorX": 0.4429,
+ "_anchorX": 0.4572,
  "_muzzle_shoot": {
-  "fx": 0.8667,
-  "fy": 0.3291
+  "fx": 0.8615,
+  "fy": 0.3335
  },
  "_muzzle_crouch_shoot": {
-  "fx": 0.9188,
-  "fy": 0.5048
+  "fx": 0.9479,
+  "fy": 0.5064
  },
  "_muzzle_run_shoot": {
-  "fx": 0.934,
-  "fy": 0.3289
+  "fx": 0.9899,
+  "fy": 0.3416
  }
 }
