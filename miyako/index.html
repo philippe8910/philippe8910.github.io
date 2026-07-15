@@ -683,6 +683,7 @@ const ENEMY_KINDS = {
     fw: 240, fh: 216, feet: 0.9274, anchor: 0.5712, drawH: 158,
     muzzle: { fx: 0.9562, fy: 0.212 },
     hp: 5, bulletV: 320, rocket: true,
+    sight: 1000, sightV: 170,   // 偵測範圍大幅高於其他兵種（480/60），配合火箭追蹤跨平台壓制
     attack: { type: "single", first: 1.0, interval: 2.4 },
   },
   turret: {  // 砲台：固定不動、低彈道（蹲閃不掉，要跳）
@@ -713,7 +714,7 @@ function fireEnemyShot(e, K) {
   const mx = e.x + e.dir * (K.muzzle.fx - K.anchor) * dw;
   const my = e.y - (K.feet - K.muzzle.fy) * K.drawH;
   if (K.rocket) {                  // 火箭：慢速、直擊 2 傷、落點爆風（rocketBlast）
-    bossBullets.push({ x: mx, y: my, vx: e.dir * K.bulletV, dmg: 2, rocket: true });
+    bossBullets.push({ x: mx, y: my, vx: e.dir * K.bulletV, vy: 0, dmg: 2, rocket: true, homeT: 3.0 });
   } else if (K.shotgun) {          // 霰彈：5 顆垂直扇形散射
     for (let k = 0; k < 5; k++) {
       bossBullets.push({
@@ -847,7 +848,7 @@ function updateEnemies(dt) {
 
     const dist = player.x - e.x;
     const atk = K.attack;
-    const engaged = Math.abs(dist) < 480 && Math.abs(player.y - e.y) < 60;
+    const engaged = Math.abs(dist) < (K.sight || 480) && Math.abs(player.y - e.y) < (K.sightV || 60);
     if (K.stationary) {                       // 砲台：不移動，交戰時朝玩家定速射擊
       e.dir = Math.sign(dist) || e.dir;
       if (e.state !== "shoot") { e.state = "shoot"; e.t = 0; e.fireT = atk.first; }
@@ -1467,8 +1468,23 @@ function updateEnemyBullets(dt) {
   const hh = player.crouching ? HITBOX_H_CROUCH : HITBOX_H;
   for (let i = bossBullets.length - 1; i >= 0; i--) {
     const b = bossBullets[i];
+    if (b.homeT > 0) {                     // 火箭小追蹤：限速轉向，貼近後直飛（防繞圈）
+      b.homeT -= dt;
+      if (Math.abs(b.x - player.x) < 70) b.homeT = 0;
+      else {
+        const spd = Math.hypot(b.vx, b.vy || 0);
+        const want = Math.atan2(player.y - hh / 2 - b.y, player.x - b.x);
+        let cur = Math.atan2(b.vy || 0, b.vx);
+        let dv = want - cur;
+        while (dv > Math.PI) dv -= 2 * Math.PI;
+        while (dv < -Math.PI) dv += 2 * Math.PI;
+        const mt = 1.3 * dt;
+        cur += Math.max(-mt, Math.min(mt, dv));
+        b.vx = Math.cos(cur) * spd; b.vy = Math.sin(cur) * spd;
+      }
+    }
     b.x += b.vx * dt;
-    b.y += (b.vy || 0) * dt;   // 霰彈散射用
+    b.y += (b.vy || 0) * dt;   // 霰彈散射／火箭追蹤用
     let gone = b.x < -20 || b.x > WORLD.w + 20;
     if (!gone && vulnerable &&
         Math.abs(b.x - player.x) < HITBOX_W / 2 + 6 &&
@@ -1522,12 +1538,16 @@ function drawBoss() {
   for (const b of bossBullets) {
     const dir = Math.sign(b.vx);
     if (b.rocket) {
+      ctx.save();
+      ctx.translate(b.x, b.y);
+      ctx.rotate(Math.atan2(b.vy || 0, b.vx));   // 追蹤時彈體隨飛行方向轉
       ctx.fillStyle = "#63683d";
-      ctx.fillRect(b.x - dir * 13, b.y - 3, dir * 13, 6);
+      ctx.fillRect(-13, -3, 13, 6);
       ctx.fillStyle = "#2c2c30";
-      ctx.fillRect(b.x, b.y - 3, dir * 5, 6);
+      ctx.fillRect(0, -3, 5, 6);
       ctx.fillStyle = Math.random() < 0.5 ? "#ffb35e" : "#ff7a3c";   // 尾焰閃爍
-      ctx.fillRect(b.x - dir * (13 + 5 + Math.random() * 6), b.y - 2, dir * 7, 4);
+      ctx.fillRect(-(18 + Math.random() * 6), -2, 7, 4);
+      ctx.restore();
       continue;
     }
     ctx.fillStyle = "#ff6a5e";
