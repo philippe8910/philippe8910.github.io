@@ -199,8 +199,7 @@ const SOLIDS = [
   { x: 2700, y: 2270, w: 130, h: 16 },
   { x: 3500, y: 2270, w: 130, h: 16 },
   { x: 4100, y: 2270, w: 120, h: 16 },
-  { x: 4290, y: 2140, w: 135, h: 16 },
-  { x: 4220, y: 1990, w: 120, h: 16 },
+  { x: 4260, y: 2110, w: 135, h: 16 },
   { x: 5000, y: 2270, w: 130, h: 16 },
   { x: 6300, y: 2280, w: 130, h: 16 },
   { x: 6490, y: 2160, w: 120, h: 16 },
@@ -214,7 +213,6 @@ const SOLIDS = [
   { x: 12220, y: 2150, w: 130, h: 16 },
   { x: 13460, y: 2070, w: 130, h: 16 },
   { x: 12800, y: 2100, w: 120, h: 16 },
-  { x: 14380, y: 2310, w: 130, h: 16 },
   { x: 1300, y: 1680, w: 130, h: 16 },
   { x: 1490, y: 1560, w: 120, h: 16 },
   { x: 2200, y: 1670, w: 130, h: 16 },
@@ -987,7 +985,6 @@ const ENEMY_SPAWNS = [
   { x: 14020, y: 3000, range: 410, kind: "shield" },
   { x: 1550, y: 1560, range: 90, kind: "rocket" },
   { x: 12980, y: 2400, range: 90, kind: "shield" },
-  { x: 14440, y: 2310, range: 90, kind: "turret" },
   { x: 12060, y: 2400, range: 250, kind: "pmc" },
   { x: 13350, y: 2400, range: 90, kind: "sgtrooper" },
   { x: 10750, y: 2150, range: 90, kind: "turret" },
@@ -1012,6 +1009,7 @@ const ENEMY_SPAWNS = [
   { x: 10930, y: 1800, range: 90, kind: "pmc2" },
   { x: 6550, y: 2150, range: 90, kind: "turret" },
   { x: 14790, y: 2100, range: 90, kind: "shield" },
+  { x: 15160, y: 2870, range: 90, kind: "turret" },
 ];
 const enemies = ENEMY_SPAWNS.map(s => ({
   kind: s.kind, home: s.x, range: s.range,
