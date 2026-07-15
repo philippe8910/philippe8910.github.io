@@ -2023,12 +2023,13 @@ function castCard(i, wx, wy) {
   if (c.skill === "area") {          // 鋼盔：畫面外拋出閃光彈，旋轉飛行 → 落地才引爆（傷害 + 暈眩 2 秒）
     cost -= cardCost(c); c.flashT = 0.3;
     const sx = wx < cam.x ? cam.x + VIEW_W / 2 + 40 : cam.x - VIEW_W / 2 - 40;
-    const sy = cam.y - 270 + 60;   // 從目標反方向的畫面外側拋出
+    const gy = groundYAt(wx, wy);   // 落在目標點的平面（高台/跳台也砸得到），不再用玩家樓層
+    const sy = Math.min(cam.y - 270 + 60, gy - 220);   // 拋出點保證高於落點
     grenades.push({
       x: sx, y: sy,
       vx: (wx - sx) / GREN_FLIGHT,
-      gy: floorYAt(player.y),
-      vy: (floorYAt(player.y) - 8 - sy - 0.5 * GREN_G * GREN_FLIGHT * GREN_FLIGHT) / GREN_FLIGHT,
+      gy,
+      vy: (gy - 8 - sy - 0.5 * GREN_G * GREN_FLIGHT * GREN_FLIGHT) / GREN_FLIGHT,
       rot: 0,
     });
     return true;
@@ -2069,6 +2070,14 @@ function roverStun(target, isBoss) {   // 小車命中：暈眩 1 秒 + 電花
   }
 }
 
+function groundYAt(wx, wy) {   // 目標點下方最近可站表面（含薄跳台；容忍點在表面上方 40px 內）
+  let best = Infinity;
+  for (const s of SOLIDS) {
+    if (wx < s.x || wx > s.x + s.w) continue;
+    if (s.y >= wy - 40 && s.y < best) best = s.y;
+  }
+  return best === Infinity ? floorYAt(wy) : best;
+}
 function doAreaBlast(wx, gy) {       // 閃光彈落地引爆（gy = 施放樓層地面）
   const r = 90;
   gy = gy || floorYAt(player.y);
