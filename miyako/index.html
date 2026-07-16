@@ -6,10 +6,14 @@
 <meta name="mobile-web-app-capable" content="yes">
 <title>卡班諾的兔子 We Were RABBITs!</title>
 <style>
+  @font-face { font-family: "PixelCJK"; src: url("assets_env/fpf-latin.woff2") format("woff2"); unicode-range: U+0020-00FF, U+2000-206F; }
+  @font-face { font-family: "PixelCJK"; src: url("assets_env/fpf-hant.woff2") format("woff2"); unicode-range: U+3000-303F, U+4E00-9FFF, U+FF00-FFEF; }
+  @font-face { font-family: "PixelCJK"; src: url("assets_env/fpf-ja.woff2") format("woff2"); unicode-range: U+3040-30FF, U+31F0-31FF; }
+  @font-face { font-family: "PixelCJK"; src: url("assets_env/fpf-ko.woff2") format("woff2"); unicode-range: U+AC00-D7A3, U+1100-11FF, U+3130-318F; }
   html, body { margin: 0; height: 100%; background: #1a1a1e; overflow: hidden; font-family: Consolas, monospace;
                touch-action: none; -webkit-user-select: none; user-select: none; overscroll-behavior: none; }
   canvas { display: block; width: 100vw; height: 100vh; object-fit: contain; background: #55555c; touch-action: none; }
-  #hud { position: fixed; left: 0; right: 0; bottom: 0; text-align: center; color: #2b3a55; padding: 6px; font-size: 13px; font-family: "Segoe UI", "Noto Sans TC", sans-serif; font-weight: 600; background: rgba(244,248,252,.88); border-top: 1px solid rgba(120,150,190,.35); pointer-events: none; }
+  #hud { position: fixed; left: 0; right: 0; bottom: 0; text-align: center; color: #2b3a55; padding: 6px; font-size: 13px; font-family: "PixelCJK", "Segoe UI", "Noto Sans TC", sans-serif; font-weight: 600; background: rgba(244,248,252,.88); border-top: 1px solid rgba(120,150,190,.35); pointer-events: none; }
   @media (pointer: coarse) { #hud { display: none; } }   /* 手機：隱藏底部鍵盤說明列 */
 </style>
 </head>
@@ -2472,7 +2476,7 @@ function drawMenu() {
       const drift = Math.sin(uiTime * 0.07) * 12;
       let dw = VIEW_W * 1.06, dh = dw * bg.height / bg.width;
       if (dh < 540 * 1.06) { dh = 540 * 1.06; dw = dh * bg.width / bg.height; }
-      const dx = (VIEW_W - dw) / 2 + drift, dy = (540 - dh) / 2 - drift * 0.4;
+      const dx = (VIEW_W - dw) / 2 + drift, dy = (540 - dh) * 0.12 - drift * 0.4;   // 頂部偏置：保住角色頭部構圖
       ctx.drawImage(bg, dx, dy, dw, dh);
     }
     // 左側深藍壓暗區（UI 錨定）＋底部漸層
@@ -4477,7 +4481,12 @@ function drawSelectScreen() {
 
 // ---- BA 風 UI：白色斜切面板 + 深藍字 + 天藍飾條 + 膠囊進度條 ----
 const UI_NAVY = "#2b3a55", UI_BLUE = "#2ba7f0", UI_RED = "#e8544a", UI_YELLOW = "#ffcc37";
-const UI_FONT = "'Segoe UI', 'Noto Sans TC', sans-serif";
+const UI_FONT = "'PixelCJK', 'Segoe UI', 'Noto Sans TC', sans-serif";   // 像素字體（Fusion Pixel, OFL）
+try {   // 預載常用子集，避免首幀 fallback 字型閃爍
+  if (typeof document !== "undefined" && document.fonts) {
+    document.fonts.load("16px PixelCJK", "補給站A1");
+  }
+} catch (e) {}
 
 function slantPath(x, y, w, h, s = 8) {   // 平行四邊形（右斜切）
   ctx.beginPath();
