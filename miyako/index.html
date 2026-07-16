@@ -444,7 +444,7 @@ for (const el of ELEVATORS) {
 // ---- 移動平台（編輯器配置；axis x=左右 y=上下 來回）----
 const MOVERS = [
   { x: 6020, y: 1080, w: 180, axis: "x", dist: 2000, speed: 120 },
-  { x: 10480, y: 2050, w: 180, axis: "x", dist: 3780, speed: 120 },
+  { x: 10480, y: 2050, w: 420, axis: "x", dist: 3540, speed: 120 },   // 長程渡輪平台（欄杆款，分節平鋪）
   { x: -70, y: 1940, w: 180, axis: "y", dist: -1900, speed: 60 },
   { x: -390, y: 1680, w: 180, axis: "x", dist: 730, speed: 120 },
 ];
@@ -2781,6 +2781,7 @@ const ENV = {
   wallFill: { file: "assets_env/tile_19.png" },  // 牆板填充
   platSkin: { file: "assets_env/float_11.png" }, // 薄平台皮
   platSkin2:{ file: "assets_env/float_04.png" }, // 薄平台皮（帶欄杆款）
+  elevSkin: { file: "assets_env/float_09.png" }, // 電梯平台皮（懸浮推進器款）
   crate:    { file: "assets_env/plat_43.png" },  // 貨箱（裝飾）
   lamp:     { file: "assets_env/prop_09.png" },  // 紅色警示燈柱（裝飾）
 };
@@ -3790,7 +3791,18 @@ function draw() {
       if (s.w >= 170) {
         // float_04 頂部 21/57 是欄杆：上移讓甲板面(第21列)對齊物理面，欄杆成為背景裝飾
         const dh2 = Math.max(26, s.h + 18);
-        ctx.drawImage(ENV.platSkin2.img, s.x - 3, s.y - dh2 * 21 / 57, s.w + 6, dh2);
+        const ty = s.y - dh2 * 21 / 57;
+        if (s.w <= 280) {
+          ctx.drawImage(ENV.platSkin2.img, s.x - 3, ty, s.w + 6, dh2);
+        } else {                           // 長平台：以素材原比例分節平鋪，接縫疊在欄杆柱上
+          const tileW = 198 * dh2 / 57;
+          ctx.save();
+          ctx.beginPath(); ctx.rect(s.x - 3, ty, s.w + 6, dh2); ctx.clip();
+          for (let tx = s.x - 3; tx < s.x + s.w + 3; tx += tileW - 10) {
+            ctx.drawImage(ENV.platSkin2.img, tx, ty, tileW, dh2);
+          }
+          ctx.restore();
+        }
       } else {
         ctx.drawImage(ENV.platSkin.img, s.x - 3, s.y - 3, s.w + 6, Math.max(26, s.h + 18));
       }
@@ -3848,10 +3860,15 @@ function draw() {
     ctx.moveTo(el.x + el.w - 4, el.top - 60); ctx.lineTo(el.x + el.w - 4, el.bottom);
     ctx.stroke();
     ctx.setLineDash([]);
-    ctx.fillStyle = "#c9a13b";
-    ctx.fillRect(el.x, el.y, el.w, 14);
-    ctx.strokeStyle = "#3c3c42";
-    ctx.strokeRect(el.x + .5, el.y + .5, el.w - 1, 13);
+    if (ENV.elevSkin.img && ENV.elevSkin.img.width) {   // 懸浮平台素材（推進器懸在物理面下方）
+      const dw2 = el.w + 10, dh3 = dw2 * ENV.elevSkin.img.height / ENV.elevSkin.img.width;
+      ctx.drawImage(ENV.elevSkin.img, el.x - 5, el.y - 3, dw2, dh3);
+    } else {                                            // 素材未載入退回琥珀平台
+      ctx.fillStyle = "#c9a13b";
+      ctx.fillRect(el.x, el.y, el.w, 14);
+      ctx.strokeStyle = "#3c3c42";
+      ctx.strokeRect(el.x + .5, el.y + .5, el.w - 1, 13);
+    }
     ctx.fillStyle = "#e8544a";                       // 紅三角（地圖記號同款）
     ctx.beginPath();
     ctx.moveTo(el.x + el.w / 2, el.y - 22);
