@@ -436,6 +436,18 @@ const SOLIDS = (MAP?.solids || BASE_SOLIDS).map(s => ({ ...s }));
 //      進入另一框時鏡頭飛行過渡；框外＝世界邊界。用於藏隱藏地圖 ----
 const CAMZONES = (MAP?.camzones || []).map(z => ({ ...z }));
 let camZone = null, camFlyT = 0;
+let visitedZones = [];              // 小地圖迷霧：已探索的攝影機框 index（存檔持久化）
+function inUnvisitedZone(cx, cy) {  // 該點只被未探索框涵蓋 → 小地圖隱藏
+  let inUnvis = false;
+  for (let i = 0; i < CAMZONES.length; i++) {
+    const z = CAMZONES[i];
+    if (cx > z.x && cx < z.x + z.w && cy > z.y && cy < z.y + z.h) {
+      if (visitedZones.includes(i)) return false;   // 已探索框涵蓋 → 顯示
+      inUnvis = true;
+    }
+  }
+  return inUnvis;
+}
 function camZoneAt(x, y) {
   for (const z of CAMZONES) {
     if (x > z.x && x < z.x + z.w && y > z.y && y < z.y + z.h) return z;
@@ -746,7 +758,15 @@ function updateCamera(dt) {
   cam.x = Math.max(WORLD.x0 + VIEW_W / 2, Math.min(WORLD.w - VIEW_W / 2, cam.x));   // world bounds
   cam.y = Math.max(270, Math.min(WORLD.h - 270, cam.y));
   const cz = camZoneAt(player.x, player.y - 60);                 // 攝影機框鉗制
-  if (cz !== camZone) { camZone = cz; camFlyT = 0.9; }           // 換框：飛行過渡
+  if (cz !== camZone) {                                          // 換框：飛行過渡＋迷霧揭開
+    camZone = cz; camFlyT = 0.9;
+    const zi = CAMZONES.indexOf(cz);
+    if (zi >= 0 && !visitedZones.includes(zi)) {
+      visitedZones.push(zi);
+      buildMinimap();
+      saveGame();
+    }
+  }
   camFlyT = Math.max(0, camFlyT - dt);
   if (camZone) {
     const zx0 = camZone.x + VIEW_W / 2, zx1 = camZone.x + camZone.w - VIEW_W / 2;
@@ -862,7 +882,7 @@ function buildSaveData() {
     openedDoors: [...openedGates],
     cps: CHECKPOINTS.map(c => c.active ? 1 : 0),
     lastCp: checkpoint.active ? { x: checkpoint.x, y: checkpoint.y } : null,
-    chosen: chosenSupport, spent: shopSpent, mikaUsed
+    chosen: chosenSupport, spent: shopSpent, mikaUsed, vz: visitedZones
   };
 }
 function saveGame() {
@@ -997,6 +1017,7 @@ function loadGame() {
         keys: v.inventory.keys || []
       };
       mikaUsed = !!v.mikaUsed;
+      visitedZones = Array.isArray(v.vz) ? v.vz : [];
       if (Array.isArray(v.items)) collectedItems = v.items.filter(i => i >= 0 && i < ITEM_SPAWNS.length);
       const savedDoors = Array.isArray(v.openedDoors) ? v.openedDoors : v.gates;
       if (Array.isArray(savedDoors)) openedGates = savedDoors.filter(i => i >= 0);
@@ -5155,10 +5176,14 @@ function buildMinimap() {
   g.fillRect(0, 0, minimapCv.width, minimapCv.height);
   g.fillStyle = "#7f8aa0";
   for (const s of SOLIDS) {
+    if (inUnvisitedZone(s.x + s.w / 2, s.y + s.h / 2)) continue;   // 迷霧：未探索區不顯示
     g.fillRect((s.x - WORLD.x0) / MM_SC, s.y / MM_SC, Math.max(1, s.w / MM_SC), Math.max(1, s.h / MM_SC));
   }
   g.fillStyle = "#c9a13b";                 // 電梯
-  for (const el of ELEVATORS) g.fillRect((el.x - WORLD.x0) / MM_SC - 1, el.top / MM_SC, 3, (el.bottom - el.top) / MM_SC);
+  for (const el of ELEVATORS) {
+    if (inUnvisitedZone(el.x + el.w / 2, (el.top + el.bottom) / 2)) continue;
+    g.fillRect((el.x - WORLD.x0) / MM_SC - 1, el.top / MM_SC, 3, (el.bottom - el.top) / MM_SC);
+  }
 }
 buildMinimap();
 
@@ -5171,7 +5196,8 @@ function drawMinimap() {
   ctx.globalAlpha = 1;
   ctx.strokeStyle = "rgba(120,150,190,.5)";
   ctx.strokeRect(x0 - .5, y0 - .5, mw + 1, mh + 1);
-  for (const cp of CHECKPOINTS) {          // 存檔點
+  for (const cp of CHECKPOINTS) {          // 存檔點（迷霧區隱藏）
+    if (inUnvisitedZone(cp.x, cp.y - 30)) continue;
     ctx.fillStyle = cp.active ? "#59d5f2" : "#8a93a8";
     ctx.fillRect(x0 + (cp.x - WORLD.x0) / MM_SC - 1, y0 + cp.y / MM_SC - 2, 3, 3);
   }
