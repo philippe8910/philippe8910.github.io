@@ -1,7 +1,7 @@
 globalThis.OFFICIAL_MAP = {
  "solids": [
   {
-   "x": -460,
+   "x": -530,
    "y": 3000,
    "w": 16500,
    "h": 160,
@@ -914,32 +914,32 @@ globalThis.OFFICIAL_MAP = {
    "h": 16
   },
   {
-   "x": 700,
-   "y": 490,
+   "x": 880,
+   "y": 500,
    "w": 140,
    "h": 16
   },
   {
    "x": 1100,
-   "y": 420,
+   "y": 370,
    "w": 140,
    "h": 16
   },
   {
-   "x": 1500,
-   "y": 490,
+   "x": 1530,
+   "y": 440,
    "w": 140,
    "h": 16
   },
   {
-   "x": 1900,
-   "y": 430,
+   "x": 2110,
+   "y": 340,
    "w": 130,
    "h": 16
   },
   {
-   "x": 2300,
-   "y": 490,
+   "x": 2270,
+   "y": 480,
    "w": 130,
    "h": 16
   },
@@ -1215,13 +1215,13 @@ globalThis.OFFICIAL_MAP = {
   },
   {
    "x": 14560,
-   "y": 880,
+   "y": 810,
    "w": 40,
-   "h": 930
+   "h": 1000
   },
   {
    "x": 14160,
-   "y": 880,
+   "y": 810,
    "w": 400,
    "h": 90
   },
@@ -1240,6 +1240,12 @@ globalThis.OFFICIAL_MAP = {
   {
    "x": -4130,
    "y": -110,
+   "w": 40,
+   "h": 500
+  },
+  {
+   "x": 2760,
+   "y": -190,
    "w": 40,
    "h": 500
   }
@@ -1273,7 +1279,8 @@ globalThis.OFFICIAL_MAP = {
    "w": 140,
    "top": 600,
    "bottom": 1200,
-   "c": "E4 東塔 → 天頂迴廊"
+   "c": "E4 東塔 → 天頂迴廊",
+   "lock": "E4"
   },
   {
    "x": 15790,
@@ -1380,13 +1387,13 @@ globalThis.OFFICIAL_MAP = {
   {
    "x": 11500,
    "y": 3000,
-   "range": 80,
+   "range": 390,
    "kind": "shield"
   },
   {
-   "x": 13000,
+   "x": 12900,
    "y": 3000,
-   "range": 110,
+   "range": 310,
    "kind": "pmc2"
   },
   {
@@ -1451,7 +1458,7 @@ globalThis.OFFICIAL_MAP = {
   },
   {
    "x": 12290,
-   "y": 2160,
+   "y": 2150,
    "range": 60,
    "kind": "rocket"
   },
@@ -1462,9 +1469,9 @@ globalThis.OFFICIAL_MAP = {
    "kind": "pmc2"
   },
   {
-   "x": 900,
+   "x": 1150,
    "y": 1800,
-   "range": 90,
+   "range": 190,
    "kind": "sgtrooper"
   },
   {
@@ -1482,43 +1489,43 @@ globalThis.OFFICIAL_MAP = {
   {
    "x": 4900,
    "y": 1800,
-   "range": 110,
+   "range": 420,
    "kind": "pmc2"
   },
   {
    "x": 5700,
    "y": 1800,
-   "range": 0,
+   "range": 170,
    "kind": "turret"
   },
   {
-   "x": 6600,
+   "x": 6250,
    "y": 1800,
    "range": 120,
    "kind": "pmc"
   },
   {
-   "x": 7500,
+   "x": 7970,
    "y": 1800,
-   "range": 90,
+   "range": 370,
    "kind": "sgtrooper"
   },
   {
    "x": 8900,
    "y": 1800,
-   "range": 0,
+   "range": 540,
    "kind": "turret"
   },
   {
    "x": 10100,
    "y": 1800,
-   "range": 80,
+   "range": 420,
    "kind": "shield"
   },
   {
-   "x": 12100,
+   "x": 11850,
    "y": 1800,
-   "range": 110,
+   "range": 310,
    "kind": "pmc2"
   },
   {
@@ -1529,12 +1536,12 @@ globalThis.OFFICIAL_MAP = {
   },
   {
    "x": 14810,
-   "y": 1800,
-   "range": 70,
+   "y": 1810,
+   "range": 60,
    "kind": "shield"
   },
   {
-   "x": 3690,
+   "x": 3760,
    "y": 1560,
    "range": 25,
    "kind": "rocket"
@@ -1698,13 +1705,13 @@ globalThis.OFFICIAL_MAP = {
   {
    "x": 8580,
    "y": 2120,
-   "range": 150,
+   "range": 170,
    "kind": "shield"
   },
   {
    "x": 9820,
    "y": 2110,
-   "range": 90,
+   "range": 60,
    "kind": "rocket"
   },
   {
@@ -1716,7 +1723,7 @@ globalThis.OFFICIAL_MAP = {
   {
    "x": 1550,
    "y": 1560,
-   "range": 90,
+   "range": 60,
    "kind": "rocket"
   },
   {
@@ -1728,7 +1735,7 @@ globalThis.OFFICIAL_MAP = {
   {
    "x": 12060,
    "y": 2400,
-   "range": 250,
+   "range": 380,
    "kind": "pmc"
   },
   {
@@ -1740,7 +1747,7 @@ globalThis.OFFICIAL_MAP = {
   {
    "x": 10750,
    "y": 2150,
-   "range": 90,
+   "range": 50,
    "kind": "turret"
   },
   {
@@ -1798,14 +1805,14 @@ globalThis.OFFICIAL_MAP = {
    "kind": "rocket"
   },
   {
-   "x": -400,
-   "y": 1260,
+   "x": -340,
+   "y": 1250,
    "range": 90,
    "kind": "rocket"
   },
   {
    "x": -370,
-   "y": 810,
+   "y": 820,
    "range": 90,
    "kind": "rocket"
   },
@@ -1824,7 +1831,7 @@ globalThis.OFFICIAL_MAP = {
   {
    "x": 12860,
    "y": 2100,
-   "range": 90,
+   "range": 50,
    "kind": "turret"
   },
   {
@@ -1836,7 +1843,7 @@ globalThis.OFFICIAL_MAP = {
   {
    "x": 15000,
    "y": 3000,
-   "range": 90,
+   "range": 310,
    "kind": "sgtrooper"
   },
   {
@@ -1848,12 +1855,12 @@ globalThis.OFFICIAL_MAP = {
   {
    "x": 10930,
    "y": 1800,
-   "range": 90,
+   "range": 380,
    "kind": "pmc2"
   },
   {
    "x": 6550,
-   "y": 2150,
+   "y": 2160,
    "range": 90,
    "kind": "turret"
   },
@@ -1994,6 +2001,24 @@ globalThis.OFFICIAL_MAP = {
    "y": 470,
    "range": 90,
    "kind": "grenadier"
+  },
+  {
+   "x": 14390,
+   "y": 810,
+   "range": 90,
+   "kind": "pmc"
+  },
+  {
+   "x": -1260,
+   "y": 2500,
+   "range": 740,
+   "kind": "pmc"
+  },
+  {
+   "x": 1830,
+   "y": 1200,
+   "range": 90,
+   "kind": "pmc"
   }
  ],
  "movers": [
@@ -2025,7 +2050,7 @@ globalThis.OFFICIAL_MAP = {
    "x": -380,
    "y": 1640,
    "w": 180,
-   "dist": 640,
+   "dist": 720,
    "speed": 120,
    "axis": "x"
   },
@@ -2042,7 +2067,7 @@ globalThis.OFFICIAL_MAP = {
    "y": 1500,
    "w": 180,
    "axis": "y",
-   "dist": -590,
+   "dist": -670,
    "speed": 110
   }
  ],
@@ -2069,12 +2094,6 @@ globalThis.OFFICIAL_MAP = {
    "c": "三千留：L3 西端短板"
   },
   {
-   "x": 1510,
-   "y": 1800,
-   "type": "key",
-   "id": "K1"
-  },
-  {
    "x": 15580,
    "y": 600,
    "type": "skin",
@@ -2097,6 +2116,12 @@ globalThis.OFFICIAL_MAP = {
    "y": 1500,
    "type": "key",
    "id": "K1"
+  },
+  {
+   "x": 14550,
+   "y": 810,
+   "type": "key",
+   "id": "E4"
   }
  ],
  "gates": [
