@@ -425,6 +425,16 @@ const BASE_SOLIDS = [
   { x: 14200, y: 2450, w: 130, h: 16 },
 ];
 const SOLIDS = (MAP?.solids || BASE_SOLIDS).map(s => ({ ...s }));
+// ---- 攝影機框（Cinemachine confiner 式）：玩家在框內時鏡頭被鉗在框內，
+//      進入另一框時鏡頭飛行過渡；框外＝世界邊界。用於藏隱藏地圖 ----
+const CAMZONES = (MAP?.camzones || []).map(z => ({ ...z }));
+let camZone = null, camFlyT = 0;
+function camZoneAt(x, y) {
+  for (const z of CAMZONES) {
+    if (x > z.x && x < z.x + z.w && y > z.y && y < z.y + z.h) return z;
+  }
+  return null;
+}
 
 function setGate(on) {
   const i = SOLIDS.indexOf(bossGate);
@@ -728,6 +738,19 @@ function updateCamera(dt) {
   cam.y += (gy - cam.y) * (1 - Math.exp(-dt * 3.2));           // y damping (softer)
   cam.x = Math.max(WORLD.x0 + VIEW_W / 2, Math.min(WORLD.w - VIEW_W / 2, cam.x));   // world bounds
   cam.y = Math.max(270, Math.min(WORLD.h - 270, cam.y));
+  const cz = camZoneAt(player.x, player.y - 60);                 // 攝影機框鉗制
+  if (cz !== camZone) { camZone = cz; camFlyT = 0.9; }           // 換框：飛行過渡
+  camFlyT = Math.max(0, camFlyT - dt);
+  if (camZone) {
+    const zx0 = camZone.x + VIEW_W / 2, zx1 = camZone.x + camZone.w - VIEW_W / 2;
+    const zy0 = camZone.y + 270, zy1 = camZone.y + camZone.h - 270;
+    const cx2 = zx1 < zx0 ? camZone.x + camZone.w / 2 : Math.max(zx0, Math.min(zx1, cam.x));
+    const cy2 = zy1 < zy0 ? camZone.y + camZone.h / 2 : Math.max(zy0, Math.min(zy1, cam.y));
+    if (camFlyT > 0) {
+      cam.x += (cx2 - cam.x) * (1 - Math.exp(-dt * 6));
+      cam.y += (cy2 - cam.y) * (1 - Math.exp(-dt * 6));
+    } else { cam.x = cx2; cam.y = cy2; }
+  }
   if (boss.active && boss.deadT <= 0) {                        // Boss 戰：跟隨但鉗在房內
     const lockX = Math.max(BOSS_ROOM.left + VIEW_W / 2, Math.min(BOSS_ROOM.right - VIEW_W / 2, player.x));
     cam.x += (lockX - cam.x) * (1 - Math.exp(-dt * 4));
