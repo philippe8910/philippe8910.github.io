@@ -148,7 +148,7 @@ SKINS.yuuka = {
 };
 SKINS.momoi = {
   label: "桃井",
-  hint: "6分鐘內通關解鎖",
+  hint: "12分鐘內通關解鎖",
   fw: 240, fh: 221, feet: 0.9825, anchor: 0.4332, drawH: 136,   // 桃井設定比宮子矮一截（本體約125px vs 宮子138.5px）
   anims: {
     idle:         { file: "assets_miyako_momoi/idle.png",         count: 11, fps: 8,  loop: true  },
@@ -3424,9 +3424,9 @@ function damageBoss(dmg, crit) {
           bestClearT = bossClearT;
           try { localStorage.setItem("miyako_best", String(bestClearT)); } catch (e) {}
         }
-        if (bossClearT <= 360 && SKINS.momoi && !unlocks.skins.includes("momoi")) {   // 桃井：6 分鐘內通關
+        if (bossClearT <= 720 && SKINS.momoi && !unlocks.skins.includes("momoi")) {   // 桃井：12 分鐘內通關
           unlocks.skins.push("momoi");
-          pickupToasts.push({ text: "造型解鎖：桃井（6分鐘內通關達成！存檔點可更換）", t: 4 });
+          pickupToasts.push({ text: "造型解鎖：桃井（12分鐘內通關達成！存檔點可更換）", t: 4 });
           saveGame();
         }
       }
