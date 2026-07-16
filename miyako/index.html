@@ -94,7 +94,7 @@ SKINS.swim = {
 };
 SKINS.conv = {
   label: "便利商店打工",
-  hint: "商店累計消費 200C 解鎖",
+  hint: "hintConv",
   fw: 240, fh: 248, feet: 0.9728, anchor: 0.4031,
   anims: {
     idle:         { file: "assets_miyako_conv/idle.png",         count: 10, fps: 8,  loop: true  },
@@ -148,7 +148,7 @@ SKINS.yuuka = {
 };
 SKINS.momoi = {
   label: "桃井",
-  hint: "12分鐘內通關解鎖",
+  hint: "hintMomoi",
   fw: 240, fh: 221, feet: 0.9825, anchor: 0.4332, drawH: 136,   // 桃井設定比宮子矮一截（本體約125px vs 宮子138.5px）
   anims: {
     idle:         { file: "assets_miyako_momoi/idle.png",         count: 11, fps: 8,  loop: true  },
@@ -175,7 +175,7 @@ SKINS.momoi = {
 };
 SKINS.mika = {
   label: "彌香",
-  hint: "無敵的代名詞…？",
+  hint: "hintMika",
   fw: 240, fh: 251, feet: 0.9839, anchor: 0.4911, drawH: 157,   // 翅膀佔幀寬，本體對齊宮子視覺身高
   anims: {
     idle:         { file: "assets_miyako_mika/idle.png",         count: 10, fps: 8,  loop: true  },
@@ -2630,6 +2630,7 @@ const I18N = {
         settings: "設定", back: "返回", volume: "音量", language: "語言 Language",
         confirmNew: "清除本地進度並開始新遊戲？（速通紀錄保留）",
         pasteOpt: "貼上存檔碼（留空＝使用本機存檔）：", noSave: "沒有本機存檔，請先貼上存檔碼", loadSave: "讀檔", progress: "進度", cheat: "作弊碼", cheatPrompt: "輸入作弊碼：",
+        hintDefault: "隱藏道具解鎖", hintConv: "商店累計消費 200C 解鎖", hintMomoi: "12分鐘內通關解鎖", hintMika: "無敵的代名詞…？", recruitMystery: "在地圖中尋找發光道具解鎖", descFireline: "呼叫直升機對目標區投放多枚燃燒飛彈，觸地爆炸並引燃地面", descStun: "放出自走式無人機直線突進，命中敵人閃光引爆造成暈眩", descArea: "請求支援砲擊！閃光彈砸向瞄準點，範圍傷害並暈眩敵人", descSnipe: "觀測並標記目標，狙擊手延遲擊發；交替使用時傷害翻倍", sup4: "被動：每30秒回復1/4生命", sup5: "被動：每30秒獲得1/3護盾", sup6: "被動：每30秒+1/5護盾(15s)", sup7: "被動：Cost獲得×1.8", sup8: "被動：防禦力+30%", sup9: "被動：Cost+10%・全卡-1費",
         discTitle: "免責聲明", start: "！開始任務！",
         disc: "本作品為《蔚藍檔案 Blue Archive》之非官方粉絲二次創作，與 NEXON、Nexon Games、Yostar 無任何關聯；角色與世界觀之著作權皆屬原權利人所有。本專案內容由生成式 AI 工具產生或協助製作，範圍包括但不限於美術資產與程式資產。本作僅供學習交流之非商業用途。",
         opN1: "宮子", op1: "……作戰區域確認完畢，這裡就是目標設施。",
@@ -2641,6 +2642,7 @@ const I18N = {
         settings: "Settings", back: "Back", volume: "Volume", language: "Language",
         confirmNew: "Clear local progress and start a new game? (speedrun record kept)",
         pasteOpt: "Paste save code (leave empty to use local save):", noSave: "No local save. Paste a save code first.", loadSave: "Load", progress: "Progress", cheat: "Cheat Code", cheatPrompt: "Enter cheat code:",
+        hintDefault: "Unlock via hidden item", hintConv: "Spend 200C total at the shop", hintMomoi: "Clear the game within 12 minutes", hintMika: "A synonym for invincible...?", recruitMystery: "Find the glowing item somewhere in the map", descFireline: "Calls a helicopter to drop incendiary missiles that explode on impact and ignite the ground", descStun: "Deploys a drone that charges forward and stuns enemies with a flash on impact", descArea: "Support fire! A flashbang hits the aim point, dealing area damage and stunning", descSnipe: "Marks the target for a delayed sniper shot; damage doubles on alternating uses", sup4: "Passive: heal 1/4 HP every 30s", sup5: "Passive: gain 1/3 shield every 30s", sup6: "Passive: +1/5 shield every 30s (15s)", sup7: "Passive: Cost gain x1.8", sup8: "Passive: +30% defense", sup9: "Passive: Cost +10% & all cards -1",
         discTitle: "Disclaimer", start: "! MISSION START !",
         disc: "This is an unofficial fan work of Blue Archive, unaffiliated with NEXON, Nexon Games, or Yostar; all character and IP rights belong to their owners. Content of this project was produced or assisted by generative AI tools, including but not limited to art assets and program code. Non-commercial, for learning purposes only.",
         opN1: "Miyako", op1: "...Operation area confirmed. This is the target facility.",
@@ -2652,6 +2654,7 @@ const I18N = {
         settings: "設定", back: "戻る", volume: "音量", language: "言語 Language",
         confirmNew: "ローカルの進行データを消去して新しく始めますか？（タイム記録は保持）",
         pasteOpt: "セーブコードを貼り付け（空欄＝ローカルセーブ使用）：", noSave: "ローカルセーブがありません。", loadSave: "ロード", progress: "進行度", cheat: "チートコード", cheatPrompt: "チートコードを入力：",
+        hintDefault: "隠しアイテムで解放", hintConv: "ショップで累計200C消費で解放", hintMomoi: "12分以内クリアで解放", hintMika: "無敵の代名詞…？", recruitMystery: "マップのどこかで光るアイテムを探して解放", descFireline: "ヘリを要請し目標区域へ焼夷ミサイルを投下、着弾で爆発し地面を燃やす", descStun: "自走式ドローンが直進し、命中すると閃光で敵をスタンさせる", descArea: "支援射撃要請！閃光弾が着弾点で爆発、範囲ダメージとスタンを与える", descSnipe: "目標を観測・マーキングして狙撃手が遅延射撃；交互使用でダメージ2倍", sup4: "パッシブ：30秒毎にHP1/4回復", sup5: "パッシブ：30秒毎にシールド1/3獲得", sup6: "パッシブ：30秒毎に+1/5シールド(15秒)", sup7: "パッシブ：コスト獲得×1.8", sup8: "パッシブ：防御力+30%", sup9: "パッシブ：コスト+10%・全カード-1",
         discTitle: "免責事項", start: "！作戦開始！",
         disc: "本作は『ブルーアーカイブ』の非公式ファン二次創作であり、NEXON・Nexon Games・Yostar とは一切関係ありません。キャラクター及び世界観の著作権は原権利者に帰属します。本作のコンテンツは生成AIツールにより制作・補助されており、その範囲はアート素材やプログラムコードを含みますがこれらに限りません。非営利・学習目的のみ。",
         opN1: "ミヤコ", op1: "……作戦区域、確認完了。ここが目標施設ね。",
@@ -2663,6 +2666,7 @@ const I18N = {
         settings: "설정", back: "뒤로", volume: "볼륨", language: "언어 Language",
         confirmNew: "로컬 진행 데이터를 삭제하고 새로 시작할까요? (스피드런 기록 유지)",
         pasteOpt: "세이브 코드 붙여넣기 (비워두면 로컬 세이브 사용):", noSave: "로컬 세이브가 없습니다.", loadSave: "로드", progress: "진행도", cheat: "치트 코드", cheatPrompt: "치트 코드 입력:",
+        hintDefault: "숨겨진 아이템으로 해금", hintConv: "상점에서 누적 200C 소비 시 해금", hintMomoi: "12분 이내 클리어 시 해금", hintMika: "무적의 대명사…?", recruitMystery: "맵 어딘가의 빛나는 아이템을 찾아 해금", descFireline: "헬기를 요청해 목표 지역에 소이 미사일 투하, 착탄 시 폭발하고 지면을 불태운다", descStun: "자주식 드론이 직진 돌격, 명중 시 섬광 폭발로 적을 기절시킨다", descArea: "지원 사격 요청! 섬광탄이 조준점에 떨어져 범위 피해와 기절을 준다", descSnipe: "목표를 관측·마킹해 저격수가 지연 사격; 교대로 사용 시 피해 2배", sup4: "패시브: 30초마다 HP 1/4 회복", sup5: "패시브: 30초마다 실드 1/3 획득", sup6: "패시브: 30초마다 +1/5 실드(15초)", sup7: "패시브: 코스트 획득 x1.8", sup8: "패시브: 방어력 +30%", sup9: "패시브: 코스트 +10%·모든 카드 -1",
         discTitle: "면책 조항", start: "! 작전 개시 !",
         disc: "본 작품은 <블루 아카이브>의 비공식 팬 2차 창작물로, NEXON, Nexon Games, Yostar와 무관합니다. 캐릭터 및 세계관의 저작권은 원권리자에게 있습니다. 본 프로젝트의 콘텐츠는 생성형 AI 도구로 제작되거나 보조되었으며, 그 범위는 아트 에셋과 프로그램 코드를 포함하되 이에 국한되지 않습니다. 비상업적 학습 목적 전용.",
         opN1: "미야코", op1: "...작전 구역 확인 완료. 여기가 목표 시설이야.",
@@ -4533,7 +4537,7 @@ function drawPanel() {
         ctx.fillStyle = "rgba(43,58,85,.5)";
         ctx.fillText("？？？", px + 78, ry + 17);
         ctx.font = `bold 10.5px ${UI_FONT}`;
-        ctx.fillText("在地圖中尋找發光道具解鎖", px + 78, ry + 33);
+        ctx.fillText(T("recruitMystery"), px + 78, ry + 33);
         row++;
         continue;
       }
@@ -4558,8 +4562,7 @@ function drawPanel() {
       ctx.fillText(c.name, px + 78, ry + 17);
       ctx.font = `bold 10.5px ${UI_FONT}`;
       ctx.fillStyle = "rgba(43,58,85,.6)";
-      const descs = { 4: "被動：每30秒回復1/4生命", 5: "被動：每30秒獲得1/3護盾", 6: "被動：每30秒+1/5護盾(15s)",
-                      7: "被動：Cost獲得×1.8", 8: "被動：防禦力+30%", 9: "被動：Cost+10%・全卡-1費" };
+      const descs = { 4: T("sup4"), 5: T("sup5"), 6: T("sup6"), 7: T("sup7"), 8: T("sup8"), 9: T("sup9") };
       ctx.fillText((idx === chosenSupport ? "〔開局選擇〕" : "") + (descs[idx] || ""), px + 78, ry + 33);
       const benched = benchedSupports.includes(idx);
       const poolFull = supportsInPool() >= SUPPORT_POOL_MAX;
@@ -4670,7 +4673,7 @@ function drawPanel() {
         ctx.fillStyle = "rgba(43,58,85,.5)";
         ctx.fillText("？？？", px + 88, ry + 24);
         ctx.font = `bold 11px ${UI_FONT}`;
-        ctx.fillText(s.hint || "隱藏道具解鎖", px + 88, ry + 40);
+        ctx.fillText(T(s.hint || "hintDefault"), px + 88, ry + 40);
         row++;
         continue;
       }
@@ -5577,12 +5580,8 @@ function drawHUD() {
   const baseX = CARD_UI.x, baseY = CARD_UI.y;
   if (targeting) {                 // 瞄準中：卡欄上方 BA 風技能說明橫幅
     const tc = CARDS[hand[targeting.slot]];
-    const SKILL_DESC = {
-      fireline: "呼叫直升機對目標區投放多枚燃燒飛彈，觸地爆炸並引燃地面",
-      stun:     "放出自走式無人機直線突進，命中敵人閃光引爆造成暈眩",
-      area:     "請求支援砲擊！閃光彈砸向瞄準點，範圍傷害並暈眩敵人",
-      snipe:    "觀測並標記目標，狙擊手延遲擊發；交替使用時傷害翻倍",
-    };
+    const SKILL_DESC = { fireline: T("descFireline"), stun: T("descStun"),
+                         area: T("descArea"), snipe: T("descSnipe") };
     const bw = 330, bh = 46, bx1 = baseX + CW * 3 + GAP * 2, bx = bx1 - bw, by = baseY - bh - 12;
     slantPath(bx, by, bw, bh, 9);
     ctx.fillStyle = "rgba(16,27,48,.88)";
