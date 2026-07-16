@@ -2782,6 +2782,8 @@ const ENV = {
   platSkin: { file: "assets_env/float_11.png" }, // 薄平台皮
   platSkin2:{ file: "assets_env/float_04.png" }, // 薄平台皮（帶欄杆款）
   elevSkin: { file: "assets_env/float_09.png" }, // 電梯平台皮（懸浮推進器款）
+  gateSkin: { file: "assets_env/misc_20.png" },  // 單向門門體（紅色能量燈柱，垂直平鋪）
+  gateArrow:{ file: "assets_env/misc_22.png" },  // 單向門方向箭頭
   crate:    { file: "assets_env/plat_43.png" },  // 貨箱（裝飾）
   lamp:     { file: "assets_env/prop_09.png" },  // 紅色警示燈柱（裝飾）
 };
@@ -3775,7 +3777,29 @@ function draw() {
   for (const s of SOLIDS) {
     if (s.deco || s.hidden || s.elevator) continue;
     if (s === bossGate || s.gate) {
-      ctx.fillStyle = "#b4483c";
+      if (s.gate && ENV.gateSkin.img && ENV.gateSkin.img.width) {   // 單向門：能量燈柱垂直平鋪
+        ctx.save();
+        ctx.beginPath(); ctx.rect(s.x - 3, s.y, s.w + 6, s.h); ctx.clip();
+        const gw2 = s.w + 6, gh2 = gw2 * ENV.gateSkin.img.height / ENV.gateSkin.img.width;
+        for (let gy2 = s.y; gy2 < s.y + s.h; gy2 += gh2 - 4) {
+          ctx.drawImage(ENV.gateSkin.img, s.x - 3, gy2, gw2, gh2);
+        }
+        ctx.restore();
+        const gd = GATES.find(g3 => g3.solid === s);
+        if (gd && ENV.gateArrow.img && ENV.gateArrow.img.width) {   // 可通行方向箭頭（呼吸閃爍）
+          const aw = 32, ah = aw * ENV.gateArrow.img.height / ENV.gateArrow.img.width;
+          ctx.save();
+          if (gd.side === "right") {
+            ctx.translate(s.x + s.w / 2, 0); ctx.scale(-1, 1); ctx.translate(-(s.x + s.w / 2), 0);
+          }
+          ctx.globalAlpha = 0.7 + 0.3 * Math.sin(uiTime * 4);
+          ctx.drawImage(ENV.gateArrow.img, s.x + s.w / 2 - aw / 2, s.y + s.h / 2 - ah / 2, aw, ah);
+          ctx.restore();
+          ctx.globalAlpha = 1;
+        }
+        continue;
+      }
+      ctx.fillStyle = "#b4483c";               // Boss 落閘／素材未載入退回紅牆
       ctx.fillRect(s.x, s.y, s.w, s.h);
       ctx.strokeStyle = "#3c3c42";
       ctx.strokeRect(s.x + .5, s.y + .5, s.w - 1, s.h - 1);
