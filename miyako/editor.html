@@ -254,7 +254,47 @@ function draw() {
     if (e === sel) { ctx.strokeStyle = "#ffd75e"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(sx, sy - 9, 10, 0, 7); ctx.stroke(); ctx.lineWidth = 1; }
     ctx.fillText(e.kind + i, sx - 12, sy - 20);
   });
+  drawHandles();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
+}
+
+function rectOf(o) {   // 可拖拉調整大小的物件矩形（電梯用 top/bottom；移動平台僅寬度）
+  if (!o) return null;
+  if (data.elevators.includes(o)) return { x: o.x, y: o.top, w: o.w, h: o.bottom - o.top, elev: true };
+  if (data.movers.includes(o)) return { x: o.x, y: o.y - 7 / scale, w: o.w, h: 14 / scale, mover: true };
+  if (typeof o.w === "number" && typeof o.h === "number") return { x: o.x, y: o.y, w: o.w, h: o.h };
+  return null;
+}
+function resizeHandleAt(o, wx, wy) {
+  const r = rectOf(o);
+  if (!r) return null;
+  const tol = 10 / scale;
+  const inX = wx > r.x - tol && wx < r.x + r.w + tol;
+  const inY = wy > r.y - tol && wy < r.y + r.h + tol;
+  let hx = 0, hy = 0;
+  if (Math.abs(wx - r.x) < tol && inY) hx = -1;
+  else if (Math.abs(wx - r.x - r.w) < tol && inY) hx = 1;
+  if (Math.abs(wy - r.y) < tol && inX) hy = -1;
+  else if (Math.abs(wy - r.y - r.h) < tol && inX) hy = 1;
+  if (r.mover) hy = 0;
+  if (!hx && !hy) return null;
+  return { hx, hy };
+}
+function drawHandles() {   // 選取物件的 8 向把手（螢幕固定 7px 方塊）
+  const r = rectOf(sel);
+  if (!r) return;
+  const hs = 7 / scale;
+  const pts = r.mover
+    ? [[r.x, r.y + r.h / 2], [r.x + r.w, r.y + r.h / 2]]
+    : [[r.x, r.y], [r.x + r.w / 2, r.y], [r.x + r.w, r.y],
+       [r.x, r.y + r.h / 2], [r.x + r.w, r.y + r.h / 2],
+       [r.x, r.y + r.h], [r.x + r.w / 2, r.y + r.h], [r.x + r.w, r.y + r.h]];
+  for (const [px, py] of pts) {
+    ctx.fillStyle = "#ffd75e";
+    ctx.fillRect(px - hs / 2, py - hs / 2, hs, hs);
+    ctx.strokeStyle = "#1a2233";
+    ctx.strokeRect(px - hs / 2, py - hs / 2, hs, hs);
+  }
 }
 
 function hitTest(wx, wy) {
@@ -319,13 +359,10 @@ function hitTest(wx, wy) {
 cv.addEventListener("mousedown", ev => {
   const [wx, wy] = S2W(ev.offsetX, ev.offsetY + BAR_H());
   if (mode !== "select") { addAt(wx, wy); return; }
-  // 選取中的 solid：把手優先
-  if (sel && data.solids.includes(sel)) {
-    const tol = 12 / scale;
-    if (Math.abs(wy - sel.y) < tol * 1.5) {
-      if (Math.abs(wx - sel.x) < tol) { pushUndo(); drag = { type: "resizeL" }; return; }
-      if (Math.abs(wx - sel.x - sel.w) < tol) { pushUndo(); drag = { type: "resizeR" }; return; }
-    }
+  // 選取中的物件：8 向手柄優先（邊/角直接拖拉調整大小）
+  if (sel) {
+    const h = resizeHandleAt(sel, wx, wy);
+    if (h) { pushUndo(); drag = { type: "resize", hx: h.hx, hy: h.hy }; return; }
   }
   const hit = hitTest(wx, wy);
   if (hit) {
@@ -354,8 +391,16 @@ addEventListener("mousemove", ev => {
     `座標 ${hoverXY[0]}, ${hoverXY[1]}　縮放 ${(scale * 100) | 0}%　跳台可跳高≈195 距≈280`;
   if (!drag) {
     if (mode === "select" && ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom) {
-      const hit = hitTest(wx, wy);
-      cv.style.cursor = hit?.t === "moverEnd" ? (hit.o.axis === "x" ? "ew-resize" : "ns-resize") : "grab";
+      let cur = null;
+      if (sel) {
+        const h = resizeHandleAt(sel, wx, wy);
+        if (h) cur = h.hx && h.hy ? (h.hx * h.hy > 0 ? "nwse-resize" : "nesw-resize") : (h.hx ? "ew-resize" : "ns-resize");
+      }
+      if (!cur) {
+        const hit = hitTest(wx, wy);
+        cur = hit?.t === "moverEnd" ? (hit.o.axis === "x" ? "ew-resize" : "ns-resize") : "grab";
+      }
+      cv.style.cursor = cur;
     }
     return;
   }
@@ -370,8 +415,20 @@ addEventListener("mousemove", ev => {
     sel.dist = sel.axis === "x" ? snap(wx - drag.offset - sel.x) : snap(wy - drag.offset - sel.y);
     showProps();
   }
-  else if (drag.type === "resizeL" && sel) { const r2 = sel.x + sel.w; sel.x = Math.min(snap(wx), r2 - 40); sel.w = r2 - sel.x; showProps(); }
-  else if (drag.type === "resizeR" && sel) { sel.w = Math.max(40, snap(wx) - sel.x); showProps(); }
+  else if (drag.type === "resize" && sel) {
+    const elev = data.elevators.includes(sel);
+    const minW = 20, minH = 10;
+    if (drag.hx < 0) { const rr = sel.x + sel.w; sel.x = Math.min(snap(wx), rr - minW); sel.w = rr - sel.x; }
+    if (drag.hx > 0) sel.w = Math.max(minW, snap(wx) - sel.x);
+    if (elev) {
+      if (drag.hy < 0) sel.top = Math.min(snap(wy), sel.bottom - 60);
+      if (drag.hy > 0) sel.bottom = Math.max(snap(wy), sel.top + 60);
+    } else if (typeof sel.h === "number") {
+      if (drag.hy < 0) { const bb = sel.y + sel.h; sel.y = Math.min(snap(wy), bb - minH); sel.h = bb - sel.y; }
+      if (drag.hy > 0) sel.h = Math.max(minH, snap(wy) - sel.y);
+    }
+    showProps();
+  }
   draw();
 });
 addEventListener("mouseup", () => { if (drag && drag.type !== "pan") save(); drag = null; cv.style.cursor = "grab"; });
@@ -552,7 +609,7 @@ function duplicateSelected(){if(!sel)return notify("請先選取物件");pushUnd
 function nudgeSelected(dx,dy){if(!sel){ox+=dx/scale;oy+=dy/scale;draw();return}pushUndo();if("x" in sel)sel.x+=dx;if("y" in sel)sel.y+=dy;else if("top" in sel){sel.top+=dy;sel.bottom+=dy}save();draw();showProps()}
 function openOverlay(id){document.querySelectorAll(".overlay").forEach(o=>o.classList.remove("open"));const el=document.getElementById(id);el.classList.add("open");setTimeout(()=>el.querySelector("input,button")?.focus(),0)}
 function closeOverlays(){document.querySelectorAll(".overlay.open").forEach(o=>o.classList.remove("open"));cv.focus()}
-const shortcutRows=[["V","選取與移動"],["P / B / W","新增跳台 / 樓板 / 牆"],["R / Shift+W / X","新增可破壞牆 / 幽靈牆 / 可破壞箱"],["E / C / G / I","新增電梯 / 存檔點 / 單向門 / 道具"],["K","新增鑰匙門"],["H / Shift+H","新增水平 / 垂直移動台"],["Alt+1 … Alt+6","新增各類敵人"],["方向鍵","微調 10 px；Shift 為 50 px"],["Ctrl+D","複製選取物件"],["Delete","刪除選取物件"],["Ctrl+Z / Ctrl+Y","復原 / 重做"],["+ / − / F","放大 / 縮小 / 顯示全部"],["A","切換敵人感應範圍"],["Ctrl+S","立即儲存到瀏覽器"],["Ctrl+Shift+S / Ctrl+O","匯出 / 匯入 JSON"],["Ctrl+K","開啟指令面板"],["? / Esc","快捷鍵說明 / 取消"]];
+const shortcutRows=[["拖拉邊/角","選取物件後直接拖拉 8 向手柄調整大小（電梯拉上下端、移動平台拉左右端）"],["V","選取與移動"],["P / B / W","新增跳台 / 樓板 / 牆"],["R / Shift+W / X","新增可破壞牆 / 幽靈牆 / 可破壞箱"],["E / C / G / I","新增電梯 / 存檔點 / 單向門 / 道具"],["K","新增鑰匙門"],["H / Shift+H","新增水平 / 垂直移動台"],["Alt+1 … Alt+6","新增各類敵人"],["方向鍵","微調 10 px；Shift 為 50 px"],["Ctrl+D","複製選取物件"],["Delete","刪除選取物件"],["Ctrl+Z / Ctrl+Y","復原 / 重做"],["+ / − / F","放大 / 縮小 / 顯示全部"],["A","切換敵人感應範圍"],["Ctrl+S","立即儲存到瀏覽器"],["Ctrl+Shift+S / Ctrl+O","匯出 / 匯入 JSON"],["Ctrl+K","開啟指令面板"],["? / Esc","快捷鍵說明 / 取消"]];
 document.getElementById("shortcutGrid").innerHTML=shortcutRows.map(([k,d])=>`<div>${k.split(" / ").map(x=>`<kbd>${x}</kbd>`).join(" ")}</div><div class="desc">${d}</div>`).join("");
 const commands=[...Object.entries(MODE_NAMES).map(([id,name])=>({name,key:document.querySelector(`[data-mode="${id}"]`)?.dataset.shortcut||"",run:()=>setMode(id)})),{name:"顯示完整地圖",key:"F",run:fitView},{name:"切換感應範圍",key:"A",run:()=>document.getElementById("sightB").click()},{name:"復原",key:"Ctrl+Z",run:undo},{name:"重做",key:"Ctrl+Y",run:redo},{name:"複製選取物件",key:"Ctrl+D",run:duplicateSelected},{name:"匯出 JSON",key:"Ctrl+Shift+S",run:exportMap},{name:"匯入 JSON",key:"Ctrl+O",run:()=>document.getElementById("importFile").click()},{name:"還原初始配置",key:"",run:()=>document.getElementById("resetB").click()}];
 let commandIndex=0;
