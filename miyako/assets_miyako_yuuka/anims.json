@@ -19,8 +19,8 @@
   "file": "crouch_idle.png",
   "frameW": 240,
   "frameH": 238,
-  "count": 8,
-  "fps": 6,
+  "count": 9,
+  "fps": 5,
   "loop": true
  },
  "shoot": {
