@@ -2450,35 +2450,106 @@ function menuBtn(x, y, w, h, label, fn, style) {
 function drawMenu() {
   menuBtns = [];
   const cx = VIEW_W / 2;
-  ctx.fillStyle = "#eef4fb";
-  ctx.fillRect(0, 0, VIEW_W, 540);
-  ctx.save();                                     // BA 斜紋背景
-  ctx.globalAlpha = 0.05;
-  ctx.strokeStyle = "#2f77d4";
-  ctx.lineWidth = 26;
-  for (let x = -540; x < VIEW_W + 200; x += 92) {
-    ctx.beginPath(); ctx.moveTo(x, 560); ctx.lineTo(x + 300, -20); ctx.stroke();
+  if (menuScreen !== "main") {                    // 子畫面：淺色斜紋底
+    ctx.fillStyle = "#eef4fb";
+    ctx.fillRect(0, 0, VIEW_W, 540);
+    ctx.save();
+    ctx.globalAlpha = 0.05;
+    ctx.strokeStyle = "#2f77d4";
+    ctx.lineWidth = 26;
+    for (let x = -540; x < VIEW_W + 200; x += 92) {
+      ctx.beginPath(); ctx.moveTo(x, 560); ctx.lineTo(x + 300, -20); ctx.stroke();
+    }
+    ctx.restore();
+    ctx.lineWidth = 1;
   }
-  ctx.restore();
-  ctx.lineWidth = 1;
   if (menuScreen === "main") {
-    ctx.textAlign = "center";
-    ctx.font = `italic 900 52px ${UI_FONT}`;
-    const titleW = ctx.measureText(T("title")).width;
-    if (titleW > 880) ctx.font = `italic 900 ${Math.floor(52 * 880 / titleW)}px ${UI_FONT}`;
-    ctx.fillStyle = "#2b3a55";
-    ctx.fillText(T("title"), cx, 158);
-    ctx.font = `italic 700 17px ${UI_FONT}`;
-    ctx.fillStyle = "rgba(43,58,85,.55)";
-    ctx.fillText(T("sub"), cx, 192);
+    // ---- Key art 背景：cover 滿版 + 極慢漂移（活起來但不搶戲）----
+    ctx.fillStyle = "#0a1224";
+    ctx.fillRect(0, 0, VIEW_W, 540);
+    const bg = ENV.menuBg.img;
+    if (bg && bg.width) {
+      const drift = Math.sin(uiTime * 0.07) * 12;
+      let dw = VIEW_W * 1.06, dh = dw * bg.height / bg.width;
+      if (dh < 540 * 1.06) { dh = 540 * 1.06; dw = dh * bg.width / bg.height; }
+      const dx = (VIEW_W - dw) / 2 + drift, dy = (540 - dh) / 2 - drift * 0.4;
+      ctx.drawImage(bg, dx, dy, dw, dh);
+    }
+    // 左側深藍壓暗區（UI 錨定）＋底部漸層
+    let g = ctx.createLinearGradient(0, 0, VIEW_W * 0.62, 0);
+    g.addColorStop(0, "rgba(8,14,30,.93)");
+    g.addColorStop(0.55, "rgba(8,14,30,.55)");
+    g.addColorStop(1, "rgba(8,14,30,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, VIEW_W * 0.62, 540);
+    g = ctx.createLinearGradient(0, 540, 0, 380);
+    g.addColorStop(0, "rgba(8,14,30,.78)");
+    g.addColorStop(1, "rgba(8,14,30,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 380, VIEW_W, 160);
+    // 頂部細藍飾條 + 斜切小標籤
+    ctx.fillStyle = UI_BLUE;
+    ctx.fillRect(0, 0, VIEW_W, 3);
+    slantPath(-10, 14, 190, 26, 8);
+    ctx.fillStyle = "rgba(47,119,212,.9)";
+    ctx.fill();
+    ctx.textAlign = "left";
+    ctx.font = `italic 900 12px ${UI_FONT}`;
+    ctx.fillStyle = "#fff";
+    ctx.fillText("PIXEL SIDE-SCROLLER", 14, 32);
+    // ---- 標題塊（左對齊，中英雙行）----
+    const LX = 64;
+    const t = T("title");
+    const ix = t.indexOf(" We Were");
+    const line1 = ix > 0 ? t.slice(0, ix) : t;
+    const line2 = ix > 0 ? t.slice(ix + 1) : "";
+    ctx.font = `italic 900 50px ${UI_FONT}`;
+    ctx.fillStyle = "rgba(89,213,242,.45)";       // 天藍錯位殘影
+    ctx.fillText(line1, LX + 3, 153);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText(line1, LX, 150);
+    if (line2) {
+      ctx.font = `italic 900 30px ${UI_FONT}`;
+      ctx.fillStyle = "#59d5f2";
+      ctx.fillText(line2, LX + 4, 192);
+    }
+    slantPath(LX + 2, line2 ? 206 : 170, 224, 5, 2);   // 標題底線飾條
+    ctx.fillStyle = UI_BLUE;
+    ctx.fill();
+    ctx.font = `italic 700 14px ${UI_FONT}`;
+    ctx.fillStyle = "rgba(200,220,240,.75)";
+    ctx.fillText(T("sub"), LX + 2, line2 ? 230 : 194);
     let hasSave = false;
     try { hasSave = !!localStorage.getItem("miyako_save"); } catch (e) {}
-    menuBtn(cx - 130, 250, 260, 52, T("newGame"), () => {
+    // ---- 左側直排選單（BA 風斜切鍵）----
+    const mBtn = (y, label, fn, primary) => {
+      const x = LX, w = 264, h = 50;
+      const hover = mouse.sx >= x && mouse.sx <= x + w && mouse.sy >= y && mouse.sy <= y + h;
+      slantPath(x, y, w, h, 10);
+      ctx.fillStyle = primary ? (hover ? "rgba(66,150,240,.96)" : "rgba(47,119,212,.92)")
+                              : (hover ? "rgba(255,255,255,.28)" : "rgba(255,255,255,.13)");
+      ctx.fill();
+      slantPath(x, y, w, h, 10);
+      ctx.strokeStyle = hover ? "rgba(255,255,255,.9)" : "rgba(255,255,255,.4)";
+      ctx.stroke();
+      ctx.fillStyle = primary ? "#ffd75e" : "#59d5f2";   // 左緣飾條
+      ctx.fillRect(x + 6, y + 8, 3, h - 16);
+      ctx.textAlign = "left";
+      ctx.font = `italic 900 19px ${UI_FONT}`;
+      ctx.fillStyle = "#fff";
+      ctx.fillText(label, x + 26, y + h / 2 + 7);
+      if (hover) {
+        ctx.fillStyle = "#fff";
+        ctx.fillText("▶", x + w - 34, y + h / 2 + 7);
+      }
+      menuBtns.push({ x, y, w, h, fn });
+    };
+    mBtn(272, T("newGame"), () => {
       if (!confirm(T("confirmNew"))) return;
       try { localStorage.removeItem("miyako_save"); } catch (e) {}
       location.hash = "#start"; location.reload();
-    });
-    menuBtn(cx - 130, 318, 260, 52, T("cont"), () => {
+    }, true);
+    mBtn(334, T("cont"), () => {
       const s = prompt(T("pasteOpt"));
       if (s === null) return;                   // 取消
       if (s.trim()) { importSaveCode(s.trim()); return; }
@@ -2486,22 +2557,31 @@ function drawMenu() {
       try { sv = localStorage.getItem("miyako_save"); } catch (e) {}
       if (sv) { ensureAudio(); menuScreen = null; if (selectScreen) tryResume(); }
       else alert(T("noSave"));
-    }, hasSave ? undefined : "ghost");
-    if (hasSave) {                              // 進度摘要：存檔點開啟數 + 最後位置
+    });
+    mBtn(396, T("settings"), () => { menuFrom = "main"; menuScreen = "settings"; });
+    if (hasSave) {                              // 進度摘要：選單下方小字
       try {
         const sv = JSON.parse(localStorage.getItem("miyako_save"));
         const n = (sv.cps || []).filter(Boolean).length;
         const floors = { 3000: "L0", 2400: "L1", 1800: "L2", 1200: "L3", 600: "L4" };
         const loc = sv.lastCp ? (floors[sv.lastCp.y] || "?") + " x" + sv.lastCp.x : "-";
+        ctx.textAlign = "left";
         ctx.font = "600 12px " + UI_FONT;
-        ctx.fillStyle = "rgba(43,58,85,.55)";
-        ctx.fillText(T("progress") + ": CP " + n + "/" + CHECKPOINTS.length + " | " + loc + " | " + (sv.credits | 0) + "C", cx, 390 - 6);
+        ctx.fillStyle = "rgba(180,205,230,.7)";
+        ctx.fillText(T("progress") + ": CP " + n + "/" + CHECKPOINTS.length + " · " + loc + " · " + (sv.credits | 0) + "C", 66, 472);
       } catch (e) {}
     }
-    menuBtn(cx - 130, 386 + 14, 260, 52, T("settings"), () => { menuFrom = "main"; menuScreen = "settings"; });
+    if (bestClearT !== null) {                  // 速通紀錄：右下角
+      ctx.textAlign = "right";
+      ctx.font = `italic 900 14px ${UI_FONT}`;
+      ctx.fillStyle = "rgba(255,215,94,.9)";
+      ctx.fillText("BEST " + fmtTime(bestClearT), VIEW_W - 20, 508);
+    }
+    ctx.textAlign = "left";
     ctx.font = `600 11px ${UI_FONT}`;
-    ctx.fillStyle = "rgba(43,58,85,.4)";
-    ctx.fillText("Unofficial Blue Archive fan game · AI-assisted assets & code", cx, 512);
+    ctx.fillStyle = "rgba(170,195,220,.55)";
+    ctx.fillText("Unofficial Blue Archive fan game · AI-assisted assets & code", 66, 512);
+    ctx.textAlign = "center";
   } else if (menuScreen === "settings") {
     ctx.textAlign = "center";
     ctx.font = `italic 900 30px ${UI_FONT}`;
@@ -2660,6 +2740,7 @@ const GREN_FX = { file: "assets_fx/grenade.png", w: 64, h: 131 };  // M-84 閃�
 const CREDIT_FX = { file: "assets_fx/credit.png" };   // 信用點數 icon
 // ---- 場景素材（自動切割自 assets_env 素材表）----
 const ENV = {
+  menuBg:   { file: "assets_env/menu_bg.png" },  // 主選單 key art（RABBIT 小隊）
   bgWall:   { file: "assets_env/bg_01.png" },    // 遠景廠房牆（視差）
   corridor: { file: "assets_env/bg_04.png" },    // 走廊門（視差近層）
   floorTop: { file: "assets_env/plat_08.png" },  // 黃線平台條（厚板頂緣）
