@@ -437,11 +437,12 @@ const SOLIDS = (MAP?.solids || BASE_SOLIDS).map(s => ({ ...s }));
 const CAMZONES = (MAP?.camzones || []).map(z => ({ ...z }));
 let camZone = null, camFlyT = 0;
 let visitedZones = [];              // 小地圖迷霧：已探索的攝影機框 index（存檔持久化）
-function inUnvisitedZone(cx, cy) {  // 該點只被未探索框涵蓋 → 小地圖隱藏
+function inUnvisitedZone(cx, cy) {  // 該點在 secret 框內＝永久隱藏；只被未探索框涵蓋＝迷霧隱藏
   let inUnvis = false;
   for (let i = 0; i < CAMZONES.length; i++) {
     const z = CAMZONES[i];
     if (cx > z.x && cx < z.x + z.w && cy > z.y && cy < z.y + z.h) {
+      if (z.secret) return true;                    // 隱藏區：探索過也不顯示
       if (visitedZones.includes(i)) return false;   // 已探索框涵蓋 → 顯示
       inUnvis = true;
     }

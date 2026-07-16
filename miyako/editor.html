@@ -265,7 +265,7 @@ function draw() {
     ctx.setLineDash([]);
     ctx.lineWidth = 1;
     ctx.fillStyle = z === sel ? "#ffd75e" : "#b07df0";
-    ctx.fillText("🎥 攝影機框" + i, sx + 6, sy + 16);
+    ctx.fillText("🎥 攝影機框" + i + (z.secret ? "（隱藏區）" : ""), sx + 6, sy + 16);
   });
   drawHandles();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -526,6 +526,7 @@ function showProps() {
   let fields = Object.keys(sel).filter(f => f !== "c");
   if (kind === "breakables" && !("drop" in sel)) fields.push("drop");
   if (kind === "elevators" && !("lock" in sel)) fields.push("lock");     // 電梯鎖（空字串=無鎖）
+  if (kind === "camzones" && !("secret" in sel)) fields.push("secret");   // secret=1：永久不顯示在小地圖
   if (kind === "items") {
     if (sel.type === "char" && !("card" in sel)) fields.push("card");    // 7=日鞠 8=風華 9=三千留
     if (sel.type === "skin" && !("skin" in sel)) fields.push("skin");
