@@ -2759,7 +2759,7 @@ function drawFire(phase, dx, dy, size) {
     FIRE_FX.fw, FIRE_FX.fh, dx, dy, size, size);
   if (FIRE_FX.additive) ctx.restore();
 }
-const tracers = [], blasts = [], flameZones = [], snipeShots = [], helis = [];
+const tracers = [], blasts = [], flameZones = [], snipeShots = [], helis = [], fireMissiles = [];
 const costPops = [];               // 擊殺 +1 Cost 浮字
 const dmgPops = [];                // 傷害數字（顯示 ×100；爆擊紅色星芒）
 
@@ -3071,10 +3071,10 @@ function shieldUp(e) {
 
 function damageEnemy(e, dmg, crit) {
   if (e.state === "death") return;
-  if (shieldUp(e)) {                 // 舉盾格擋：護罩波紋 + 火花
+  if (shieldUp(e)) {                 // 舉盾格擋：傷害減半（原全擋）＋護罩波紋火花
     e.blockT = 0.18;
     impacts.push({ x: e.x + (Math.random() - .5) * 20, y: e.y - e.h * 0.5 - Math.random() * 30, t: 0.1 });
-    return;
+    dmg *= 0.5;
   }
   pushDmgPop(e.x, e.y - e.h - 8, dmg, crit);
   e.hp -= dmg;
@@ -3392,28 +3392,37 @@ function updateEffects(dt) {
     const h = helis[i];
     h.t += dt;
     h.x += HELI_SPEED * dt;
-    if (!h.zone && h.x >= h.x0) {              // 抵達區域起點 → 開始鋪火
-      h.zone = { x0: h.x0, x1: h.x0 + 1, t: 5, gy: h.gy || F1_Y };
-      flameZones.push(h.zone);
-    }
-    if (h.zone && h.zone.x1 < h.x1) {          // 隨飛行進度延伸火線，掃過的目標點燃 + 直傷
-      const nx = Math.min(h.x1, h.x);
-      for (const e of enemies) {
-        if (e.state !== "death" && e.x > h.zone.x1 && e.x <= nx &&
-            Math.abs(e.y - h.zone.gy) < 100) { damageEnemy(e, 1); e.burnT = 20; }
-      }
-      if (boss.active && boss.deadT <= 0 && boss.x > h.zone.x1 && boss.x <= nx &&
-          Math.abs(boss.y - h.zone.gy) < 40) { damageBoss(1); boss.burnT = 20; }
-      for (const a of allies) {
-        if (a.kind !== "sniper" && a.mode === "fight" && a.x > h.zone.x1 && a.x <= nx &&
-            Math.abs(a.y - h.zone.gy) < 100) {
-          damageAlly(a, 1); a.burnT = 20;
-        }
-      }
-      h.zone.x1 = nx;
-      h.zone.t = 5;                            // 鋪完起算殘留 5 秒
+    if (h.drops === undefined && h.x >= h.x0) h.drops = 0;   // 進入區域：開始投彈
+    if (h.drops !== undefined && h.drops < 5 &&
+        h.x >= h.x0 + h.drops * (h.x1 - h.x0) / 4.001) {      // 等距 5 顆
+      fireMissiles.push({
+        x: h.x, y: cam.y - 270 + 80,
+        vx: 70, vy: 500,
+        gy: h.gy || F1_Y,
+      });
+      h.drops++;
     }
     if (h.x > cam.x + VIEW_W / 2 + HELI_FX.w + 60) helis.splice(i, 1);
+  }
+  // 燃燒飛彈：俯衝 → 觸地爆炸（傷害+點燃）＋殘留火焰區
+  for (let i = fireMissiles.length - 1; i >= 0; i--) {
+    const ms = fireMissiles[i];
+    ms.vy += 1100 * dt;
+    ms.x += ms.vx * dt;
+    ms.y += ms.vy * dt;
+    if (ms.y >= ms.gy - 6) {
+      blasts.push({ x: ms.x, y: ms.gy, t: 0.35 });
+      shakeT = Math.max(shakeT, 0.12);
+      for (const e of enemies) {
+        if (e.state !== "death" && Math.abs(e.x - ms.x) < 80 && Math.abs(e.y - ms.gy) < 110) { damageEnemy(e, 1.5); e.burnT = 20; }
+      }
+      if (boss.active && boss.deadT <= 0 && Math.abs(boss.x - ms.x) < 80 && Math.abs(boss.y - ms.gy) < 140) { damageBoss(1); boss.burnT = 20; }
+      for (const a of allies) {
+        if (a.kind !== "sniper" && a.mode === "fight" && Math.abs(a.x - ms.x) < 80 && Math.abs(a.y - ms.gy) < 110) { damageAlly(a, 1); a.burnT = 20; }
+      }
+      flameZones.push({ x0: ms.x - 45, x1: ms.x + 45, t: 5, gy: ms.gy });
+      fireMissiles.splice(i, 1);
+    }
   }
   // 火焰殘留區：站在裡面的目標重新點燃
   for (let i = flameZones.length - 1; i >= 0; i--) {
@@ -5057,7 +5066,7 @@ function drawHUD() {
   if (targeting) {                 // 瞄準中：卡欄上方 BA 風技能說明橫幅
     const tc = CARDS[hand[targeting.slot]];
     const SKILL_DESC = {
-      fireline: "呼叫直升機空投燃燒彈，沿瞄準方向鋪設火焰帶持續灼燒敵人",
+      fireline: "呼叫直升機對目標區投放多枚燃燒飛彈，觸地爆炸並引燃地面",
       stun:     "放出自走式無人機直線突進，命中敵人閃光引爆造成暈眩",
       area:     "請求支援砲擊！閃光彈砸向瞄準點，範圍傷害並暈眩敵人",
       snipe:    "觀測並標記目標，狙擊手延遲擊發；交替使用時傷害翻倍",
@@ -5379,6 +5388,18 @@ function drawEffects() {
     ctx.translate(g.x, g.y);
     ctx.rotate(g.rot);
     ctx.drawImage(GREN_FX.img, -8, -16, 16, 16 * GREN_FX.h / GREN_FX.w);
+    ctx.restore();
+  }
+  for (const ms of fireMissiles) {   // 燃燒飛彈：橄欖彈體 + 尾焰，沿速度方向
+    ctx.save();
+    ctx.translate(ms.x, ms.y);
+    ctx.rotate(Math.atan2(ms.vy, ms.vx));
+    ctx.fillStyle = "#63683d";
+    ctx.fillRect(-14, -3, 14, 6);
+    ctx.fillStyle = "#2c2c30";
+    ctx.fillRect(0, -3, 5, 6);
+    ctx.fillStyle = Math.random() < 0.5 ? "#ffb35e" : "#ff7a3c";
+    ctx.fillRect(-(20 + Math.random() * 6), -2, 7, 4);
     ctx.restore();
   }
   // 空投直升機（貼畫面上緣、露出下方 1/4，微幅浮沉）
