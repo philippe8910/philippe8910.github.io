@@ -4080,8 +4080,10 @@ function draw() {
   }
   ctx.translate(-camL + jx, -camT + jy);
 
-  // 場景背景：每層樓一條走廊帶（x 視差 0.5），其上遠景牆帶
+  // 場景背景：每層樓一條走廊帶（x 視差 0.5），其上遠景牆帶；景深＝越遠越糊（預烘焙模糊版）
   if (ENV.corridor.img && ENV.corridor.img.width) {
+    const corridorImg = blurredTile(ENV.corridor.img, 1);   // 近背景：微糊 1px
+    const wallImg = ENV.bgWall.img && ENV.bgWall.img.width ? blurredTile(ENV.bgWall.img, 2) : null;   // 遠景牆：2px
     const bgS = 1.7;
     const bw = Math.round(625 * bgS), bh = Math.round(170 * bgS);
     const ww2 = Math.round(625 * 1.2), wh2 = Math.round(234 * 1.2);
@@ -4091,13 +4093,13 @@ function draw() {
       let bx = Math.floor((camL - par) / bw) * bw + Math.floor(par / bw) * bw;
       bx = camL - ((camL * 0.5) % bw) - bw;
       for (let x = bx; x < camL + VIEW_W + bw; x += bw) {
-        ctx.drawImage(ENV.corridor.img, x, by, bw, bh);
+        ctx.drawImage(corridorImg, x, by, bw, bh);
       }
-      if (ENV.bgWall.img && ENV.bgWall.img.width) {   // 走廊帶上方遠景牆
+      if (wallImg) {   // 走廊帶上方遠景牆
         const wy = by - wh2;
         let wx = camL - ((camL * 0.3) % ww2) - ww2;
         for (let x = wx; x < camL + VIEW_W + ww2; x += ww2) {
-          ctx.drawImage(ENV.bgWall.img, x, wy, ww2, wh2);
+          ctx.drawImage(wallImg, x, wy, ww2, wh2);
         }
       }
     }
@@ -5214,6 +5216,19 @@ function drawMinimap() {
   ctx.fill();
 }
 
+function blurredTile(img, px) {   // 景深：預烘焙模糊版（水平三連畫避免平鋪接縫出現透明邊）
+  if (!document.createElement) return img;   // 無頭測試環境
+  img._blur = img._blur || {};
+  if (!img._blur[px]) {
+    const c = document.createElement("canvas");
+    c.width = img.width; c.height = img.height;
+    const g = c.getContext("2d");
+    g.filter = "blur(" + px + "px)";
+    for (const dx of [-img.width, 0, img.width]) g.drawImage(img, dx, 0);
+    img._blur[px] = c;
+  }
+  return img._blur[px];
+}
 let weaponShadow = null;
 function getWeaponShadow(img) {     // 武器剪影投影（離屏一次性上色）
   if (weaponShadow) return weaponShadow;
