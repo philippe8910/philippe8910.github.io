@@ -2376,8 +2376,15 @@ function updateEnemyBullets(dt) {
         break;
       }
     }
+    // 飛行中直擊玩家 → 立即引爆（不用等落地彈跳）
+    const ghh = player.crouching ? HITBOX_H_CROUCH : HITBOX_H;
+    if (player.invulnT <= 0 && player.deathT <= 0 &&
+        Math.abs(g.x - player.x) < HITBOX_W / 2 + 8 &&
+        g.y > player.y - ghh - 10 && g.y < player.y + 6) {
+      boom = true;
+    }
     g.t = (g.t || 0) + dt;
-    if (boom || g.t > 5 || g.y > WORLD.h + 100) {      // 兩彈爆炸；5 秒保險引信
+    if (boom || g.t > 5 || g.y > WORLD.h + 100) {      // 直擊/兩彈/5 秒保險引信
       rocketBlast(g.x, g.y - 10);
       eGrenades.splice(i, 1);
     }
