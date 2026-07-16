@@ -4804,10 +4804,10 @@ function drawHUD() {
   if (targeting) {                 // 瞄準中：卡欄上方 BA 風技能說明橫幅
     const tc = CARDS[hand[targeting.slot]];
     const SKILL_DESC = {
-      fireline: "呼叫直升機沿瞄準方向鋪設火焰帶，持續燃燒沿途敵人",
-      stun:     "腳下釋放麻痺小車直線前進，撞擊敵人觸發暈眩",
-      area:     "向瞄準點拋擲閃光彈，落地引爆造成範圍傷害與暈眩",
-      snipe:    "狙擊手鎖定瞄準點附近的敵人延遲擊發；交替使用傷害翻倍",
+      fireline: "呼叫直升機空投燃燒彈，沿瞄準方向鋪設火焰帶持續灼燒敵人",
+      stun:     "放出自走式無人機直線突進，命中敵人閃光引爆造成暈眩",
+      area:     "請求支援砲擊！閃光彈砸向瞄準點，範圍傷害並暈眩敵人",
+      snipe:    "觀測並標記目標，狙擊手延遲擊發；交替使用時傷害翻倍",
     };
     const bw = 330, bh = 46, bx1 = baseX + CW * 3 + GAP * 2, bx = bx1 - bw, by = baseY - bh - 12;
     slantPath(bx, by, bw, bh, 9);
