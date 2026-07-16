@@ -894,18 +894,24 @@ if (cv.addEventListener) {
     return { x: (t.clientX - r.left - (r.width - VIEW_W * s) / 2) / s,
              y: (t.clientY - r.top - (r.height - 540 * s) / 2) / s };
   }
-  let autoFsTries = 0;   // 手機：前幾次觸碰自動進全螢幕（快速隱藏網址列）
-  cv.addEventListener("touchstart", () => {
-    if (autoFsTries >= 3 || document.fullscreenElement) return;
+  // 手機自動全螢幕：Android(Chrome/Brave)支援；iPhone 全系 WebKit 無此 API → 顯示加入主畫面提示
+  const FS_OK = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+  let autoFsTries = 0;
+  const tryAutoFs = () => {
+    if (!FS_OK || autoFsTries >= 3 || document.fullscreenElement || document.webkitFullscreenElement) return;
     autoFsTries++;
     const el = document.documentElement;
     const req = el.requestFullscreen || el.webkitRequestFullscreen;
     if (req) {
-      Promise.resolve(req.call(el)).then(() => {
-        try { screen.orientation && screen.orientation.lock("landscape").catch(() => {}); } catch (e2) {}
-      }).catch(() => {});
+      try {
+        Promise.resolve(req.call(el)).then(() => {
+          try { screen.orientation && screen.orientation.lock("landscape").catch(() => {}); } catch (e2) {}
+        }).catch(() => {});
+      } catch (e2) {}
     }
-  }, { passive: true });
+  };
+  cv.addEventListener("touchend", tryAutoFs, { passive: true });
+  cv.addEventListener("click", tryAutoFs);
   cv.addEventListener("touchstart", e => {
     e.preventDefault();
     if (!vpad.on) { const h = document.getElementById("hud"); if (h) h.style.display = "none"; }
@@ -2598,6 +2604,14 @@ function drawMenu() {
       ctx.fillText("BEST " + fmtTime(bestClearT), VIEW_W - 20, 508);
     }
     ctx.textAlign = "left";
+    try {   // iPhone（WebKit 無全螢幕 API）：提示加入主畫面以全螢幕遊玩
+      if ("ontouchstart" in window && !(document.fullscreenEnabled || document.webkitFullscreenEnabled) &&
+          !(navigator.standalone || (window.matchMedia && matchMedia("(display-mode: standalone)").matches))) {
+        ctx.font = `600 11px ${UI_FONT}`;
+        ctx.fillStyle = "rgba(89,213,242,.85)";
+        ctx.fillText("iPhone 全螢幕：Safari 分享 ▸ 加入主畫面", 66, 496);
+      }
+    } catch (e) {}
     ctx.font = `600 11px ${UI_FONT}`;
     ctx.fillStyle = "rgba(170,195,220,.55)";
     ctx.fillText("Unofficial Blue Archive fan game · AI-assisted assets & code", 66, 512);
