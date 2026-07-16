@@ -1076,6 +1076,17 @@ function spawnEnemyShell(x, y, dir) {
   });
 }
 
+function losBlocked(x0, y0, x1, y1) {   // RAYCAST：視線是否被牆擋住（厚實心；薄平台不擋）
+  const d = Math.hypot(x1 - x0, y1 - y0), n = Math.max(1, Math.ceil(d / 24));
+  for (let i = 1; i < n; i++) {
+    const px = x0 + (x1 - x0) * i / n, py = y0 + (y1 - y0) * i / n;
+    for (const sd of SOLIDS) {
+      if (sd.h <= 30) continue;
+      if (px > sd.x && px < sd.x + sd.w && py > sd.y && py < sd.y + sd.h) return true;
+    }
+  }
+  return false;
+}
 const EGREN_FX = { file: "assets_fx/grenade2.png" };   // 手雷兵投射物（grenade.png 是咲的閃光彈）
 const eGrenades = [];
 function throwEnemyGrenade(e, K) {
@@ -1269,7 +1280,8 @@ function updateEnemies(dt) {
     const dist = player.x - e.x;
     const atk = K.attack;
     const engaged = K.sightR
-      ? Math.hypot(dist, player.y - e.y) < K.sightR
+      ? Math.hypot(dist, player.y - e.y) < K.sightR &&
+        !losBlocked(e.x, e.y - 100, player.x, player.y - 40)
       : Math.abs(dist) < (K.sight || 480) && Math.abs(player.y - e.y) < (K.sightV || 60);
     // 瞄準射擊：玩家在射線上持續蹲下 >1.2s → 直線彈敵人壓低槍口（火箭/霰彈/手雷本就反蹲，不參與）
     if (engaged && player.crouching && !K.rocket && !K.shotgun && !K.grenade) {
@@ -2042,14 +2054,33 @@ function updateBoss(dt) {
 
 // 敵方子彈（小怪 + Boss 共用 bossBullets）：每幀無條件運算，不依賴 Boss 狀態
 function updateEnemyBullets(dt) {
-  for (let i = eGrenades.length - 1; i >= 0; i--) {   // 手雷：拋物線 → 落地爆風（rocketBlast 傷害+震動）
+  for (let i = eGrenades.length - 1; i >= 0; i--) {   // 手雷：真實物理，地板彈兩下才爆（rocketBlast）
     const g = eGrenades[i];
+    const prevX = g.x, prevY = g.y;
     g.vy += GREN_G * dt;
     g.x += g.vx * dt;
     g.y += g.vy * dt;
-    g.rot += 9 * dt;
-    if (g.vy > 0 && g.y >= g.gy - 8) {
-      rocketBlast(g.x, g.gy - 10);
+    g.rot += (Math.abs(g.vx) > 30 ? 9 : 3) * dt;
+    let boom = false;
+    for (const sd of SOLIDS) {
+      const thin = sd.h <= 30;
+      if (g.x > sd.x && g.x < sd.x + sd.w && g.y > sd.y && g.y < sd.y + (thin ? 14 : sd.h)) {
+        if (g.vy > 0 && prevY <= sd.y + 1) {          // 從上方砸到地板/平台 → 反彈
+          g.y = sd.y; g.vy = -g.vy * 0.45; g.vx *= 0.65;
+          g.bounce = (g.bounce || 0) + 1;
+          impacts.push({ x: g.x, y: g.y, t: 0.08 });
+          if (g.bounce >= 2) boom = true;
+        } else if (!thin && g.vy < 0 && prevY >= sd.y + sd.h - 1) {   // 撞天花板
+          g.y = sd.y + sd.h; g.vy = 0;
+        } else if (!thin) {                            // 撞牆：水平反彈（不穿牆）
+          g.x = prevX; g.vx = -g.vx * 0.5;
+        }
+        break;
+      }
+    }
+    g.t = (g.t || 0) + dt;
+    if (boom || g.t > 5 || g.y > WORLD.h + 100) {      // 兩彈爆炸；5 秒保險引信
+      rocketBlast(g.x, g.y - 10);
       eGrenades.splice(i, 1);
     }
   }
