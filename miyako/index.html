@@ -2098,16 +2098,16 @@ const TARGETING_TIMESCALE = 0.25;   // 瞄準中的子彈時間（Cost 回復同
 let cost = 4;
 let snipeCharge = false;            // 狙擊蓄力：第二次使用傷害雙倍
 const CARDS = [   // crop：半身構圖（源圖臉在中段，整幅即半身像；c1 臉偏高另裁側邊）
-  { name: "萌繪・燃焰貫射", file: "assets_cards/card1.png", cost: 4, skill: "fireline", flashT: 0, dealT: 0, crop: { sx: 8, sy: 0, sw: 179, sh: 224 } },
-  { name: "美遊・麻痺小車", file: "assets_cards/card2.png", cost: 2, skill: "stun",     flashT: 0, dealT: 0, crop: { sx: 0, sy: 0, sw: 200, sh: 250 } },
-  { name: "咲・壓制炮擊",   file: "assets_cards/card3.png", cost: 4, skill: "area",     flashT: 0, dealT: 0, crop: { sx: 0, sy: 0, sw: 200, sh: 250 } },
-  { name: "阿露・精準狙擊", file: "assets_cards/card4.png", cost: 3, skill: "snipe",    flashT: 0, dealT: 0, crop: { sx: 0, sy: 0, sw: 200, sh: 250 } },
-  { name: "芹奈・急救血包", file: "assets_cards/card5.png", cost: 2, skill: "heal", selfCast: true, flashT: 0, dealT: 0, crop: { sx: 0, sy: 0, sw: 200, sh: 250 }, headCrop: { sx: 50, sy: 45, sw: 95, sh: 119 }, shopCrop: { sx: 50, sy: 48, s: 95 } },
-  { name: "瑪麗・聖盾祝福", file: "assets_cards/card6.png", cost: 2, skill: "buff", selfCast: true, flashT: 0, dealT: 0, crop: { sx: 0, sy: 0, sw: 200, sh: 250 }, headCrop: { sx: 38, sy: 51, sw: 95, sh: 119 }, shopCrop: { sx: 38, sy: 58, s: 95 } },
-  { name: "亞子・爆擊指令", file: "assets_cards/card7.png", cost: 3, skill: "crit", selfCast: true, flashT: 0, dealT: 0, crop: { sx: 0, sy: 0, sw: 200, sh: 250 }, headCrop: { sx: 42, sy: 42, sw: 95, sh: 119 }, shopCrop: { sx: 42, sy: 50, s: 95 } },
-  { name: "日鞠・火力支援", file: "assets_cards/card8.png", cost: 3, skill: "atk", selfCast: true, flashT: 0, dealT: 0, crop: { sx: 0, sy: 0, sw: 200, sh: 250 }, headCrop: { sx: 83, sy: 107, sw: 95, sh: 119 }, shopCrop: { sx: 83, sy: 113, s: 95 } },
-  { name: "風華・主廚饗宴", file: "assets_cards/card9.png", cost: 5, skill: "fullheal", selfCast: true, flashT: 0, dealT: 0, crop: { sx: 0, sy: 0, sw: 200, sh: 250 }, headCrop: { sx: 49, sy: 59, sw: 107, sh: 134 }, shopCrop: { sx: 52, sy: 67, s: 100 } },
-  { name: "三千留・優雅茶會", file: "assets_cards/card10.png", cost: 2, skill: "heal25", selfCast: true, flashT: 0, dealT: 0, crop: { sx: 0, sy: 0, sw: 200, sh: 250 }, headCrop: { sx: 64, sy: 69, sw: 107, sh: 134 }, shopCrop: { sx: 67, sy: 79, s: 100 } },
+  { name: "萌繪・鋼鐵之雨", file: "assets_cards/card1.png", cost: 4, skill: "fireline", flashT: 0, dealT: 0, crop: { sx: 8, sy: 0, sw: 179, sh: 224 } },
+  { name: "美遊・膽小者的觀測", file: "assets_cards/card2.png", cost: 2, skill: "stun",     flashT: 0, dealT: 0, crop: { sx: 0, sy: 0, sw: 200, sh: 250 } },
+  { name: "咲・支援射擊，開始！",   file: "assets_cards/card3.png", cost: 4, skill: "area",     flashT: 0, dealT: 0, crop: { sx: 0, sy: 0, sw: 200, sh: 250 } },
+  { name: "阿露・硬漢射擊", file: "assets_cards/card4.png", cost: 3, skill: "snipe",    flashT: 0, dealT: 0, crop: { sx: 0, sy: 0, sw: 200, sh: 250 } },
+  { name: "芹奈・集中治療組合A", file: "assets_cards/card5.png", cost: 2, skill: "heal", selfCast: true, flashT: 0, dealT: 0, crop: { sx: 0, sy: 0, sw: 200, sh: 250 }, headCrop: { sx: 50, sy: 45, sw: 95, sh: 119 }, shopCrop: { sx: 50, sy: 48, s: 95 } },
+  { name: "瑪麗・神聖加護", file: "assets_cards/card6.png", cost: 2, skill: "buff", selfCast: true, flashT: 0, dealT: 0, crop: { sx: 0, sy: 0, sw: 200, sh: 250 }, headCrop: { sx: 38, sy: 51, sw: 95, sh: 119 }, shopCrop: { sx: 38, sy: 58, s: 95 } },
+  { name: "亞子・共享偵查數據", file: "assets_cards/card7.png", cost: 3, skill: "crit", selfCast: true, flashT: 0, dealT: 0, crop: { sx: 0, sy: 0, sw: 200, sh: 250 }, headCrop: { sx: 42, sy: 42, sw: 95, sh: 119 }, shopCrop: { sx: 42, sy: 50, s: 95 } },
+  { name: "日鞠・見識我的實力吧", file: "assets_cards/card8.png", cost: 3, skill: "atk", selfCast: true, flashT: 0, dealT: 0, crop: { sx: 0, sy: 0, sw: 200, sh: 250 }, headCrop: { sx: 83, sy: 107, sw: 95, sh: 119 }, shopCrop: { sx: 83, sy: 113, s: 95 } },
+  { name: "風華・供餐時間！", file: "assets_cards/card9.png", cost: 5, skill: "fullheal", selfCast: true, flashT: 0, dealT: 0, crop: { sx: 0, sy: 0, sw: 200, sh: 250 }, headCrop: { sx: 49, sy: 59, sw: 107, sh: 134 }, shopCrop: { sx: 52, sy: 67, s: 100 } },
+  { name: "三千留・三千留流忍法！！", file: "assets_cards/card10.png", cost: 2, skill: "heal25", selfCast: true, flashT: 0, dealT: 0, crop: { sx: 0, sy: 0, sw: 200, sh: 250 }, headCrop: { sx: 64, sy: 69, sw: 107, sh: 134 }, shopCrop: { sx: 67, sy: 79, s: 100 } },
 ];
 // 被動（隊伍常駐）：芹奈 每30秒回復1/4血｜瑪麗 每30秒+1/3護盾｜亞子 每30秒+1/5護盾(持續15秒)
 const passiveT = { heal: 30, buff: 30, crit: 30 };
