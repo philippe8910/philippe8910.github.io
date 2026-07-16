@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-fullscreen">
+<meta name="theme-color" content="#0a1224">
+<meta name="mobile-web-app-capable" content="yes">
 <title>卡班諾的兔子 We Were RABBITs!</title>
 <style>
   @font-face { font-family: "PixelCJK"; src: url("assets_env/fpf-latin.woff2") format("woff2"); unicode-range: U+0020-00FF, U+2000-206F; }
@@ -890,6 +894,18 @@ if (cv.addEventListener) {
     return { x: (t.clientX - r.left - (r.width - VIEW_W * s) / 2) / s,
              y: (t.clientY - r.top - (r.height - 540 * s) / 2) / s };
   }
+  let autoFsTries = 0;   // 手機：前幾次觸碰自動進全螢幕（快速隱藏網址列）
+  cv.addEventListener("touchstart", () => {
+    if (autoFsTries >= 3 || document.fullscreenElement) return;
+    autoFsTries++;
+    const el = document.documentElement;
+    const req = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (req) {
+      Promise.resolve(req.call(el)).then(() => {
+        try { screen.orientation && screen.orientation.lock("landscape").catch(() => {}); } catch (e2) {}
+      }).catch(() => {});
+    }
+  }, { passive: true });
   cv.addEventListener("touchstart", e => {
     e.preventDefault();
     if (!vpad.on) { const h = document.getElementById("hud"); if (h) h.style.display = "none"; }
@@ -2306,7 +2322,7 @@ const I18N = {
   zh: { title: "卡班諾的兔子 We Were RABBITs!", sub: "Blue Archive 同人像素動作", newGame: "新遊戲", cont: "繼續遊戲",
         settings: "設定", back: "返回", volume: "音量", language: "語言 Language",
         confirmNew: "清除本地進度並開始新遊戲？（速通紀錄保留）",
-        pasteOpt: "貼上存檔碼（留空＝使用本機存檔）：", noSave: "沒有本機存檔，請先貼上存檔碼", loadSave: "讀檔", progress: "進度", cheat: "作弊碼", cheatPrompt: "輸入作弊碼（BOSS/GOD/MONEY/HEAL/COST/AMMO/KEYS/UNLOCK/KILL/CP）：",
+        pasteOpt: "貼上存檔碼（留空＝使用本機存檔）：", noSave: "沒有本機存檔，請先貼上存檔碼", loadSave: "讀檔", progress: "進度", cheat: "作弊碼", cheatPrompt: "輸入作弊碼：",
         discTitle: "免責聲明", start: "！開始任務！",
         disc: "本作品為《蔚藍檔案 Blue Archive》之非官方粉絲二次創作，與 NEXON、Nexon Games、Yostar 無任何關聯；角色與世界觀之著作權皆屬原權利人所有。本專案內容由生成式 AI 工具產生或協助製作，範圍包括但不限於美術資產與程式資產。本作僅供學習交流之非商業用途。",
         opN1: "宮子", op1: "……作戰區域確認完畢，這裡就是目標設施。",
@@ -2317,7 +2333,7 @@ const I18N = {
   en: { title: "We Were RABBITs!", sub: "A Blue Archive fan pixel action game", newGame: "New Game", cont: "Continue",
         settings: "Settings", back: "Back", volume: "Volume", language: "Language",
         confirmNew: "Clear local progress and start a new game? (speedrun record kept)",
-        pasteOpt: "Paste save code (leave empty to use local save):", noSave: "No local save. Paste a save code first.", loadSave: "Load", progress: "Progress", cheat: "Cheat Code", cheatPrompt: "Enter cheat (BOSS/GOD/MONEY/HEAL/COST/AMMO/KEYS/UNLOCK/KILL/CP):",
+        pasteOpt: "Paste save code (leave empty to use local save):", noSave: "No local save. Paste a save code first.", loadSave: "Load", progress: "Progress", cheat: "Cheat Code", cheatPrompt: "Enter cheat code:",
         discTitle: "Disclaimer", start: "! MISSION START !",
         disc: "This is an unofficial fan work of Blue Archive, unaffiliated with NEXON, Nexon Games, or Yostar; all character and IP rights belong to their owners. Content of this project was produced or assisted by generative AI tools, including but not limited to art assets and program code. Non-commercial, for learning purposes only.",
         opN1: "Miyako", op1: "...Operation area confirmed. This is the target facility.",
@@ -2328,7 +2344,7 @@ const I18N = {
   ja: { title: "We Were RABBITs!", sub: "ブルーアーカイブ二次創作ピクセルアクション", newGame: "ニューゲーム", cont: "つづきから",
         settings: "設定", back: "戻る", volume: "音量", language: "言語 Language",
         confirmNew: "ローカルの進行データを消去して新しく始めますか？（タイム記録は保持）",
-        pasteOpt: "セーブコードを貼り付け（空欄＝ローカルセーブ使用）：", noSave: "ローカルセーブがありません。", loadSave: "ロード", progress: "進行度", cheat: "チートコード", cheatPrompt: "チート入力（BOSS/GOD/MONEY/HEAL/COST/AMMO/KEYS/UNLOCK/KILL/CP）：",
+        pasteOpt: "セーブコードを貼り付け（空欄＝ローカルセーブ使用）：", noSave: "ローカルセーブがありません。", loadSave: "ロード", progress: "進行度", cheat: "チートコード", cheatPrompt: "チートコードを入力：",
         discTitle: "免責事項", start: "！作戦開始！",
         disc: "本作は『ブルーアーカイブ』の非公式ファン二次創作であり、NEXON・Nexon Games・Yostar とは一切関係ありません。キャラクター及び世界観の著作権は原権利者に帰属します。本作のコンテンツは生成AIツールにより制作・補助されており、その範囲はアート素材やプログラムコードを含みますがこれらに限りません。非営利・学習目的のみ。",
         opN1: "ミヤコ", op1: "……作戦区域、確認完了。ここが目標施設ね。",
@@ -2339,7 +2355,7 @@ const I18N = {
   ko: { title: "We Were RABBITs!", sub: "블루 아카이브 팬 픽셀 액션", newGame: "새 게임", cont: "이어하기",
         settings: "설정", back: "뒤로", volume: "볼륨", language: "언어 Language",
         confirmNew: "로컬 진행 데이터를 삭제하고 새로 시작할까요? (스피드런 기록 유지)",
-        pasteOpt: "세이브 코드 붙여넣기 (비워두면 로컬 세이브 사용):", noSave: "로컬 세이브가 없습니다.", loadSave: "로드", progress: "진행도", cheat: "치트 코드", cheatPrompt: "치트 입력 (BOSS/GOD/MONEY/HEAL/COST/AMMO/KEYS/UNLOCK/KILL/CP):",
+        pasteOpt: "세이브 코드 붙여넣기 (비워두면 로컬 세이브 사용):", noSave: "로컬 세이브가 없습니다.", loadSave: "로드", progress: "진행도", cheat: "치트 코드", cheatPrompt: "치트 코드 입력:",
         discTitle: "면책 조항", start: "! 작전 개시 !",
         disc: "본 작품은 <블루 아카이브>의 비공식 팬 2차 창작물로, NEXON, Nexon Games, Yostar와 무관합니다. 캐릭터 및 세계관의 저작권은 원권리자에게 있습니다. 본 프로젝트의 콘텐츠는 생성형 AI 도구로 제작되거나 보조되었으며, 그 범위는 아트 에셋과 프로그램 코드를 포함하되 이에 국한되지 않습니다. 비상업적 학습 목적 전용.",
         opN1: "미야코", op1: "...작전 구역 확인 완료. 여기가 목표 시설이야.",
