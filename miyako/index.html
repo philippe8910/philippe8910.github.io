@@ -3986,7 +3986,7 @@ function drawPanel() {
     ctx.fillRect(px + PW - 12, thumbY, 4, thumbH);
   }
   const cbx = px + PW - 46, cby = py + 12, cbs = 30;
-  {   // 「你想要無敵嗎」：彌香密語按鈕（匯出檔左側）
+  if (false) {   // 「你想要無敵嗎」：彌香密語按鈕（暫時移除，改回 true 即恢復）
     const mx = cbx - 76 * 2 - 8 - 118, mw = 110;
     slantPath(mx, cby, mw, cbs, 6);
     ctx.fillStyle = "#e88fb0";
