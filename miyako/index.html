@@ -215,6 +215,13 @@ function applySkin(id) {
 
 // ---- 大型灰盒測試關卡：左起點 → 中段階梯連跳 → 終點 Boss 房 ----
 const WORLD = { x0: -500, w: 16000, h: 3160 };   // x0：西側秘密區（負座標）
+if (MAP?.solids) {   // 世界邊界隨地圖外擴（隱藏區可在更遠的負座標/更高處）
+  for (const s of MAP.solids) {
+    WORLD.x0 = Math.min(WORLD.x0, s.x - 100);
+    WORLD.w = Math.max(WORLD.w, s.x + s.w + 100);
+    WORLD.h = Math.max(WORLD.h, s.y + s.h + 60);
+  }
+}
 // 五層 Metroidvania：L0 起始（底）→ L4 天頂（Boss 在左上）
 const L0_Y = 3000, L1_Y = 2400, L2_Y = 1800, L3_Y = 1200, L4_Y = 600;
 const F1_Y = L0_Y, F3_Y = L4_Y;               // 舊別名：出生層 / Boss 層
