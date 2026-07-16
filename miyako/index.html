@@ -767,6 +767,7 @@ function fitCanvas() {
 }
 fitCanvas();
 addEventListener("resize", fitCanvas);
+addEventListener("beforeunload", () => { try { saveGame(); } catch (e) {} });   // 關頁前搶救進度
 
 const keys = {};
 // ---- 手機虛擬控制（首次觸控啟用；搖桿=左半屏浮動，下拉=蹲）----
@@ -2072,6 +2073,7 @@ let flashT = 0, flashSeed = 0, hurtFlash = 0;
 let shakeT = 0;                     // 畫面震動（世界層）
 const SHAKE_DUR = 0.3;
 let hitstopT = 0;                   // 打擊停頓：爆擊/擊殺瞬間世界微凍結（手感）
+let autosaveT = 30, autosaveFlashT = 0;   // 週期自動存檔 + 右下角指示
 const dusts = [];                   // 塵土粒子（落地/起跳/跑步揚塵）
 let runDustT = 0;
 function spawnDust(x, y, n, spread) {
@@ -2930,6 +2932,23 @@ function spawnShot() {
 function updateEffects(dt) {
   flashT = Math.max(0, flashT - dt);
   hurtFlash = Math.max(0, hurtFlash - dt);
+  if (teleT > 0) {                   // 傳送黑幕進行中
+    const prevTele = teleT;
+    teleT -= dt;
+    if (prevTele > 0.45 && teleT <= 0.45 && teleCp) {   // 全黑瞬間搬人
+      player.x = teleCp.x; player.y = teleCp.y;
+      player.vx = 0; player.vy = 0;
+      checkpoint.x = teleCp.x; checkpoint.y = teleCp.y; checkpoint.active = true;
+      cam.x = teleCp.x; cam.y = teleCp.y - 140;
+      teleCp = null;
+    }
+  }
+  autosaveT -= dt;                   // 週期自動存檔（30s；存進度與最後存檔點，不存位置）
+  if (autosaveT <= 0) {
+    saveGame();
+    autosaveT = 30;
+    autosaveFlashT = 1.4;
+  }
   for (let i = dusts.length - 1; i >= 0; i--) {
     const d = dusts[i];
     d.t -= dt;
@@ -3756,6 +3775,19 @@ function draw() {
   }
   drawHUD();
   drawSkillCut();
+  if (teleT > 0) {                 // 傳送黑幕
+    const a = teleT > 0.45 ? (0.9 - teleT) / 0.45 : teleT / 0.45;
+    ctx.fillStyle = `rgba(8,8,12,${Math.min(1, a)})`;
+    ctx.fillRect(0, 0, VIEW_W, 540);
+  }
+  if (autosaveFlashT > 0) {          // 自動存檔指示（右下角，不打擾）
+    autosaveFlashT -= 1 / 60;
+    ctx.textAlign = "right";
+    ctx.font = `bold 11px ${UI_FONT}`;
+    ctx.fillStyle = `rgba(120,200,255,${Math.min(0.7, autosaveFlashT)})`;
+    ctx.fillText("✓ 已自動存檔", VIEW_W - 12, 528);
+    ctx.textAlign = "left";
+  }
   // 死亡黑幕（蓋過一切）
   if (player.deathT > 0) {
     const a = player.deathT > 0.7 ? (1.4 - player.deathT) / 0.7 : player.deathT / 0.7;
@@ -4454,11 +4486,10 @@ function buyUpgrade(key) {
   saveGame();
   return true;
 }
+let teleT = 0, teleCp = null;      // 傳送黑幕：前半淡入黑 → 中點搬人 → 後半淡出
 function teleportTo(cp) {
-  player.x = cp.x; player.y = cp.y;
-  player.vx = 0; player.vy = 0;
-  checkpoint.x = cp.x; checkpoint.y = cp.y; checkpoint.active = true;
-  cam.x = cp.x; cam.y = cp.y - 140;
+  teleT = 0.9; teleCp = cp;
+  player.invulnT = Math.max(player.invulnT, 1.2);
   closePanel();
 }
 function panelClickAt(px, py) {        // 面板點擊（滑鼠/觸控共用）
@@ -4770,6 +4801,39 @@ function drawHUD() {
   // ---- Cost 卡片系統（右下：三卡槽輪換）----
   const CW = CARD_UI.w, CH = CARD_UI.h, GAP = CARD_UI.gap;
   const baseX = CARD_UI.x, baseY = CARD_UI.y;
+  if (targeting) {                 // 瞄準中：卡欄上方 BA 風技能說明橫幅
+    const tc = CARDS[hand[targeting.slot]];
+    const SKILL_DESC = {
+      fireline: "呼叫直升機沿瞄準方向鋪設火焰帶，持續燃燒沿途敵人",
+      stun:     "腳下釋放麻痺小車直線前進，撞擊敵人觸發暈眩",
+      area:     "向瞄準點拋擲閃光彈，落地引爆造成範圍傷害與暈眩",
+      snipe:    "狙擊手鎖定瞄準點附近的敵人延遲擊發；交替使用傷害翻倍",
+    };
+    const bw = 330, bh = 46, bx1 = baseX + CW * 3 + GAP * 2, bx = bx1 - bw, by = baseY - bh - 12;
+    slantPath(bx, by, bw, bh, 9);
+    ctx.fillStyle = "rgba(16,27,48,.88)";
+    ctx.fill();
+    slantPath(bx, by, bw, bh, 9);
+    ctx.strokeStyle = "rgba(120,200,255,.55)";
+    ctx.stroke();
+    ctx.save();
+    slantPath(bx, by, bw, bh, 9);
+    ctx.clip();
+    ctx.fillStyle = UI_BLUE;
+    ctx.fillRect(bx, by, bw + 9, 3);
+    ctx.restore();
+    ctx.textAlign = "left";
+    ctx.font = `italic 900 13px ${UI_FONT}`;
+    ctx.fillStyle = "#fff";
+    ctx.fillText(tc.name, bx + 16, by + 19);
+    ctx.textAlign = "right";
+    ctx.fillStyle = "#ffd75e";
+    ctx.fillText(`COST ${cardCost(tc)}`, bx + bw - 14, by + 19);
+    ctx.textAlign = "left";
+    ctx.font = `bold 10.5px ${UI_FONT}`;
+    ctx.fillStyle = "rgba(190,215,240,.95)";
+    ctx.fillText(SKILL_DESC[tc.skill] || "", bx + 16, by + 36);
+  }
   for (let i = 0; i < HAND_SIZE; i++) {
     const c = CARDS[hand[i]];
     const sel = targeting && targeting.slot === i;
