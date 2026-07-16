@@ -86,8 +86,8 @@
   "fy": 0.3287
  },
  "_muzzle_crouch_shoot": {
-  "fx": 0.9101,
-  "fy": 0.5326
+  "fx": 0.8354,
+  "fy": 0.5946
  },
  "_muzzle_run_shoot": {
   "fx": 0.9518,
