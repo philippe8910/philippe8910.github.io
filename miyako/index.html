@@ -4766,22 +4766,19 @@ function draw() {
   drawBoss();
   drawEnemyBullets();
 
-  // ── 賽博龐克衝刺殘影：留在原地慢慢透明（青色染色疊加）──
+  // ── 賽博龐克衝刺殘影：各 skin 專屬色的彩色剪影，留在原地慢慢透明 ──
   for (const g of afterimages) {
     const dm = DASH_META[g.skin] || DASH_META.default;
     const ds = dashSpriteFor(g.skin).img;
-    if (!ds || !ds.img && !ds.width) continue;
+    if (!ds || !(ds.width || ds.img)) continue;
     const dsc = DRAW_H / dm.fh, dwid = dm.fw * dsc * SLIM, dhei = DRAW_H;
+    const sil = silTile(ds, DASH_COLOR[g.skin] || DASH_COLOR.default);
     ctx.save();
     if (g.facing === -1) { ctx.translate(g.x, 0); ctx.scale(-1, 1); ctx.translate(-g.x, 0); }
-    ctx.globalAlpha = 0.5 * (g.t / g.t0);
-    ctx.drawImage(ds, g.fi * dm.fw, 0, dm.fw, dm.fh, g.x - dm.anchor * dwid, g.y - dm.feet * dhei, dwid, dhei);
-    ctx.globalCompositeOperation = "source-atop";   // 青色染色（賽博感）
-    ctx.fillStyle = "rgba(90,213,242," + (0.55 * (g.t / g.t0)) + ")";
-    ctx.fillRect(g.x - dm.anchor * dwid, g.y - dm.feet * dhei, dwid, dhei);
+    ctx.globalAlpha = 0.6 * (g.t / g.t0);
+    ctx.drawImage(sil, g.fi * dm.fw, 0, dm.fw, dm.fh, g.x - dm.anchor * dwid, g.y - dm.feet * dhei, dwid, dhei);
     ctx.restore();
   }
-  ctx.globalCompositeOperation = "source-over";
   ctx.globalAlpha = 1;
   const dashing = player.state === "dash";
   const a = dashing ? null : ANIMS[player.state];
@@ -5646,6 +5643,25 @@ const DASH_META = {"default": {"fw": 240, "fh": 232, "count": 5, "anchor": 0.529
 const DASH_SPRITES = {};
 for (const sk in DASH_META) DASH_SPRITES[sk] = { file: "assets_dash/" + sk + ".png" };
 function dashSpriteFor(skinId) { return DASH_SPRITES[skinId] || DASH_SPRITES.default; }
+const DASH_COLOR = { default: [96,170,255], swim: [120,220,255], conv: [130,235,150],
+  yuuka: [160,110,245], momoi: [255,190,90], mika: [255,150,210], shiroko: [110,235,235] };
+function silTile(img, rgb) {   // 彩色剪影快取：只在 sprite 形狀上色（乾淨無方框）
+  const key = "_sil" + rgb.join("_");
+  if (!img[key] || img[key].width !== img.width) {
+    const c = document.createElement ? document.createElement("canvas") : null;
+    if (!c) return img;
+    c.width = img.width; c.height = img.height;
+    const g = c.getContext("2d");
+    g.drawImage(img, 0, 0);
+    try {
+      const d = g.getImageData(0, 0, c.width, c.height), px = d.data;
+      for (let i = 0; i < px.length; i += 4) { px[i] = rgb[0]; px[i + 1] = rgb[1]; px[i + 2] = rgb[2]; }
+      g.putImageData(d, 0, 0);
+    } catch (e) {}
+    img[key] = c;
+  }
+  return img[key];
+}
 let minimapCv = null, minimapOn = true;
 const MM_SC = 64;   // 1 小地圖 px = 64 世界 px
 function buildMinimap() {
