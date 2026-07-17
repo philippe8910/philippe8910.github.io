@@ -14,10 +14,17 @@
   @font-face { font-family: "PixelCJK"; src: url("assets_env/fpf-hant.woff2") format("woff2"); unicode-range: U+3000-303F, U+4E00-9FFF, U+FF00-FFEF; }
   @font-face { font-family: "PixelCJK"; src: url("assets_env/fpf-ja.woff2") format("woff2"); unicode-range: U+3040-30FF, U+31F0-31FF; }
   @font-face { font-family: "PixelCJK"; src: url("assets_env/fpf-ko.woff2") format("woff2"); unicode-range: U+AC00-D7A3, U+1100-11FF, U+3130-318F; }
-  html, body { margin: 0; height: 100%; background: #1a1a1e; overflow: hidden; font-family: Consolas, monospace;
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; font-family: Consolas, monospace;
                touch-action: none; -webkit-user-select: none; user-select: none; overscroll-behavior: none; }
-  canvas { display: block; width: 100vw; height: 100vh; object-fit: contain; background: #55555c; touch-action: none; }
-  #hud { position: fixed; left: 0; right: 0; bottom: 0; text-align: center; color: #2b3a55; padding: 6px; font-size: 13px; font-family: "PixelCJK", "Segoe UI", "Noto Sans TC", sans-serif; font-weight: 600; background: rgba(244,248,252,.88); border-top: 1px solid rgba(120,150,190,.35); pointer-events: none; }
+  /* iPhone 瀏海/靈動島/Home 條：以 safe-area 內縮遊戲畫面（無安全區裝置四值為 0 不受影響）。
+     fitCanvas 用 clientWidth/Height，會自動適應縮小後的尺寸 */
+  canvas { display: block;
+           margin-left: env(safe-area-inset-left, 0px);
+           margin-top: env(safe-area-inset-top, 0px);
+           width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px));
+           height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+           object-fit: contain; background: #55555c; touch-action: none; }
+  #hud { position: fixed; left: 0; right: 0; bottom: env(safe-area-inset-bottom, 0px); text-align: center; color: #2b3a55; padding: 6px; font-size: 13px; font-family: "PixelCJK", "Segoe UI", "Noto Sans TC", sans-serif; font-weight: 600; background: rgba(244,248,252,.88); border-top: 1px solid rgba(120,150,190,.35); pointer-events: none; }
   @media (pointer: coarse) { #hud { display: none; } }   /* 手機：隱藏底部鍵盤說明列 */
 </style>
 </head>
