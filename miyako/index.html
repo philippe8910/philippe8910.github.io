@@ -1330,6 +1330,13 @@ if (cv.addEventListener) {
         panelDragY = p.y;
         continue;
       }
+      if (menuScreen === "gallery") {   // 圖鑑清單觸控拖曳捲動
+        if (panelDragY !== null) {
+          galScroll = Math.max(0, Math.min((galScroll || 0) + (panelDragY - p.y), galMaxScroll || 0));
+        }
+        panelDragY = p.y;
+        continue;
+      }
       if (t.identifier === vpad.joyId) {
         vpad.joyDx = Math.max(-1, Math.min(1, (p.x - vpad.joyBaseX) / 52));
         vpad.joyDy = Math.max(-1, Math.min(1, (p.y - vpad.joyBaseY) / 52));
