@@ -5677,7 +5677,7 @@ function fgBand(edge, par, per, phase, blur, targetH, alpha, seedMul) {
     const img = blurredTile(e2.img, blur);
     const sx = wx - camL * par + phase + (seed % 9) * 40;
     // 錨定螢幕邊緣：底部件 82% 露出於下緣上方、頂部件 82% 垂於上緣下方
-    const sy = edge === "bottom" ? 540 - h * 0.82 : -h * 0.18;
+    const sy = edge === "bottom" ? 540 - h * 0.5 : -h * 0.5;   // 只露一半，不擋視線
     ctx.drawImage(img, sx, sy, w, h);
   }
   ctx.globalAlpha = 1;
@@ -5685,9 +5685,9 @@ function fgBand(edge, par, per, phase, blur, targetH, alpha, seedMul) {
 function drawForeground() {   // 前景框景：頂部貼上緣垂下、底部貼下緣冒起（近層大＆較糊）
   if (menuScreen || selectScreen) return;
   ctx.save();
-  fgBand("top",    1.30, 1500, 60, 2.5, 150, 0.9,  2654435761);   // 頂部框（垂下）
-  fgBand("bottom", 1.35, 1450, 0,  2,   140, 0.85, 40503421);     // 底部中層（冒起）
-  fgBand("bottom", 1.75, 1050, 70, 3.5, 250, 0.97, 1013904223);   // 底部近層（大、略糊、近全黑主導）
+  fgBand("top",    1.30, 1600, 60, 2.5, 95,  0.85, 2654435761);   // 頂部框（垂下，小）
+  fgBand("bottom", 1.35, 1550, 0,  2,   90,  0.8,  40503421);      // 底部中層（冒起，小）
+  fgBand("bottom", 1.75, 1200, 70, 3.5, 150, 0.92, 1013904223);   // 底部近層（略糊，中等）
   ctx.restore();
 }
 function drawHUD() {
