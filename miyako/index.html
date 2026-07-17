@@ -3166,6 +3166,10 @@ const ENV = {
   platSkin: { file: "assets_env/float_11.png" }, // 薄平台皮
   platSkin2:{ file: "assets_env/float_04.png" }, // 薄平台皮（帶欄杆款）
   elevSkin: { file: "assets_env/float_09.png" }, // 電梯平台皮（懸浮推進器款）
+  fgPlat:   { file: "assets_env/fg_plat.png" },  // 前景剪影：欄杆平台
+  fgPipe:   { file: "assets_env/fg_pipe.png" },  // 前景剪影：長管線
+  fgGirder: { file: "assets_env/fg_girder.png" },// 前景剪影：直立樑柱
+  fgPod:    { file: "assets_env/fg_pod.png" },   // 前景剪影：懸浮艙
   gateSkin: { file: "assets_env/misc_20.png" },  // 單向門門體（紅色能量燈柱，垂直平鋪）
   gateArrow:{ file: "assets_env/misc_22.png" },  // 單向門方向箭頭
   keyDoor:  { file: "assets_env/tile_16.png" },  // 鑰匙門（完整門框＋紅色電子鎖）
@@ -4497,6 +4501,7 @@ function draw() {
   }
 
   // 受傷紅閃（世界層之上、HUD 之下）
+  drawForeground();
   if (hurtFlash > 0) {
     ctx.fillStyle = `rgba(255,50,40,${(hurtFlash / 0.3) * 0.25})`;
     ctx.fillRect(0, 0, VIEW_W, 540);
@@ -5576,6 +5581,29 @@ function drawPickupToasts() {   // BA 風廣播橫幅：斜紋深藍條 + 滑入
     ctx.restore();
   }
   ctx.textAlign = "left";
+}
+function drawForeground() {   // 前景剪影層：全黑工業件從畫面上下緣探入（視差>1，Hollow Knight 式框景）
+  if (menuScreen || selectScreen) return;
+  const f = 1.3;
+  const camL = cam.x - VIEW_W / 2;
+  const per = 1240;                            // 稀疏擺放：每 ~1240 世界px 一件
+  const kinds = [ENV.fgPlat, ENV.fgPipe, ENV.fgGirder, ENV.fgPod];
+  const base = Math.floor((camL * f) / per) * per;
+  ctx.save();
+  ctx.globalAlpha = 0.96;
+  for (let wx = base - per; wx < camL * f + VIEW_W + per * 1.5; wx += per) {
+    const seed = Math.abs(((wx / per) * 2654435761) % 977) | 0;
+    const e2 = kinds[seed % 4];
+    if (!e2.img || !e2.img.width) continue;
+    const img = blurredTile(e2.img, 2);        // 前景也糊：焦點在玩家層
+    const sc2 = 3.2 + (seed % 4) * 0.5;
+    const w = e2.img.width * sc2, h = e2.img.height * sc2;
+    const sx = wx - camL * f + (seed % 7) * 40;
+    const sy = (seed % 2) ? 540 - h * 0.5 : -h * 0.5;   // 從下緣/上緣探入一半
+    ctx.drawImage(img, sx, sy, w, h);
+  }
+  ctx.restore();
+  ctx.globalAlpha = 1;
 }
 function drawHUD() {
   drawPickupToasts();
