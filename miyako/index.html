@@ -5659,35 +5659,38 @@ function drawPickupToasts() {   // BA 風廣播橫幅：斜紋深藍條 + 滑入
 function fgSet(name) {
   return [0,1,2,3,4,5,6,7].map(i => ENV[name + i]).filter(e => e && e.img && e.img.width);
 }
-// 前景框景帶：edge="bottom" 貼螢幕下緣往上冒；edge="top" 貼上緣往下垂。
-// targetH＝螢幕上的目標高度（不用素材原始大小，避免爆掉），件依此等比縮放。
-function fgBand(edge, par, per, phase, blur, targetH, alpha, seedMul) {
-  const camL = cam.x - VIEW_W / 2;
-  let set;
-  if (edge === "bottom") set = cam.y > 2400 ? fgSet("fgBot") : fgSet("fgMid");
-  else                   set = cam.y < 1500 ? fgSet("fgTop") : fgSet("fgMid");
+// 世界錨定前景帶：件固定在世界樓層線上（垂直跟世界 1:1，水平帶輕微視差），
+// 爬樓時下層前景自然滑出畫面看不到。kind="ground" 站樓層線上往上；"ceiling" 從天花板垂下。
+const FG_ROOM_H = 520;
+function fgWorldBand(kind, worldY, setName, par, per, phase, blur, targetH, alpha, seedMul) {
+  const set = fgSet(setName);
   if (!set.length) return;
+  const camL = cam.x - VIEW_W / 2, camT = cam.y - 270;
   const base = Math.floor((camL * par) / per) * per;
   ctx.globalAlpha = alpha;
   for (let wx = base - per; wx < camL * par + VIEW_W + per; wx += per) {
     const seed = Math.abs(((wx / per) * seedMul) % 4093) | 0;
     const e2 = set[seed % set.length];
-    const h = targetH * (0.82 + (seed % 5) * 0.09);   // 螢幕高度（控制範圍，不用原尺寸）
+    const h = targetH * (0.82 + (seed % 5) * 0.09);
     const w = e2.img.width * (h / e2.img.height);
-    const img = blurredTile(e2.img, blur);
     const sx = wx - camL * par + phase + (seed % 9) * 40;
-    // 錨定螢幕邊緣：底部件 82% 露出於下緣上方、頂部件 82% 垂於上緣下方
-    const sy = edge === "bottom" ? 540 - h * 0.62 : -h * 0.38;   // 露出稍多但不擋視線
-    ctx.drawImage(img, sx, sy, w, h);
+    const sy = kind === "ground" ? (worldY - camT) - h : (worldY - camT);   // 垂直＝世界座標（不貼鏡頭）
+    if (sy > 540 || sy + h < 0) continue;   // 螢幕外剔除 → 別層樓看不到本層前景
+    ctx.drawImage(blurredTile(e2.img, blur), sx, sy, w, h);
   }
   ctx.globalAlpha = 1;
 }
-function drawForeground() {   // 前景框景：頂部貼上緣垂下、底部貼下緣冒起（近層大＆較糊）
+function drawForeground() {   // 前景綁世界樓層線（爬樓換景），非貼鏡頭
   if (menuScreen || selectScreen) return;
   ctx.save();
-  fgBand("top",    1.30, 1050, 60, 2.5, 70,  0.85, 2654435761);   // 頂部框（小＆密）
-  fgBand("bottom", 1.35, 1000, 0,  2,   66,  0.8,  40503421);      // 底部中層（小＆密）
-  fgBand("bottom", 1.75, 820,  70, 3.5, 110, 0.92, 1013904223);   // 底部近層（小＆密）
+  const floors = [L0_Y, L1_Y, L2_Y, L3_Y, L4_Y];
+  for (let fi = 0; fi < floors.length; fi++) {
+    const fy = floors[fi];
+    const groundSet = fi === 0 ? "fgBot" : "fgMid";     // 最底層＝雜物；其餘＝通用
+    fgWorldBand("ground",  fy,             groundSet, 1.14, 1050, 0,  2.5, 96,  0.86, 40503421);
+    fgWorldBand("ground",  fy,             groundSet, 1.5,  760,  70, 3.5, 128, 0.94, 1013904223);   // 近層：大＆較糊
+    fgWorldBand("ceiling", fy - FG_ROOM_H, "fgTop",   1.14, 1100, 40, 2.5, 92,  0.82, 2654435761);   // 天花板垂下
+  }
   ctx.restore();
 }
 function drawHUD() {
