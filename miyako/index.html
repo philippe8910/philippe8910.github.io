@@ -5681,6 +5681,7 @@ function fgWorldBand(kind, worldY, setName, par, per, phase, blur, targetH, alph
   ctx.globalAlpha = 1;
 }
 function drawForeground() {   // 前景綁世界樓層線（爬樓換景），非貼鏡頭
+  return;   // 前景暫時移除：刪掉這行即恢復
   if (menuScreen || selectScreen) return;
   ctx.save();
   const floors = [L0_Y, L1_Y, L2_Y, L3_Y, L4_Y];
