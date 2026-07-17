@@ -1262,24 +1262,7 @@ if (cv.addEventListener) {
     return { x: (t.clientX - r.left - (r.width - VIEW_W * s) / 2) / s,
              y: (t.clientY - r.top - (r.height - 540 * s) / 2) / s };
   }
-  // 手機自動全螢幕：Android(Chrome/Brave)支援；iPhone 全系 WebKit 無此 API → 顯示加入主畫面提示
-  const FS_OK = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
-  let autoFsTries = 0;
-  const tryAutoFs = () => {
-    if (!FS_OK || autoFsTries >= 3 || document.fullscreenElement || document.webkitFullscreenElement) return;
-    autoFsTries++;
-    const el = document.documentElement;
-    const req = el.requestFullscreen || el.webkitRequestFullscreen;
-    if (req) {
-      try {
-        Promise.resolve(req.call(el)).then(() => {
-          try { screen.orientation && screen.orientation.lock("landscape").catch(() => {}); } catch (e2) {}
-        }).catch(() => {});
-      } catch (e2) {}
-    }
-  };
-  cv.addEventListener("touchend", tryAutoFs, { passive: true });
-  cv.addEventListener("click", tryAutoFs);
+  // （自動全螢幕已移除：全螢幕改為玩家手動觸發，F 鍵 / 齒輪鈕）
   cv.addEventListener("touchstart", e => {
     e.preventDefault();
     if (!vpad.on) { const h = document.getElementById("hud"); if (h) h.style.display = "none"; }
