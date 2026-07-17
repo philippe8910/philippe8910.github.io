@@ -1141,7 +1141,43 @@ const VBTN = {
   jump:   { x: 778, y: 362, r: 34, label: "跳躍" },
   reload: { x: 882, y: 222, r: 28, label: "換彈" },
 };
+let tutSeen = [];
+try { tutSeen = JSON.parse(localStorage.getItem("miyako_tut") || "[]"); } catch (e) {}
+let activeTut = null;
+const TUTORIALS = {
+  move:  { title: "操作說明", lines: ["← → / A D　移動", "空白 / W / ↑　跳躍", "S / ↓　蹲下", "J　射擊　·　R　換彈", "1-3　施放支援卡（滑鼠 / 觸控瞄準）", "手機：左搖桿 + 右按鈕　·　F 全螢幕"] },
+  panel: { title: "補給站", lines: ["在存檔點休息可開啟補給站。", "強化屬性、招募支援、傳送、造型、成就。", "休息會回滿血並重生敵人（篝火制）。"] },
+  card:  { title: "支援卡 · Cost", lines: ["命中敵人累積 Cost，滿額即可施放支援卡。", "出卡進入子彈時間，用滑鼠 / 觸控瞄準落點。", "左鍵確認、右鍵取消。"] },
+  boss:  { title: "首領戰", lines: ["首領有三階段，血量越低越兇猛。", "宮子的自走小車能暈眩首領 3 秒。", "不同支援技能剋制不同敵人，善用地形。"] },
+};
+function showTut(id) {
+  if (!TUTORIALS[id] || tutSeen.includes(id) || activeTut) return;
+  tutSeen.push(id);
+  try { localStorage.setItem("miyako_tut", JSON.stringify(tutSeen)); } catch (e) {}
+  activeTut = id;
+}
+function dismissTut() { activeTut = null; }
+function drawTutorial() {
+  if (!activeTut) return;
+  const tut = TUTORIALS[activeTut];
+  ctx.fillStyle = "rgba(8,12,22,.72)";
+  ctx.fillRect(0, 0, VIEW_W, 540);
+  const bw = 460, bh = 90 + tut.lines.length * 30, bx = (VIEW_W - bw) / 2, by = (540 - bh) / 2;
+  slantPath(bx, by, bw, bh, 14); ctx.fillStyle = "rgba(250,252,255,.98)"; ctx.fill();
+  ctx.save(); slantPath(bx, by, bw, bh, 14); ctx.clip();
+  ctx.fillStyle = UI_BLUE; ctx.fillRect(bx, by, bw + 14, 5); ctx.restore();
+  ctx.textAlign = "left";
+  ctx.font = `italic 900 22px ${UI_FONT}`; ctx.fillStyle = "#2b3a55";
+  ctx.fillText("? " + tut.title, bx + 28, by + 40);
+  ctx.font = `bold 14px ${UI_FONT}`; ctx.fillStyle = "rgba(43,58,85,.85)";
+  for (let i = 0; i < tut.lines.length; i++) ctx.fillText(tut.lines[i], bx + 28, by + 74 + i * 30);
+  ctx.textAlign = "center";
+  ctx.font = `italic 900 13px ${UI_FONT}`; ctx.fillStyle = UI_BLUE;
+  ctx.fillText("點擊畫面 / 按任意鍵繼續", bx + bw / 2, by + bh - 14);
+  ctx.textAlign = "left";
+}
 addEventListener("keydown", e => {
+  if (activeTut) { dismissTut(); e.preventDefault(); return; }
   keys[e.code] = true;
   if (["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.code)) e.preventDefault();
   if (menuScreen) {
@@ -1242,6 +1278,7 @@ if (cv.addEventListener) {
   }, { passive: false });
   cv.addEventListener("mousedown", e => {
     if (e.button !== 0) return;
+    if (activeTut) { dismissTut(); return; }
     if (menuScreen) { menuClickAt(mouse.sx, mouse.sy); return; }
     if (dialogue) { advanceDialogue(); return; }
     if (selectScreen) { selectClickAt(mouse.sx, mouse.sy); return; }
@@ -1281,6 +1318,7 @@ if (cv.addEventListener) {
   cv.addEventListener("touchend", tryAutoFs, { passive: true });   // 僅觸控裝置（手機）；桌機不綁 click
   cv.addEventListener("touchstart", e => {
     e.preventDefault();
+    if (activeTut) { dismissTut(); return; }
     if (!vpad.on) { const h = document.getElementById("hud"); if (h) h.style.display = "none"; }
     vpad.on = true;
     for (const t of e.changedTouches) {
@@ -2286,6 +2324,7 @@ function updateBoss(dt) {
   if (!boss.active) {          // 在房內待命，玩家（從右側）越過門線才開戰（落閘）
     if (player.x > BOSS_ROOM.left && player.x < BOSS_ROOM.triggerX && player.y <= F3_Y + 5) {
       boss.active = true; setGate(true); bossSetState("run");   // 需在房內（左牆以右）：西側秘密區不觸發
+      showTut("boss");
       shakeT = Math.max(shakeT, 0.25);                             // 落閘震撼
     }
     return;
@@ -3345,6 +3384,7 @@ if (checkpoint.active) {           // 續玩：回到最後休息的存檔點
 }
 try {
   if (typeof location !== "undefined" && location.hash === "#start") {
+    setTimeout(() => showTut("move"), 400);
     menuScreen = null;
     tryResume();                   // 讀檔後：跳過選卡與開場對話（新遊戲無紀錄，照常選卡）
     history.replaceState(null, "", location.pathname);
@@ -3412,6 +3452,7 @@ const mouse = { sx: 480, sy: 270 };  // 邏輯螢幕座標（960×540）
 
 function startTargeting(slot) {
   if (cost < cardCost(CARDS[hand[slot]]) || player.deathT > 0) return;
+  showTut("card");
   if (CARDS[hand[slot]].selfCast) {   // 自施放卡（血包/聖盾）：不進瞄準直接出
     useSlot(slot, player.x, player.y);
     return;
@@ -4800,6 +4841,7 @@ function draw() {
   if (selectScreen) drawSelectScreen();
   if (dialogue) drawDialogue();
   if (menuScreen) drawMenu();
+  drawTutorial();
   dbg.textContent = `state=${player.state} frame=${fi} hp=${player.hp} ammo=${player.ammo} ground=${player.onGround} cam=${Math.round(cam.x)},${Math.round(cam.y)}`;
 }
 
@@ -5502,6 +5544,7 @@ function nearCheckpoint() {
   return null;
 }
 function openPanel() {                 // 互動＝休息：回滿血、敵人重生、存檔
+  showTut("panel");
   panel.open = true; panel.tab = 0; panel.scroll = 0;
   player.hp = player.maxHp;
   resetEnemies();
@@ -6461,6 +6504,13 @@ let last = 0;
 function loop(ts) {
   const rawDt = Math.min(0.033, (ts - last) / 1000 || 0.016);
   last = ts;
+  if (activeTut) {                     // 一次性教學：凍結遊戲直到關閉
+    uiTime += rawDt;
+    updateBGM(rawDt);
+    draw();
+    requestAnimationFrame(loop);
+    return;
+  }
   if (menuScreen || dialogue || bagOpen) {       // 主選單 / 對話 / 包包：凍結遊戲
     uiTime += rawDt;
     if (dialogue) dialogue.t += rawDt;
