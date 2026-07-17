@@ -5870,16 +5870,16 @@ function drawPickupToasts() {   // BA 風廣播橫幅：斜紋深藍條 + 滑入
   }
   ctx.textAlign = "left";
 }
-function blackTile(img) {   // 純黑剪影快取（未解鎖角色圖鑑用）
+function blackTile(img) {   // 純黑剪影快取（未解鎖角色圖鑑用；brightness(0) 壓黑但保留 alpha）
   if (!document.createElement) return img;
-  if (!img._black) {
+  if (!img._black || img._black.width !== img.width) {
     const c = document.createElement("canvas");
     c.width = img.width; c.height = img.height;
     const g = c.getContext("2d");
+    g.clearRect(0, 0, c.width, c.height);
+    g.filter = "brightness(0)";
     g.drawImage(img, 0, 0);
-    g.globalCompositeOperation = "source-in";
-    g.fillStyle = "#0a0a0e";
-    g.fillRect(0, 0, c.width, c.height);
+    g.filter = "none";
     img._black = c;
   }
   return img._black;
