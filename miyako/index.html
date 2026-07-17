@@ -822,9 +822,19 @@ function updateCamera(dt) {
 }
 
 const GRAV = 2300, MOVE = 340, JUMP_V = 950;
-const DASH_T = 0.16, DASH_SPEED = 1120, DASH_CD = 0.85;   // 衝刺：持續/速度/冷卻（距離加回一點）
+const DASH_T = 0.16, DASH_SPEED = 1260, DASH_CD = 0.85;   // 衝刺：持續/速度/冷卻（距離再加一點點）
 const afterimages = [];   // 賽博龐克殘影：衝刺留下的定格拷貝，慢慢透明
 let dashAfterT = 0;
+let dashLastAfterX = 0, dashAfterCount = 0;   // 沙德威斯坦拖尾：等距生成用
+// 完美閃避子彈時間（沙德威斯坦）：dash 主動幀穿過敵彈 → 世界慢動作 1 秒，玩家較快
+let bulletTimeT = 0;
+const BULLET_TIME_DUR = 1.0, BULLET_TIME_SCALE = 0.25, BULLET_TIME_PLAYER_SCALE = 1;   // 玩家速度不變、只有敵人變慢
+function triggerPerfectDodge() {
+  if (bulletTimeT > 0) return;                 // 已在子彈時間內不重複觸發
+  bulletTimeT = BULLET_TIME_DUR;
+  shakeT = Math.max(shakeT, 0.12);
+  try { sfxPerfectDodge && sfxPerfectDodge(); } catch (e) {}
+}
 const COYOTE = 0.08, BUFFER = 0.1;
 const RELOAD_TIME = 1.5;
 const BULLET_RANGE = 520;          // 玩家子彈最大飛行距離（防畫面外超遠程擊殺）
@@ -1862,6 +1872,7 @@ function respawnPlayer() {
   bossBullets.length = 0;
   eGrenades.length = 0;
   player.dashT = 0; player.dashCd = 0; player.airDashUsed = false; afterimages.length = 0;
+  bulletTimeT = 0;
   if (boss.active || boss.deadT > 0) {       // Boss 戰重置回待命
     boss.active = false; boss.deadT = 0;
     boss.hp = boss.maxHp; boss.hpGhost = boss.maxHp;
@@ -2566,11 +2577,13 @@ function updateEnemyBullets(dt) {
     b.x += b.vx * dt;
     b.y += (b.vy || 0) * dt;   // 霰彈散射／火箭追蹤用
     let gone = b.x < WORLD.x0 - 20 || b.x > WORLD.w + 20;
-    if (!gone && vulnerable &&
-        Math.abs(b.x - player.x) < HITBOX_W / 2 + 6 &&
-        b.y > player.y - hh - 12 && b.y < player.y) {   // +12 頭部容差：肩射高度的槍口(105-109)仍命中站姿，蹲下(70)可閃
+    const overlap = Math.abs(b.x - player.x) < HITBOX_W / 2 + 6 &&
+                    b.y > player.y - hh - 12 && b.y < player.y;
+    if (!gone && overlap && vulnerable) {   // +12 頭部容差：肩射高度的槍口(105-109)仍命中站姿，蹲下(70)可閃
       hurtPlayer(Math.sign(b.vx) || 1, b.dmg || 1);
       gone = true;
+    } else if (!gone && overlap && player.dashT > 0) {   // 完美閃避：dash 主動幀穿過敵彈 → 子彈時間（不消耗子彈）
+      triggerPerfectDodge();
     }
     if (!gone) {
       for (const s of SOLIDS) {
@@ -2809,6 +2822,20 @@ function sfxBoom() {                // 爆炸：CC0 樣本
   const lp = audioCtx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.setValueAtTime(1400, t); lp.frequency.exponentialRampToValueAtTime(120, t + 0.4);
   const g = audioCtx.createGain(); g.gain.setValueAtTime(0.5, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.45);
   src.connect(lp); lp.connect(g); g.connect(masterGain); src.start(t);
+}
+function sfxPerfectDodge() {        // 完美閃避子彈時間啟動：下滑音＋金屬閃（沙德威斯坦）
+  if (!audioCtx || !masterGain || volume <= 0) return;
+  const t = audioCtx.currentTime;
+  const o = audioCtx.createOscillator(); o.type = "sawtooth";
+  o.frequency.setValueAtTime(880, t); o.frequency.exponentialRampToValueAtTime(150, t + 0.5);
+  const lp = audioCtx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 2400;
+  const g = audioCtx.createGain(); g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.2, t + 0.02); g.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
+  o.connect(lp); lp.connect(g); g.connect(masterGain); o.start(t); o.stop(t + 0.62);
+  const o2 = audioCtx.createOscillator(); o2.type = "triangle";
+  o2.frequency.setValueAtTime(2400, t); o2.frequency.exponentialRampToValueAtTime(1150, t + 0.25);
+  const g2 = audioCtx.createGain(); g2.gain.setValueAtTime(0.11, t); g2.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+  o2.connect(g2); g2.connect(masterGain); o2.start(t); o2.stop(t + 0.3);
 }
 function setVolume(v) {
   volume = Math.max(0, Math.min(1, v));
@@ -4280,6 +4307,7 @@ function physics(dt) {
     player.invulnT = Math.max(player.invulnT, DASH_T + 0.05);
     spawnDust(player.x, player.y, 6, 30);
     shakeT = Math.max(shakeT, 0.08);
+    dashLastAfterX = player.x; dashAfterCount = 0;   // 拖尾起點
   }
 
   // reload: R to reload manually, auto when firing on empty; blocks shooting
@@ -4322,11 +4350,13 @@ function physics(dt) {
   if (player.dashT > 0) {              // 衝刺中：高速平移、抵銷重力、留殘影
     player.vx = player.dashDir * DASH_SPEED;
     player.vy = 0;
-    dashAfterT = (dashAfterT || 0) - dt;
-    if (dashAfterT <= 0) {
-      dashAfterT = 0.028;
-      afterimages.push({ x: player.x, y: player.y, facing: player.dashDir, skin: currentSkin,
-                         fi: Math.floor(player.t * 12) % (DASH_META[currentSkin] ? DASH_META[currentSkin].count : 5), t: 0.42, t0: 0.42 });
+    // 沙德威斯坦拖尾：沿移動路徑等距(13px)灌出密集殘影，補滿高速產生的空隙
+    const SPACING = 20, dm0 = DASH_META[currentSkin], cnt = dm0 ? dm0.count : 5;
+    let guard = 0;
+    while (Math.abs(player.x - dashLastAfterX) >= SPACING && guard++ < 40) {
+      dashLastAfterX += Math.sign(player.x - dashLastAfterX) * SPACING;
+      afterimages.push({ x: dashLastAfterX, y: player.y, facing: player.dashDir,
+                         skin: currentSkin, fi: (dashAfterCount++) % cnt, t: 0.34, t0: 0.34 });
     }
   }
   player.vy += GRAV * dt;
@@ -4766,16 +4796,25 @@ function draw() {
   drawBoss();
   drawEnemyBullets();
 
-  // ── 賽博龐克衝刺殘影：各 skin 專屬色的彩色剪影，留在原地慢慢透明 ──
+  // ── 沙德威斯坦衝刺拖尾：密集殘影＋沿尾漸層(近角色暖→尾端冷)，正常混合保留顏色 ──
   for (const g of afterimages) {
     const dm = DASH_META[g.skin] || DASH_META.default;
     const ds = dashSpriteFor(g.skin).img;
     if (!ds || !(ds.width || ds.img)) continue;
     const dsc = DRAW_H / dm.fh, dwid = dm.fw * dsc * SLIM, dhei = DRAW_H;
-    const sil = silTile(ds, DASH_COLOR[g.skin] || DASH_COLOR.default);
+    const life = g.t / g.t0;                    // 1=剛生成 → 0=將消失（給透明度）
+    // 顏色沿「拖尾空間位置」：離角色越遠越冷（不靠時間，衝刺當下整條就鋪滿漸層）
+    let p = Math.abs(player.x - g.x) / (DASH_SPEED * DASH_T * 0.85);
+    p = p < 0 ? 0 : p > 1 ? 1 : p;
+    const pq = Math.round(p * 5) / 5;           // 量化 6 階，限制剪影快取數
+    const gr = DASH_GRAD[g.skin] || DASH_GRAD.default;
+    const rgb = [Math.round(gr[0][0] + (gr[1][0] - gr[0][0]) * pq),
+                 Math.round(gr[0][1] + (gr[1][1] - gr[0][1]) * pq),
+                 Math.round(gr[0][2] + (gr[1][2] - gr[0][2]) * pq)];
+    const sil = silTile(ds, rgb);
     ctx.save();
     if (g.facing === -1) { ctx.translate(g.x, 0); ctx.scale(-1, 1); ctx.translate(-g.x, 0); }
-    ctx.globalAlpha = 0.6 * (g.t / g.t0);
+    ctx.globalAlpha = 0.4 + 0.45 * life;
     ctx.drawImage(sil, g.fi * dm.fw, 0, dm.fw, dm.fh, g.x - dm.anchor * dwid, g.y - dm.feet * dhei, dwid, dhei);
     ctx.restore();
   }
@@ -4802,7 +4841,7 @@ function draw() {
       ctx.drawImage(ds, dfi * dm.fw, 0, dm.fw, dm.fh, player.x - dm.anchor * dwid, player.y - dm.feet * DRAW_H, dwid, DRAW_H);
     }
   } else {
-    if (player.invulnT > 0 && player.deathT <= 0) {          // 無敵幀閃爍
+    if (player.invulnT > 0 && player.deathT <= 0 && bulletTimeT <= 0) {   // 無敵幀閃爍（子彈時間中不閃，保持角色清晰）
       ctx.globalAlpha = ((player.invulnT * 12) | 0) % 2 ? 0.35 : 0.9;
     }
     ctx.drawImage(a.img, fi * FRAME_W, 0, FRAME_W, FRAME_H,
@@ -4831,6 +4870,24 @@ function draw() {
   if (targeting) drawTargetingWorld();
   ctx.restore();   // end camera transform
 
+  // 完美閃避沙德威斯坦：冷青暗角 + 掃描線 + 觸發青白閃 + 電影黑邊
+  if (bulletTimeT > 0) {
+    const e = bulletTimeT / BULLET_TIME_DUR;                 // 1→0
+    const rg = ctx.createRadialGradient(VIEW_W / 2, 264, 120, VIEW_W / 2, 264, 580);
+    rg.addColorStop(0, "rgba(0,210,255,0)");
+    rg.addColorStop(1, "rgba(0,170,255,0.30)");
+    ctx.fillStyle = rg; ctx.fillRect(0, 0, VIEW_W, 540);
+    ctx.fillStyle = "rgba(140,245,255,0.045)";              // 掃描線
+    for (let y = (uiTime * 220) % 4; y < 540; y += 4) ctx.fillRect(0, y, VIEW_W, 1);
+    const flash = Math.max(0, (bulletTimeT - (BULLET_TIME_DUR - 0.16)) / 0.16);  // 觸發瞬間青白閃
+    if (flash > 0) { ctx.fillStyle = `rgba(190,250,255,${flash * 0.55})`; ctx.fillRect(0, 0, VIEW_W, 540); }
+    ctx.fillStyle = `rgba(6,12,18,${0.42 + 0.1 * e})`;       // 電影黑邊
+    ctx.fillRect(0, 0, VIEW_W, 24); ctx.fillRect(0, 516, VIEW_W, 24);
+    ctx.textAlign = "center"; ctx.font = `bold 13px ${UI_FONT}`;
+    ctx.fillStyle = `rgba(180,250,255,${0.5 * e})`;
+    ctx.fillText("PERFECT DODGE", VIEW_W / 2, 505);
+    ctx.textAlign = "left";
+  }
   // 子彈時間：藍色暗角 + 上下黑邊
   if (targeting) {
     ctx.fillStyle = "rgba(25,50,100,.16)";
@@ -5655,19 +5712,32 @@ for (const sk in DASH_META) DASH_SPRITES[sk] = { file: "assets_dash/" + sk + ".p
 function dashSpriteFor(skinId) { return DASH_SPRITES[skinId] || DASH_SPRITES.default; }
 const DASH_COLOR = { default: [96,170,255], swim: [120,220,255], conv: [130,235,150],
   yuuka: [160,110,245], momoi: [255,190,90], mika: [255,150,210], shiroko: [110,235,235] };
-function silTile(img, rgb) {   // 彩色剪影快取：只在 sprite 形狀上色（乾淨無方框）
+// 沙德威斯坦拖尾漸層：[近角色端, 尾端]，冷→暖強對比、降低藍分量減少紫感
+const DASH_GRAD = {
+  default: [[70,200,255],  [255,110,40]],   // 天藍 → 橙紅
+  swim:    [[90,255,235],  [255,120,50]],   // 青 → 珊瑚橙
+  shiroko: [[60,230,255],  [255,90,50]],    // 冰青 → 橙紅（用戶選 B）
+  mika:    [[255,120,205], [255,170,50]],   // 粉 → 金
+  momoi:   [[255,215,70],  [255,60,80]],    // 金黃 → 紅
+  yuuka:   [[190,110,255], [255,120,60]],   // 紫 → 橙（保留紫身份、尾端轉暖）
+  conv:    [[170,255,90],  [50,215,195]],   // 黃綠 → 青
+};
+function silTile(img, rgb) {   // 染色快取：用合成操作上色（不讀像素，file:// 下也不會 tainted-canvas 失敗）
   const key = "_sil" + rgb.join("_");
   if (!img[key] || img[key].width !== img.width) {
     const c = document.createElement ? document.createElement("canvas") : null;
     if (!c) return img;
     c.width = img.width; c.height = img.height;
     const g = c.getContext("2d");
+    g.drawImage(img, 0, 0);                                   // 1) 原圖
+    g.globalCompositeOperation = "source-atop";              // 2) 只在形狀上鋪平色（不畫方框）
+    g.fillStyle = "rgb(" + (rgb[0] | 0) + "," + (rgb[1] | 0) + "," + (rgb[2] | 0) + ")";
+    g.fillRect(0, 0, c.width, c.height);
+    g.globalCompositeOperation = "multiply";                 // 3) 乘回原圖 → 保留形體明暗
     g.drawImage(img, 0, 0);
-    try {
-      const d = g.getImageData(0, 0, c.width, c.height), px = d.data;
-      for (let i = 0; i < px.length; i += 4) { px[i] = rgb[0]; px[i + 1] = rgb[1]; px[i + 2] = rgb[2]; }
-      g.putImageData(d, 0, 0);
-    } catch (e) {}
+    g.globalCompositeOperation = "destination-in";           // 4) alpha 還原為原圖形狀
+    g.drawImage(img, 0, 0);
+    g.globalCompositeOperation = "source-over";
     img[key] = c;
   }
   return img[key];
@@ -6668,7 +6738,13 @@ function loop(ts) {
     requestAnimationFrame(loop);
     return;
   }
-  const dt = rawDt * (targeting ? TARGETING_TIMESCALE : 1);   // 瞄準中：子彈時間（Cost 回復同步變慢）
+  if (bulletTimeT > 0) bulletTimeT -= rawDt;   // 子彈時間倒數（真實 1 秒，不受慢動作影響）
+  const btA = bulletTimeT > 0;
+  if (btA) player.invulnT = Math.max(player.invulnT, 0.2);   // 子彈時間全程無敵（維持 invulnT，各傷害判定自動生效）
+  // 玩家自身時間：瞄準時 0.25；完美閃避子彈時間時 0.6（比世界快＝沙德威斯坦穿梭感）
+  const dt = rawDt * (targeting ? TARGETING_TIMESCALE : (btA ? BULLET_TIME_PLAYER_SCALE : 1));
+  // 世界（敵人/子彈）時間：完美閃避時慢到 0.25
+  const wdt = rawDt * (targeting ? TARGETING_TIMESCALE : (btA ? BULLET_TIME_SCALE : 1));
   player.t += dt;
   physics(dt);
   if (player.y > WORLD.h + 200) {           // safety respawn
@@ -6677,10 +6753,10 @@ function loop(ts) {
     player.vy = 0;
   }
   updateCamera(dt);
-  updateEnemies(dt);
-  updateBoss(dt);
-  updateAlly(dt);
-  updateEnemyBullets(dt);
+  updateEnemies(wdt);
+  updateBoss(wdt);
+  updateAlly(wdt);
+  updateEnemyBullets(wdt);
   if (MUZZLE[player.state]) {
     fireT -= dt;
     if (fireT <= 0) { spawnShot(); fireT = FIRE_INTERVAL; }
