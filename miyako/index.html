@@ -851,6 +851,33 @@ function cardCost(c) {             // 三千留被動：全卡 Cost -1（最低 
 }
 let shopSpent = 0;                 // 商店累計消費（隱藏解鎖條件用）
 let creditsEarned = 0;             // 累積「獲得」的信用點（擊殺/掉落；作弊不計）——白子解鎖條件
+// ---- 成就系統：終身統計（存檔持久化）＋達成清單 ----
+let stats = { kills: 0, shots: 0, deaths: 0 };
+let achUnlocked = [];
+const ACHIEVEMENTS = [
+  { id: "clear1",   name: "畢業任務",     desc: "擊敗 Boss 通關一次",        check: () => bossCleared || bestClearT !== null },
+  { id: "speed12",  name: "神速作戰",     desc: "12 分鐘內通關",             check: () => (bestClearT !== null && bestClearT <= 720) || unlocks.skins.includes("momoi") },
+  { id: "earn999",  name: "理財有道",     desc: "累積獲得 999 信用點",       check: () => creditsEarned >= 999 },
+  { id: "kills100", name: "百人斬",       desc: "累計擊殺 100 名敵人",       check: () => stats.kills >= 100 },
+  { id: "kills500", name: "殲滅專家",     desc: "累計擊殺 500 名敵人",       check: () => stats.kills >= 500 },
+  { id: "shots1999",name: "彈藥自由",     desc: "累計射擊 1999 發",          check: () => stats.shots >= 1999 },
+  { id: "deaths13", name: "不死鳥",       desc: "累計倒下 13 次仍不放棄",    check: () => stats.deaths >= 13 },
+  { id: "skins5",   name: "衣櫃收藏家",   desc: "解鎖 5 套造型",             check: () => unlocks.skins.length >= 5 },
+  { id: "cpsAll",   name: "勘查完畢",     desc: "開啟所有存檔點",            check: () => CHECKPOINTS.every(c => c.active) },
+];
+let achCheckT = 2;
+function checkAchievements(dt) {   // 每 2 秒巡檢；達成廣播＋存檔
+  achCheckT -= dt;
+  if (achCheckT > 0) return;
+  achCheckT = 2;
+  for (const a of ACHIEVEMENTS) {
+    if (!achUnlocked.includes(a.id) && a.check()) {
+      achUnlocked.push(a.id);
+      pickupToasts.push({ text: "成就達成：" + a.name, t: 4 });
+      saveGame();
+    }
+  }
+}
 function gainCredits(n) {
   credits += n;
   creditsEarned += n;
@@ -922,7 +949,8 @@ function buildSaveData() {
     openedDoors: [...openedGates],
     cps: CHECKPOINTS.map(c => c.active ? 1 : 0),
     lastCp: checkpoint.active ? { x: checkpoint.x, y: checkpoint.y } : null,
-    chosen: chosenSupport, spent: shopSpent, mikaUsed, vz: visitedZones, ce: creditsEarned
+    chosen: chosenSupport, spent: shopSpent, mikaUsed, vz: visitedZones, ce: creditsEarned,
+    st: stats, av: achUnlocked
   };
 }
 function saveGame() {
@@ -1059,6 +1087,8 @@ function loadGame() {
       mikaUsed = !!v.mikaUsed;
       visitedZones = Array.isArray(v.vz) ? v.vz : [];
       creditsEarned = v.ce | 0;
+      if (v.st) stats = { kills: v.st.kills | 0, shots: v.st.shots | 0, deaths: v.st.deaths | 0 };
+      achUnlocked = Array.isArray(v.av) ? v.av : [];
       if (Array.isArray(v.items)) collectedItems = v.items.filter(i => i >= 0 && i < ITEM_SPAWNS.length);
       const savedDoors = Array.isArray(v.openedDoors) ? v.openedDoors : v.gates;
       if (Array.isArray(savedDoors)) openedGates = savedDoors.filter(i => i >= 0);
@@ -1139,7 +1169,7 @@ addEventListener("keydown", e => {
     if (panel.open) closePanel();
     else if (!selectScreen && nearCheckpoint()) openPanel();
   }
-  if (panel.open && e.code === "Tab") { panel.tab = (panel.tab + 1) % 4; panel.scroll = 0; e.preventDefault(); }
+  if (panel.open && e.code === "Tab") { panel.tab = (panel.tab + 1) % 5; panel.scroll = 0; e.preventDefault(); }
   if (panel.open && e.code.startsWith("Digit")) {     // 1-4 快速購買
     const n = +e.code.slice(5);
     if (panel.tab === 0 && n >= 1 && n <= 4) buyUpgrade(Object.keys(UPGRADE_DEFS)[n - 1]);
@@ -1745,6 +1775,7 @@ function hurtPlayer(dir, dmg = 1) {
   player.crouching = false;
   if (player.hp <= 0) {
     player.deathT = 1.4;   // 死亡：黑幕淡入→重生→淡出
+    stats.deaths++;
     cancelTargeting();
   }
 }
@@ -3435,6 +3466,7 @@ function damageEnemy(e, dmg, crit) {
     hitstopT = Math.max(hitstopT, 0.06);
     const cr = CREDIT_VALUE[e.kind] || 10;        // 信用點數（Cost 改由命中累積）
     gainCredits(cr);
+    stats.kills++;
     costPops.push({ x: e.x + 20, y: e.y - e.h - 30, t: 0.9, text: "+" + cr + "C", color: "#e8a417" });
     for (let k = 0; k < 6; k++) {
       impacts.push({ x: e.x + (Math.random() - .5) * e.w, y: e.y - Math.random() * e.h, t: 0.12 + Math.random() * 0.1 });
@@ -3503,6 +3535,7 @@ function gunPoint(ref) {
 function spawnShot() {
   if (player.ammo <= 0) return;
   if (!infAmmo) player.ammo--;
+  stats.shots++;
   // 彩蛋：重生點之間連開 999 發解鎖優香（碰到任一存檔點歸零）
   if (!unlocks.skins.includes("yuuka")) {
     yuukaShots++;
@@ -3545,6 +3578,7 @@ function updateEffects(dt) {
       teleCp = null;
     }
   }
+  checkAchievements(dt);
   autosaveT -= dt;                   // 週期自動存檔（30s；存進度與最後存檔點，不存位置）
   if (autosaveT <= 0) {
     saveGame();
@@ -4545,9 +4579,9 @@ function drawPanel() {
   ctx.font = `italic 900 17px ${UI_FONT}`;
   ctx.fillStyle = "#e8a417";
   ctx.fillText(String(credits), px + 160, py + 34);
-  const tabs = ["強化", "招募", "傳送", "造型"];
-  for (let i = 0; i < 4; i++) {
-    const tx = px + 26 + i * 100, ty = py + 50, tw = 88, th = 28;
+  const tabs = ["強化", "招募", "傳送", "造型", "成就"];
+  for (let i = 0; i < 5; i++) {
+    const tx = px + 26 + i * 97, ty = py + 50, tw = 88, th = 28;
     slantPath(tx, ty, tw, th, 7);
     ctx.fillStyle = panel.tab === i ? UI_BLUE : "rgba(140,155,180,.35)";
     ctx.fill();
@@ -4754,13 +4788,44 @@ function drawPanel() {
       row++;
     }
   }
+  if (panel.tab === 4) {           // ---- 成就頁 ----
+    let row = 0;
+    for (const a of ACHIEVEMENTS) {
+      const done = achUnlocked.includes(a.id);
+      const ry = py + 88 + row * 48 - scy;
+      slantPath(px + 26, ry, PW - 52, 42, 8);
+      ctx.fillStyle = done ? "rgba(255,215,94,.14)" : "rgba(90,100,120,.10)";
+      ctx.fill();
+      slantPath(px + 26, ry, PW - 52, 42, 8);
+      ctx.strokeStyle = done ? "rgba(232,164,23,.55)" : "rgba(120,150,190,.25)";
+      ctx.stroke();
+      ctx.textAlign = "center";
+      ctx.font = `900 20px ${UI_FONT}`;
+      ctx.fillStyle = done ? "#e8a417" : "rgba(120,140,170,.5)";
+      ctx.fillText(done ? "★" : "・", px + 52, ry + 28);
+      ctx.textAlign = "left";
+      ctx.font = `italic 900 14px ${UI_FONT}`;
+      ctx.fillStyle = done ? UI_NAVY : "rgba(43,58,85,.5)";
+      ctx.fillText(a.name, px + 78, ry + 18);
+      ctx.font = `bold 11px ${UI_FONT}`;
+      ctx.fillStyle = done ? "rgba(43,58,85,.7)" : "rgba(43,58,85,.4)";
+      ctx.fillText(a.desc, px + 78, ry + 34);
+      row++;
+    }
+    ctx.textAlign = "right";
+    ctx.font = `italic 900 13px ${UI_FONT}`;
+    ctx.fillStyle = "#e8a417";
+    ctx.fillText(achUnlocked.length + " / " + ACHIEVEMENTS.length, px + PW - 40, py + 88 - scy - 6);
+    ctx.textAlign = "left";
+  }
   ctx.restore();   // 內容區遮罩結束
   // 內容總高（未捲動座標）→ 可捲動上限；夾住目前捲動量
   let contentBottomY;
   if (panel.tab === 0) contentBottomY = py + 96 + Object.keys(UPGRADE_DEFS).length * 58;
   else if (panel.tab === 1) contentBottomY = py + 84 + SUPPORT_IDS.length * 46;
   else if (panel.tab === 2) contentBottomY = py + 88 + CHECKPOINTS.filter(c => c.active).length * 52;
-  else contentBottomY = py + 96 + Object.values(SKINS).filter(s => s.anims).length * 58;
+  else if (panel.tab === 3) contentBottomY = py + 96 + Object.values(SKINS).filter(s => s.anims).length * 58;
+  else contentBottomY = py + 88 + ACHIEVEMENTS.length * 48;
   panel.maxScroll = Math.max(0, contentBottomY + 6 - clipBottom);
   panel.scroll = Math.max(0, Math.min(scy, panel.maxScroll));
   // 捲出可視範圍的內容按鈕不可點
