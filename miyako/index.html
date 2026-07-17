@@ -4232,8 +4232,8 @@ function draw() {
 
   // 場景背景：每層樓一條走廊帶（x 視差 0.5），其上遠景牆帶；景深＝越遠越糊（預烘焙模糊版）
   if (ENV.corridor.img && ENV.corridor.img.width) {
-    const corridorImg = blurredTile(ENV.corridor.img, 1);   // 近背景：微糊 1px
-    const wallImg = ENV.bgWall.img && ENV.bgWall.img.width ? blurredTile(ENV.bgWall.img, 2) : null;   // 遠景牆：2px
+    const corridorImg = blurredTile(ENV.corridor.img, 2);   // 中景走廊：糊 2px
+    const wallImg = ENV.bgWall.img && ENV.bgWall.img.width ? blurredTile(ENV.bgWall.img, 4) : null;   // 遠景牆：糊 4px（更遠更糊）
     const bgS = 1.7;
     const bw = Math.round(625 * bgS), bh = Math.round(170 * bgS);
     const ww2 = Math.round(625 * 1.2), wh2 = Math.round(234 * 1.2);
@@ -4242,17 +4242,29 @@ function draw() {
       const by = fy - bh;
       let bx = Math.floor((camL - par) / bw) * bw + Math.floor(par / bw) * bw;
       bx = camL - ((camL * 0.5) % bw) - bw;
-      for (let x = bx; x < camL + VIEW_W + bw; x += bw) {
-        ctx.drawImage(corridorImg, x, by, bw, bh);
-      }
-      if (wallImg) {   // 走廊帶上方遠景牆
+      if (wallImg) {   // 先畫遠景牆（最深）
         const wy = by - wh2;
         let wx = camL - ((camL * 0.3) % ww2) - ww2;
+        ctx.globalAlpha = 0.72;                 // 遠景大氣衰減：更淡
         for (let x = wx; x < camL + VIEW_W + ww2; x += ww2) {
           ctx.drawImage(wallImg, x, wy, ww2, wh2);
         }
+        ctx.globalAlpha = 1;
       }
+      ctx.globalAlpha = 0.92;                   // 中景走廊：略淡
+      for (let x = bx; x < camL + VIEW_W + bw; x += bw) {
+        ctx.drawImage(corridorImg, x, by, bw, bh);
+      }
+      ctx.globalAlpha = 1;
     }
+  }
+  {   // 大氣景深霧：背景之上疊淡藍霧，越往深處越濃（增強遠近層次）
+    const hz = ctx.createLinearGradient(0, camT, 0, camT + 540);
+    hz.addColorStop(0, "rgba(30,42,66,.28)");
+    hz.addColorStop(0.55, "rgba(24,34,54,.10)");
+    hz.addColorStop(1, "rgba(20,28,46,0)");
+    ctx.fillStyle = hz;
+    ctx.fillRect(camL, camT, VIEW_W, 540);
   }
   // 地形：素材換皮（薄平台=平台皮；厚板=牆板填充+黃線頂緣；窄牆=直鋪牆板）
   for (const s of SOLIDS) {
@@ -5642,28 +5654,31 @@ function drawPickupToasts() {   // BA 風廣播橫幅：斜紋深藍條 + 滑入
   }
   ctx.textAlign = "left";
 }
-function drawForeground() {   // 前景剪影層：全黑工業件從畫面上下緣探入（視差>1，Hollow Knight 式框景）
-  if (menuScreen || selectScreen) return;
-  const f = 1.3;
+function fgLayer(par, per, phase, blur, sc0, alpha, seedMul) {
   const camL = cam.x - VIEW_W / 2;
-  const per = 1240;                            // 稀疏擺放：每 ~1240 世界px 一件
   const kinds = [ENV.fgPlat, ENV.fgPipe, ENV.fgGirder, ENV.fgPod];
-  const base = Math.floor((camL * f) / per) * per;
-  ctx.save();
-  ctx.globalAlpha = 0.96;
-  for (let wx = base - per; wx < camL * f + VIEW_W + per * 1.5; wx += per) {
-    const seed = Math.abs(((wx / per) * 2654435761) % 977) | 0;
+  const base = Math.floor((camL * par) / per) * per;
+  ctx.globalAlpha = alpha;
+  for (let wx = base - per; wx < camL * par + VIEW_W + per * 1.5; wx += per) {
+    const seed = Math.abs(((wx / per) * seedMul) % 977) | 0;
     const e2 = kinds[seed % 4];
     if (!e2.img || !e2.img.width) continue;
-    const img = blurredTile(e2.img, 2);        // 前景也糊：焦點在玩家層
-    const sc2 = 3.2 + (seed % 4) * 0.5;
+    const img = blurredTile(e2.img, blur);
+    const sc2 = sc0 + (seed % 4) * 0.5;
     const w = e2.img.width * sc2, h = e2.img.height * sc2;
-    const sx = wx - camL * f + (seed % 7) * 40;
-    const sy = (seed % 2) ? 540 - h * 0.5 : -h * 0.5;   // 從下緣/上緣探入一半
+    const sx = wx - camL * par + phase + (seed % 7) * 40;
+    const fromBottom = (seed % 2) === 1;
+    const sy = fromBottom ? 540 - h * (0.42 + (seed % 3) * 0.06) : -h * (0.42 + (seed % 3) * 0.06);
     ctx.drawImage(img, sx, sy, w, h);
   }
-  ctx.restore();
   ctx.globalAlpha = 1;
+}
+function drawForeground() {   // 前景剪影：雙層視差框景（近層大＆散景糊、中層清晰）
+  if (menuScreen || selectScreen) return;
+  ctx.save();
+  fgLayer(1.28, 1500, 0, 2, 2.6, 0.9, 2654435761);      // 中層：稍遠、清晰、密度低
+  fgLayer(1.62, 1180, 60, 5, 4.4, 0.98, 40503421);      // 近層：大、重度散景糊、近全黑主導
+  ctx.restore();
 }
 function drawHUD() {
   drawPickupToasts();
