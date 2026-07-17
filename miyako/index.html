@@ -5659,34 +5659,35 @@ function drawPickupToasts() {   // BA 風廣播橫幅：斜紋深藍條 + 滑入
 function fgSet(name) {
   return [0,1,2,3,4,5,6,7].map(i => ENV[name + i]).filter(e => e && e.img && e.img.width);
 }
-function fgLayer(par, per, phase, blur, sc0, alpha, seedMul) {
+// 前景框景帶：edge="bottom" 貼螢幕下緣往上冒；edge="top" 貼上緣往下垂。
+// targetH＝螢幕上的目標高度（不用素材原始大小，避免爆掉），件依此等比縮放。
+function fgBand(edge, par, per, phase, blur, targetH, alpha, seedMul) {
   const camL = cam.x - VIEW_W / 2;
-  const topSet = cam.y < 1500 ? fgSet("fgTop") : fgSet("fgMid");
-  const botSet = cam.y > 2400 ? fgSet("fgBot") : fgSet("fgMid");
-  if (!topSet.length && !botSet.length) return;
+  let set;
+  if (edge === "bottom") set = cam.y > 2400 ? fgSet("fgBot") : fgSet("fgMid");
+  else                   set = cam.y < 1500 ? fgSet("fgTop") : fgSet("fgMid");
+  if (!set.length) return;
   const base = Math.floor((camL * par) / per) * per;
   ctx.globalAlpha = alpha;
-  for (let wx = base - per; wx < camL * par + VIEW_W + per * 1.5; wx += per) {
+  for (let wx = base - per; wx < camL * par + VIEW_W + per; wx += per) {
     const seed = Math.abs(((wx / per) * seedMul) % 4093) | 0;
-    const fromBottom = (seed & 4) !== 0;
-    const set = fromBottom ? botSet : topSet;
-    if (!set.length) continue;
     const e2 = set[seed % set.length];
+    const h = targetH * (0.82 + (seed % 5) * 0.09);   // 螢幕高度（控制範圍，不用原尺寸）
+    const w = e2.img.width * (h / e2.img.height);
     const img = blurredTile(e2.img, blur);
-    const sc2 = sc0 * (0.85 + (seed % 5) * 0.09);
-    const w = e2.img.width * sc2, h = e2.img.height * sc2;
-    const sx = wx - camL * par + phase + (seed % 9) * 30;
-    const sy = fromBottom ? 540 - h * (0.6 + (seed % 3) * 0.05) : -h * (0.5 + (seed % 3) * 0.05);
+    const sx = wx - camL * par + phase + (seed % 9) * 40;
+    // 錨定螢幕邊緣：底部件 82% 露出於下緣上方、頂部件 82% 垂於上緣下方
+    const sy = edge === "bottom" ? 540 - h * 0.82 : -h * 0.18;
     ctx.drawImage(img, sx, sy, w, h);
   }
   ctx.globalAlpha = 1;
 }
-function drawForeground() {   // 前景剪影：三層視差框景（遠清晰小→近散景大），頂/底依樓層換件
+function drawForeground() {   // 前景框景：頂部貼上緣垂下、底部貼下緣冒起（近層大＆較糊）
   if (menuScreen || selectScreen) return;
   ctx.save();
-  fgLayer(1.18, 1700, 0,  1.5, 1.9, 0.82, 2654435761);
-  fgLayer(1.42, 1350, 90, 3,   2.9, 0.92, 40503421);
-  fgLayer(1.78, 1050, 40, 5.5, 4.2, 0.98, 1013904223);
+  fgBand("top",    1.30, 1500, 60, 2.5, 150, 0.9,  2654435761);   // 頂部框（垂下）
+  fgBand("bottom", 1.35, 1450, 0,  2,   140, 0.85, 40503421);     // 底部中層（冒起）
+  fgBand("bottom", 1.75, 1050, 70, 3.5, 250, 0.97, 1013904223);   // 底部近層（大、略糊、近全黑主導）
   ctx.restore();
 }
 function drawHUD() {
