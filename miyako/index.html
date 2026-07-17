@@ -2960,7 +2960,7 @@ let menuBtns = [];
 let galIdx = 0, galState = 0, galList = null;
 function buildGallery() {   // 蒐集全角色（分類）：造型 / 支援 / 敵方 / 首領
   const list = [];
-  for (const id in SKINS) if (SKINS[id].anims) list.push({ cat: "造型", label: SKINS[id].label, anims: SKINS[id].anims, fw: SKINS[id].fw, fh: SKINS[id].fh });
+  for (const id in SKINS) if (SKINS[id].anims) list.push({ cat: "造型", skinId: id, label: SKINS[id].label, anims: SKINS[id].anims, fw: SKINS[id].fw, fh: SKINS[id].fh });
   const allyNames = { gunner: "妮可（霰彈）", shield: "盾兵" };
   for (const k in ALLY_KINDS) if (ALLY_KINDS[k].anims && Object.keys(ALLY_KINDS[k].anims).length) list.push({ cat: "支援", label: allyNames[k] || k, anims: ALLY_KINDS[k].anims, fw: ALLY_KINDS[k].fw, fh: ALLY_KINDS[k].fh });
   const enemyNames = { pmc: "PMC 傭兵", pmc2: "PMC 精銳", sgtrooper: "霰彈兵", shield: "盾牌兵", turret: "自動砲台", rocket: "火箭兵", grenadier: "手雷兵" };
@@ -3208,14 +3208,15 @@ function drawMenu() {
         slantPath(LX + 8, ry, LW - 16, rh - 4, 6);
         ctx.fillStyle = sel ? "rgba(47,119,212,.9)" : "rgba(200,214,230,.5)"; ctx.fill();
         const ia = e.anims.idle || e.anims[Object.keys(e.anims)[0]];
+        const lk = galLocked(e);
         if (ia && ia.img && ia.img.width) {
           ctx.imageSmoothingEnabled = false;
           const th = rh - 10, tw = th * e.fw / e.fh;
-          ctx.drawImage(ia.img, 0, 0, e.fw, e.fh, LX + 14, ry + 3, tw, th);
+          ctx.drawImage(lk ? blackTile(ia.img) : ia.img, 0, 0, e.fw, e.fh, LX + 14, ry + 3, tw, th);
         }
         ctx.textAlign = "left"; ctx.font = `italic 900 14px ${UI_FONT}`;
         ctx.fillStyle = sel ? "#fff" : "#2b3a55";
-        ctx.fillText(e.label, LX + 52, ry + 24);
+        ctx.fillText(lk ? "？？？" : e.label, LX + 52, ry + 24);
       }
       menuBtns.push({ x: LX + 8, y: ry, w: LW - 16, h: rh - 4, fn: (j => () => { galIdx = j; galState = 0; })(i), galClip: [LTOP, LBOT] });
       ry += rh;
@@ -3232,8 +3233,9 @@ function drawMenu() {
     slantPath(RX, LTOP, RW, LBOT - LTOP, 10); ctx.strokeStyle = "rgba(120,150,190,.4)"; ctx.stroke();
     const rcx = RX + RW / 2;
     ctx.textAlign = "left";
+    const locked = galLocked(ent);
     ctx.font = `italic 900 23px ${UI_FONT}`; ctx.fillStyle = "#2b3a55";
-    ctx.fillText(ent.label, RX + 22, LTOP + 32);
+    ctx.fillText(locked ? "？？？" : ent.label, RX + 22, LTOP + 32);
     ctx.font = `bold 12px ${UI_FONT}`; ctx.fillStyle = UI_BLUE;
     ctx.fillText(ent.cat + " · No." + String(galIdx + 1).padStart(2, "0"), RX + 22, LTOP + 50);
     // 檢視模式切換：動畫 / 精靈圖
@@ -3256,7 +3258,7 @@ function drawMenu() {
       if (!galSheet) {
         // 動畫預覽（放大）
         const dh = bh - 16, dw = dh * ent.fw / ent.fh;
-        ctx.drawImage(a.img, fi * ent.fw, 0, ent.fw, ent.fh, rcx - dw / 2, by + bh - 8 - dh, dw, dh);
+        ctx.drawImage(locked ? blackTile(a.img) : a.img, fi * ent.fw, 0, ent.fw, ent.fh, rcx - dw / 2, by + bh - 8 - dh, dw, dh);
       } else {
         // 整張精靈圖：全幀網格平鋪，逐格編號，現行幀金框
         const cols = Math.ceil(Math.sqrt(a.count * (bw / bh) * ent.fh / ent.fw)) || 1;
@@ -3267,7 +3269,7 @@ function drawMenu() {
           const gx = bx + (i % cols) * cw, gy = by + Math.floor(i / cols) * chh;
           if (i === fi) { ctx.fillStyle = "rgba(232,164,23,.16)"; ctx.fillRect(gx + 1, gy + 1, cw - 2, chh - 2); }
           const dw = ent.fw * fscale, dh = ent.fh * fscale;
-          ctx.drawImage(a.img, i * ent.fw, 0, ent.fw, ent.fh, gx + (cw - dw) / 2, gy + (chh - dh) / 2, dw, dh);
+          ctx.drawImage(locked ? blackTile(a.img) : a.img, i * ent.fw, 0, ent.fw, ent.fh, gx + (cw - dw) / 2, gy + (chh - dh) / 2, dw, dh);
           ctx.strokeStyle = i === fi ? "#e8a417" : "rgba(120,150,190,.22)"; ctx.lineWidth = i === fi ? 2 : 1;
           ctx.strokeRect(gx + .5, gy + .5, cw - 1, chh - 1);
           ctx.textAlign = "left"; ctx.font = `bold 9px ${UI_FONT}`; ctx.fillStyle = "rgba(43,58,85,.5)";
@@ -5867,6 +5869,23 @@ function drawPickupToasts() {   // BA 風廣播橫幅：斜紋深藍條 + 滑入
     ctx.restore();
   }
   ctx.textAlign = "left";
+}
+function blackTile(img) {   // 純黑剪影快取（未解鎖角色圖鑑用）
+  if (!document.createElement) return img;
+  if (!img._black) {
+    const c = document.createElement("canvas");
+    c.width = img.width; c.height = img.height;
+    const g = c.getContext("2d");
+    g.drawImage(img, 0, 0);
+    g.globalCompositeOperation = "source-in";
+    g.fillStyle = "#0a0a0e";
+    g.fillRect(0, 0, c.width, c.height);
+    img._black = c;
+  }
+  return img._black;
+}
+function galLocked(ent) {   // 皮膚未解鎖（default 永遠解鎖）
+  return ent.skinId && ent.skinId !== "default" && !(unlocks.skins || []).includes(ent.skinId);
 }
 function fgSet(name) {
   return [0,1,2,3,4,5,6,7].map(i => ENV[name + i]).filter(e => e && e.img && e.img.width);
