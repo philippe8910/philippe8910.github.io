@@ -30,7 +30,7 @@
 </head>
 <body>
 <canvas id="cv" width="960" height="540"></canvas>
-<div id="hud">←→/AD 移動 · Space/W/↑ 跳躍 · S/↓ 蹲下 · J 射擊 · R 換彈 · 1-3 支援卡（滑鼠/觸控瞄準）· 手機：觸控搖桿+按鈕 · F 全螢幕 — <span id="dbg"></span></div>
+<div id="hud">←→/AD 移動 · Space/W/↑ 跳躍 · S/↓ 蹲下 · Shift/K 衝刺 · J 射擊 · R 換彈 · 1-3 支援卡 · 手機：搖桿+按鈕 · F 全螢幕 — <span id="dbg"></span></div>
 <script src="official_map.js"></script>
 <script>
 "use strict";
@@ -822,6 +822,9 @@ function updateCamera(dt) {
 }
 
 const GRAV = 2300, MOVE = 340, JUMP_V = 950;
+const DASH_T = 0.2, DASH_SPEED = 1150, DASH_CD = 0.35;   // 衝刺：持續/速度/冷卻
+const afterimages = [];   // 賽博龐克殘影：衝刺留下的定格拷貝，慢慢透明
+let dashAfterT = 0;
 const COYOTE = 0.08, BUFFER = 0.1;
 const RELOAD_TIME = 1.5;
 const BULLET_RANGE = 520;          // 玩家子彈最大飛行距離（防畫面外超遠程擊殺）
@@ -1135,9 +1138,10 @@ addEventListener("beforeunload", () => { try { saveGame(); } catch (e) {} });   
 const keys = {};
 // ---- 手機虛擬控制（首次觸控啟用；搖桿=左半屏浮動，下拉=蹲）----
 const vpad = { on: false, joyId: null, joyBaseX: 0, joyBaseY: 0, joyDx: 0, joyDy: 0,
-               fire: false, jump: false, reload: false, btnIds: {} };
+               fire: false, jump: false, reload: false, dash: false, btnIds: {} };
 const VBTN = {
   fire:   { x: 874, y: 312, r: 42, label: "射擊" },
+  dash:   { x: 812, y: 268, r: 30, label: "衝刺" },
   jump:   { x: 778, y: 362, r: 34, label: "跳躍" },
   reload: { x: 882, y: 222, r: 28, label: "換彈" },
 };
@@ -1145,7 +1149,7 @@ let tutSeen = [];
 try { tutSeen = JSON.parse(localStorage.getItem("miyako_tut") || "[]"); } catch (e) {}
 let activeTut = null;
 const TUTORIALS = {
-  move:  { title: "操作說明", lines: ["← → / A D　移動", "空白 / W / ↑　跳躍", "S / ↓　蹲下", "J　射擊　·　R　換彈", "1-3　施放支援卡（滑鼠 / 觸控瞄準）", "手機：左搖桿 + 右按鈕　·　F 全螢幕"] },
+  move:  { title: "操作說明", lines: ["← → / A D　移動", "空白 / W / ↑　跳躍", "S / ↓　蹲下", "J　射擊　·　R　換彈", "Shift / K　衝刺（閃避無敵，空中一次）", "1-3　施放支援卡（滑鼠 / 觸控瞄準）", "手機：左搖桿 + 右按鈕　·　F 全螢幕"] },
   panel: { title: "補給站", lines: ["在存檔點休息可開啟補給站。", "強化屬性、招募支援、傳送、造型、成就。", "休息會回滿血並重生敵人（篝火制）。"] },
   card:  { title: "支援卡 · Cost", lines: ["命中敵人累積 Cost，滿額即可施放支援卡。", "出卡進入子彈時間，用滑鼠 / 觸控瞄準落點。", "左鍵確認、右鍵取消。"] },
   boss:  { title: "首領戰", lines: ["首領有三階段，血量越低越兇猛。", "宮子的自走小車能暈眩首領 3 秒。", "不同支援技能剋制不同敵人，善用地形。"] },
@@ -1412,6 +1416,7 @@ const player = {
   hp: 10, maxHp: 10, hpGhost: 10,   // hpGhost = 血條受擊白影（延遲追上實際血量）
   invulnT: 0, deathT: 0,
   shieldHp: 0, buffT: 0, shieldT: 0,   // 護盾值｜霸體時效（聖盾卡）｜護盾到期時效
+  dashT: 0, dashCd: 0, dashDir: 1, airDashUsed: false,   // 衝刺：計時/冷卻/方向/空中已用
 };
 
 function setState(s) {
@@ -1856,6 +1861,7 @@ function respawnPlayer() {
   setState("idle");
   bossBullets.length = 0;
   eGrenades.length = 0;
+  player.dashT = 0; player.dashCd = 0; player.airDashUsed = false; afterimages.length = 0;
   if (boss.active || boss.deadT > 0) {       // Boss 戰重置回待命
     boss.active = false; boss.deadT = 0;
     boss.hp = boss.maxHp; boss.hpGhost = boss.maxHp;
@@ -3870,6 +3876,10 @@ function updateEffects(dt) {
     autosaveT = 30;
     autosaveFlashT = 1.4;
   }
+  for (let i = afterimages.length - 1; i >= 0; i--) {
+    const g = afterimages[i]; g.t -= dt;
+    if (g.t <= 0) afterimages.splice(i, 1);
+  }
   for (let i = dusts.length - 1; i >= 0; i--) {
     const d = dusts[i];
     d.t -= dt;
@@ -4253,11 +4263,24 @@ function physics(dt) {
   const jumpKey = keys.Space || keys.KeyW || keys.ArrowUp || vpad.jump;
   const crouchKey = keys.KeyS || keys.ArrowDown || vpad.joyDy > 0.5;
   const fireKey = keys.KeyJ || vpad.fire;
+  const dashKey = keys.ShiftLeft || keys.ShiftRight || keys.KeyK || vpad.dash;
+  player.dashCd = Math.max(0, player.dashCd - dt);
+  if (player.dashT > 0) player.dashT -= dt;
+  if (player.onGround) player.airDashUsed = false;   // 落地重置空中衝刺
 
   if (keys.KeyH && !(player.state === "hurt" && !animDone(ANIMS.hurt, player.t))) {
     hurtPlayer(-player.facing);
   }
   const hurting = (player.state === "hurt" && !animDone(ANIMS.hurt, player.t)) || player.deathT > 0;
+  if (dashKey && player.dashT <= 0 && player.dashCd <= 0 && !hurting && player.deathT <= 0 &&
+      (player.onGround || !player.airDashUsed)) {   // 衝刺觸發（閃避無敵，空中限一次）
+    player.dashT = DASH_T; player.dashCd = DASH_CD;
+    player.dashDir = player.facing;
+    if (!player.onGround) player.airDashUsed = true;
+    player.invulnT = Math.max(player.invulnT, DASH_T + 0.05);
+    spawnDust(player.x, player.y, 6, 30);
+    shakeT = Math.max(shakeT, 0.08);
+  }
 
   // reload: R to reload manually, auto when firing on empty; blocks shooting
   if (player.reloadT > 0) {
@@ -4296,6 +4319,16 @@ function physics(dt) {
     spawnDust(player.x, player.y, 4, 26);
   }
 
+  if (player.dashT > 0) {              // 衝刺中：高速平移、抵銷重力、留殘影
+    player.vx = player.dashDir * DASH_SPEED;
+    player.vy = 0;
+    dashAfterT = (dashAfterT || 0) - dt;
+    if (dashAfterT <= 0) {
+      dashAfterT = 0.028;
+      afterimages.push({ x: player.x, y: player.y, facing: player.dashDir, skin: currentSkin,
+                         fi: Math.floor(player.t * 12) % (DASH_META[currentSkin] ? DASH_META[currentSkin].count : 5), t: 0.42, t0: 0.42 });
+    }
+  }
   player.vy += GRAV * dt;
 
   const hh = player.crouching ? HITBOX_H_CROUCH : HITBOX_H;
@@ -4327,6 +4360,7 @@ function physics(dt) {
 
   // ---- state machine ----
   if (hurting) return;
+  if (player.dashT > 0) { setState("dash"); return; }
   if (player.state === "hurt") setState(player.onGround ? "idle" : "fall");
 
   if (!player.onGround) {
@@ -4732,9 +4766,27 @@ function draw() {
   drawBoss();
   drawEnemyBullets();
 
-  const a = ANIMS[player.state];
-  let fi = frameIndex(a, player.t);
-  if ((player.state === "run" || player.state === "run_shoot") &&
+  // ── 賽博龐克衝刺殘影：留在原地慢慢透明（青色染色疊加）──
+  for (const g of afterimages) {
+    const dm = DASH_META[g.skin] || DASH_META.default;
+    const ds = dashSpriteFor(g.skin).img;
+    if (!ds || !ds.img && !ds.width) continue;
+    const dsc = DRAW_H / dm.fh, dwid = dm.fw * dsc * SLIM, dhei = DRAW_H;
+    ctx.save();
+    if (g.facing === -1) { ctx.translate(g.x, 0); ctx.scale(-1, 1); ctx.translate(-g.x, 0); }
+    ctx.globalAlpha = 0.5 * (g.t / g.t0);
+    ctx.drawImage(ds, g.fi * dm.fw, 0, dm.fw, dm.fh, g.x - dm.anchor * dwid, g.y - dm.feet * dhei, dwid, dhei);
+    ctx.globalCompositeOperation = "source-atop";   // 青色染色（賽博感）
+    ctx.fillStyle = "rgba(90,213,242," + (0.55 * (g.t / g.t0)) + ")";
+    ctx.fillRect(g.x - dm.anchor * dwid, g.y - dm.feet * dhei, dwid, dhei);
+    ctx.restore();
+  }
+  ctx.globalCompositeOperation = "source-over";
+  ctx.globalAlpha = 1;
+  const dashing = player.state === "dash";
+  const a = dashing ? null : ANIMS[player.state];
+  let fi = a ? frameIndex(a, player.t) : 0;
+  if (a && (player.state === "run" || player.state === "run_shoot") &&
       player.vx !== 0 && Math.sign(player.vx) !== player.facing) {
     fi = a.count - 1 - fi;               // 倒退走（面向與移動相反）：動畫倒放
   }
@@ -4744,11 +4796,21 @@ function draw() {
   if (player.facing === -1) {
     ctx.translate(player.x, 0); ctx.scale(-1, 1); ctx.translate(-player.x, 0);
   }
-  if (player.invulnT > 0 && player.deathT <= 0) {          // 無敵幀閃爍
-    ctx.globalAlpha = ((player.invulnT * 12) | 0) % 2 ? 0.35 : 0.9;
+  if (dashing) {                                  // 衝刺 sprite（各 skin 專屬）
+    const dm = DASH_META[currentSkin] || DASH_META.default;
+    const ds = dashSpriteFor(currentSkin).img;
+    if (ds && (ds.width || ds.img)) {
+      const dsc = DRAW_H / dm.fh, dwid = dm.fw * dsc * SLIM;
+      const dfi = Math.floor(player.t * 14) % dm.count;
+      ctx.drawImage(ds, dfi * dm.fw, 0, dm.fw, dm.fh, player.x - dm.anchor * dwid, player.y - dm.feet * DRAW_H, dwid, DRAW_H);
+    }
+  } else {
+    if (player.invulnT > 0 && player.deathT <= 0) {          // 無敵幀閃爍
+      ctx.globalAlpha = ((player.invulnT * 12) | 0) % 2 ? 0.35 : 0.9;
+    }
+    ctx.drawImage(a.img, fi * FRAME_W, 0, FRAME_W, FRAME_H,
+      player.x - ANCHOR_X * dw, player.y - FEET_Y * dh, dw, dh);
   }
-  ctx.drawImage(a.img, fi * FRAME_W, 0, FRAME_W, FRAME_H,
-    player.x - ANCHOR_X * dw, player.y - FEET_Y * dh, dw, dh);
   ctx.restore();
   // 護盾能量護罩（與敵方盾兵同款泡泡）
   if (player.shieldHp > 0) drawShieldBubble(player.x, player.y, 128, playerBlockT);
@@ -5580,6 +5642,10 @@ function panelClickAt(px, py) {        // 面板點擊（滑鼠/觸控共用）
 }
 
 // ---- 探索小地圖（左上；M 切換；離屏預渲染地形）----
+const DASH_META = {"default": {"fw": 240, "fh": 232, "count": 5, "anchor": 0.5292, "feet": 0.9871}, "swim": {"fw": 240, "fh": 254, "count": 5, "anchor": 0.4813, "feet": 0.937}, "shiroko": {"fw": 240, "fh": 243, "count": 5, "anchor": 0.4938, "feet": 0.9588}, "mika": {"fw": 240, "fh": 260, "count": 5, "anchor": 0.4667, "feet": 0.9385}, "momoi": {"fw": 240, "fh": 252, "count": 5, "anchor": 0.4646, "feet": 0.9722}, "yuuka": {"fw": 240, "fh": 255, "count": 5, "anchor": 0.5271, "feet": 0.9922}};
+const DASH_SPRITES = {};
+for (const sk in DASH_META) DASH_SPRITES[sk] = { file: "assets_dash/" + sk + ".png" };
+function dashSpriteFor(skinId) { return DASH_SPRITES[skinId] || DASH_SPRITES.default; }
 let minimapCv = null, minimapOn = true;
 const MM_SC = 64;   // 1 小地圖 px = 64 世界 px
 function buildMinimap() {
@@ -6487,7 +6553,7 @@ let loaded = 0;
 // 用 SKINS.default.anims 而非 ANIMS：存檔為泳裝時開機已 applySkin，ANIMS 已不指向制服
 const assets = [...Object.values(SKINS).flatMap(s => s.anims ? Object.values(s.anims) : []), ...Object.values(TILES), ...Object.values(BOSS_ANIMS),
   ...Object.values(ALLY_KINDS).flatMap(k => Object.values(k.anims)), SNIPER_PORTRAIT,
-  ...Object.values(ENEMY_KINDS).flatMap(k => Object.values(k.anims)), ...CARDS, FIRE_FX, HELI_FX, GREN_FX, EGREN_FX, ROVER_FX, CREDIT_FX, ...Object.values(ENV)];
+  ...Object.values(ENEMY_KINDS).flatMap(k => Object.values(k.anims)), ...CARDS, FIRE_FX, HELI_FX, GREN_FX, EGREN_FX, ROVER_FX, CREDIT_FX, ...Object.values(ENV), ...Object.values(DASH_SPRITES)];
 const total = assets.length;
 function drawLoading() {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
