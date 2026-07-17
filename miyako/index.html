@@ -1231,9 +1231,12 @@ if (cv.addEventListener) {
     }
     return false;
   }
-  cv.addEventListener("wheel", e => {          // 補給站面板：滾輪捲動內容
+  cv.addEventListener("wheel", e => {          // 補給站面板 / 圖鑑清單：滾輪捲動
     if (panel.open) {
       panel.scroll = Math.max(0, Math.min((panel.scroll || 0) + e.deltaY * 0.6, panel.maxScroll || 0));
+      e.preventDefault();
+    } else if (menuScreen === "gallery") {
+      galScroll = Math.max(0, Math.min((galScroll || 0) + e.deltaY * 0.5, galMaxScroll || 0));
       e.preventDefault();
     }
   }, { passive: false });
@@ -2900,16 +2903,17 @@ function drawDialogue() {
 // ---- 主選單 ----
 let menuBtns = [];
 let galIdx = 0, galState = 0, galList = null;
-function buildGallery() {   // 蒐集全角色：皮膚 + 隊友 + 敵人 + Boss
+function buildGallery() {   // 蒐集全角色（分類）：造型 / 支援 / 敵方 / 首領
   const list = [];
-  for (const id in SKINS) if (SKINS[id].anims) list.push({ label: SKINS[id].label, anims: SKINS[id].anims, fw: SKINS[id].fw, fh: SKINS[id].fh });
+  for (const id in SKINS) if (SKINS[id].anims) list.push({ cat: "造型", label: SKINS[id].label, anims: SKINS[id].anims, fw: SKINS[id].fw, fh: SKINS[id].fh });
   const allyNames = { gunner: "妮可（霰彈）", shield: "盾兵" };
-  for (const k in ALLY_KINDS) if (ALLY_KINDS[k].anims && Object.keys(ALLY_KINDS[k].anims).length) list.push({ label: allyNames[k] || k, anims: ALLY_KINDS[k].anims, fw: ALLY_KINDS[k].fw, fh: ALLY_KINDS[k].fh });
+  for (const k in ALLY_KINDS) if (ALLY_KINDS[k].anims && Object.keys(ALLY_KINDS[k].anims).length) list.push({ cat: "支援", label: allyNames[k] || k, anims: ALLY_KINDS[k].anims, fw: ALLY_KINDS[k].fw, fh: ALLY_KINDS[k].fh });
   const enemyNames = { pmc: "PMC 傭兵", pmc2: "PMC 精銳", sgtrooper: "霰彈兵", shield: "盾牌兵", turret: "自動砲台", rocket: "火箭兵", grenadier: "手雷兵" };
-  for (const k in ENEMY_KINDS) if (ENEMY_KINDS[k].anims && Object.keys(ENEMY_KINDS[k].anims).length) list.push({ label: enemyNames[k] || k, anims: ENEMY_KINDS[k].anims, fw: ENEMY_KINDS[k].fw, fh: ENEMY_KINDS[k].fh });
-  list.push({ label: "首領 Kanna", anims: BOSS_ANIMS, fw: BOSS_FW, fh: BOSS_FH });
+  for (const k in ENEMY_KINDS) if (ENEMY_KINDS[k].anims && Object.keys(ENEMY_KINDS[k].anims).length) list.push({ cat: "敵方", label: enemyNames[k] || k, anims: ENEMY_KINDS[k].anims, fw: ENEMY_KINDS[k].fw, fh: ENEMY_KINDS[k].fh });
+  list.push({ cat: "首領", label: "首領 Kanna", anims: BOSS_ANIMS, fw: BOSS_FW, fh: BOSS_FH });
   return list;
 }
+let galScroll = 0, galMaxScroll = 0;
 let volDrag = false;
 let menuFrom = "main";             // 設定頁返回目的地："main" | "game"
 function menuBtn(x, y, w, h, label, fn, style) {
@@ -3119,38 +3123,80 @@ function drawMenu() {
     menuBtn(cx + 90, 452, 150, 44, T("back"), () => { menuScreen = menuFrom === "game" ? null : "main"; });
   } else if (menuScreen === "gallery") {
     if (!galList) galList = buildGallery();
-    const ent = galList[galIdx % galList.length];
+    const N = galList.length;
+    galIdx = ((galIdx % N) + N) % N;
+    const ent = galList[galIdx];
     const stateKeys = Object.keys(ent.anims);
     const stName = stateKeys[galState % stateKeys.length];
     const a = ent.anims[stName];
-    // 標題
-    ctx.textAlign = "center";
-    ctx.font = `italic 900 26px ${UI_FONT}`;
-    ctx.fillStyle = "#2b3a55";
-    ctx.fillText(T("gallery"), cx, 58);
-    ctx.font = `italic 900 20px ${UI_FONT}`;
-    ctx.fillStyle = UI_BLUE;
-    ctx.fillText(ent.label, cx, 96);
-    ctx.font = `bold 13px ${UI_FONT}`;
-    ctx.fillStyle = "rgba(43,58,85,.6)";
-    ctx.fillText((galIdx % galList.length + 1) + " / " + galList.length + " · " + stName, cx, 118);
-    // 大圖動畫（棋盤格底、nearest 放大看細節）
-    const bx = cx - 150, by = 138, bw = 300, bh = 260;
-    ctx.fillStyle = "#e7edf4"; ctx.fillRect(bx, by, bw, bh);
-    ctx.fillStyle = "rgba(120,150,190,.10)";
-    for (let gy = 0; gy < bh; gy += 20) for (let gx = 0; gx < bw; gx += 20) if (((gx + gy) / 20) & 1) ctx.fillRect(bx + gx, by + gy, 20, 20);
-    ctx.strokeStyle = "rgba(120,150,190,.5)"; ctx.strokeRect(bx + .5, by + .5, bw - 1, bh - 1);
+    ctx.fillStyle = UI_BLUE; ctx.fillRect(0, 0, VIEW_W, 3);
+    ctx.textAlign = "left";
+    ctx.font = `italic 900 22px ${UI_FONT}`; ctx.fillStyle = "#2b3a55";
+    ctx.fillText("ART COLLECTION", 26, 38);
+    ctx.font = `bold 12px ${UI_FONT}`; ctx.fillStyle = "rgba(43,58,85,.5)";
+    ctx.fillText(T("gallery") + " · 美術設定集", 26, 56);
+    menuBtn(VIEW_W - 116, 20, 90, 34, T("back"), () => { menuScreen = "main"; });
+    const LX = 20, LW = 250, LTOP = 74, LBOT = 512;
+    slantPath(LX, LTOP, LW, LBOT - LTOP, 8); ctx.fillStyle = "rgba(232,238,245,.9)"; ctx.fill();
+    ctx.save(); ctx.beginPath(); ctx.rect(LX, LTOP, LW, LBOT - LTOP); ctx.clip();
+    let ry = LTOP + 8 - galScroll, lastCat = "";
+    for (let i = 0; i < N; i++) {
+      const e = galList[i];
+      if (e.cat !== lastCat) {
+        lastCat = e.cat;
+        ctx.textAlign = "left"; ctx.font = `italic 900 13px ${UI_FONT}`;
+        ctx.fillStyle = UI_BLUE; ctx.fillText("— " + e.cat + " —", LX + 14, ry + 16);
+        ry += 26;
+      }
+      const rh = 40, sel = i === galIdx;
+      if (ry + rh > LTOP && ry < LBOT) {
+        slantPath(LX + 8, ry, LW - 16, rh - 4, 6);
+        ctx.fillStyle = sel ? "rgba(47,119,212,.9)" : "rgba(200,214,230,.5)"; ctx.fill();
+        const ia = e.anims.idle || e.anims[Object.keys(e.anims)[0]];
+        if (ia && ia.img && ia.img.width) {
+          ctx.imageSmoothingEnabled = false;
+          const th = rh - 10, tw = th * e.fw / e.fh;
+          ctx.drawImage(ia.img, 0, 0, e.fw, e.fh, LX + 14, ry + 3, tw, th);
+        }
+        ctx.textAlign = "left"; ctx.font = `italic 900 14px ${UI_FONT}`;
+        ctx.fillStyle = sel ? "#fff" : "#2b3a55";
+        ctx.fillText(e.label, LX + 52, ry + 24);
+      }
+      menuBtns.push({ x: LX + 8, y: ry, w: LW - 16, h: rh - 4, fn: (j => () => { galIdx = j; galState = 0; })(i), galClip: [LTOP, LBOT] });
+      ry += rh;
+    }
+    ctx.restore();
+    galMaxScroll = Math.max(0, (ry + galScroll) - LBOT + 12);
+    if (galMaxScroll > 0) {
+      const tr = LBOT - LTOP, th2 = Math.max(30, tr * tr / (tr + galMaxScroll));
+      ctx.fillStyle = "rgba(43,58,85,.3)";
+      ctx.fillRect(LX + LW - 6, LTOP + (tr - th2) * (galScroll / galMaxScroll), 3, th2);
+    }
+    const RX = 292, RW = VIEW_W - RX - 20;
+    slantPath(RX, LTOP, RW, LBOT - LTOP, 10); ctx.fillStyle = "rgba(250,252,255,.95)"; ctx.fill();
+    slantPath(RX, LTOP, RW, LBOT - LTOP, 10); ctx.strokeStyle = "rgba(120,150,190,.4)"; ctx.stroke();
+    const rcx = RX + RW / 2;
+    ctx.textAlign = "left";
+    ctx.font = `italic 900 24px ${UI_FONT}`; ctx.fillStyle = "#2b3a55";
+    ctx.fillText(ent.label, RX + 22, LTOP + 34);
+    ctx.font = `bold 12px ${UI_FONT}`; ctx.fillStyle = UI_BLUE;
+    ctx.fillText(ent.cat + " · " + (galIdx + 1) + "/" + N, RX + 22, LTOP + 54);
+    const bx = RX + 24, by = LTOP + 66, bw = RW - 48, bh = 250;
+    ctx.fillStyle = "#eef2f7"; ctx.fillRect(bx, by, bw, bh);
+    ctx.fillStyle = "rgba(120,150,190,.09)";
+    for (let gy = 0; gy < bh; gy += 22) for (let gx = 0; gx < bw; gx += 22) if (((gx + gy) / 22) & 1) ctx.fillRect(bx + gx, by + gy, 22, 22);
+    ctx.strokeStyle = "rgba(120,150,190,.4)"; ctx.strokeRect(bx + .5, by + .5, bw - 1, bh - 1);
     if (a && a.img && a.img.width) {
       const fi = frameIndex(a, uiTime);
-      const dh = bh - 24, dw = dh * ent.fw / ent.fh;
       ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(a.img, fi * ent.fw, 0, ent.fw, ent.fh, cx - dw / 2, by + bh - 12 - dh, dw, dh);
-      ctx.imageSmoothingEnabled = false;
-      // 底部影格條（全幀縮圖）
-      const stripY = by + bh + 10, cell = Math.min(30, (bw) / a.count);
+      const dh = bh - 20, dw = dh * ent.fw / ent.fh;
+      ctx.drawImage(a.img, fi * ent.fw, 0, ent.fw, ent.fh, rcx - dw / 2, by + bh - 10 - dh, dw, dh);
+      ctx.textAlign = "left"; ctx.font = `bold 12px ${UI_FONT}`; ctx.fillStyle = "rgba(43,58,85,.7)";
+      ctx.fillText(stName + " · " + a.count + " 幀 · " + a.fps + "fps · " + (a.loop ? "循環" : "單次"), bx + 4, by + bh + 20);
+      const stripY = by + bh + 30, cell = Math.min(26, bw / a.count);
       for (let i = 0; i < a.count; i++) {
         const sxx = bx + i * cell;
-        ctx.strokeStyle = i === fi ? "#e8a417" : "rgba(120,150,190,.4)";
+        ctx.strokeStyle = i === fi ? "#e8a417" : "rgba(120,150,190,.35)";
         ctx.lineWidth = i === fi ? 2 : 1;
         ctx.strokeRect(sxx + .5, stripY + .5, cell - 1, cell - 1);
         ctx.imageSmoothingEnabled = false;
@@ -3158,20 +3204,22 @@ function drawMenu() {
         ctx.drawImage(a.img, i * ent.fw, 0, ent.fw, ent.fh, sxx + (cell - tw) / 2, stripY + 2, tw, th);
       }
       ctx.lineWidth = 1;
-    } else {
-      ctx.fillStyle = "rgba(43,58,85,.4)"; ctx.font = `bold 13px ${UI_FONT}`;
-      ctx.fillText("載入中…", cx, by + bh / 2);
     }
-    // 控制鈕：上一位/下一位角色、切換動作
-    menuBtn(cx - 250, 138, 56, 100, "◀", () => { galIdx = (galIdx - 1 + galList.length) % galList.length; galState = 0; });
-    menuBtn(cx + 194, 138, 56, 100, "▶", () => { galIdx = (galIdx + 1) % galList.length; galState = 0; });
-    menuBtn(cx - 150, 452, 140, 44, "動作切換", () => { galState = (galState + 1) % stateKeys.length; });
-    menuBtn(cx + 10, 452, 140, 44, T("back"), () => { menuScreen = "main"; });
+    ctx.textAlign = "center";
+    for (let i = 0; i < stateKeys.length; i++) {
+      const chW = 66, chX = RX + 22 + (i % 5) * (chW + 6), chY = LBOT - 44 - Math.floor(i / 5) * 30;
+      const on = (galState % stateKeys.length) === i;
+      slantPath(chX, chY, chW, 24, 5); ctx.fillStyle = on ? UI_BLUE : "rgba(200,214,230,.6)"; ctx.fill();
+      ctx.font = `bold 11px ${UI_FONT}`; ctx.fillStyle = on ? "#fff" : "#2b3a55";
+      ctx.fillText(stateKeys[i], chX + chW / 2, chY + 16);
+      menuBtns.push({ x: chX, y: chY, w: chW, h: 24, fn: (j => () => { galState = j; })(i) });
+    }
   }
   ctx.textAlign = "left";
 }
 function menuClickAt(px, py) {
   for (const b of menuBtns) {
+    if (b.galClip && (py < b.galClip[0] || py > b.galClip[1])) continue;
     if (px > b.x && px < b.x + b.w && py > b.y && py < b.y + b.h) {
       if (b.volSlider) { volDrag = true; setVolume((px - b.volSlider.x) / b.volSlider.w); return; }
       if (b.fn) { b.fn(); return; }
