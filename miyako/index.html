@@ -3224,10 +3224,12 @@ const ENV = {
   platSkin: { file: "assets_env/float_11.png" }, // 薄平台皮
   platSkin2:{ file: "assets_env/float_04.png" }, // 薄平台皮（帶欄杆款）
   elevSkin: { file: "assets_env/float_09.png" }, // 電梯平台皮（懸浮推進器款）
-  fgPlat:   { file: "assets_env/fg_plat.png" },  // 前景剪影：欄杆平台
-  fgPipe:   { file: "assets_env/fg_pipe.png" },  // 前景剪影：長管線
-  fgGirder: { file: "assets_env/fg_girder.png" },// 前景剪影：直立樑柱
-  fgPod:    { file: "assets_env/fg_pod.png" },   // 前景剪影：懸浮艙
+  fgTop0:{file:"assets_env/fgtop_0.png"},fgTop1:{file:"assets_env/fgtop_1.png"},fgTop2:{file:"assets_env/fgtop_2.png"},fgTop3:{file:"assets_env/fgtop_3.png"},
+  fgTop4:{file:"assets_env/fgtop_4.png"},fgTop5:{file:"assets_env/fgtop_5.png"},fgTop6:{file:"assets_env/fgtop_6.png"},fgTop7:{file:"assets_env/fgtop_7.png"},
+  fgBot0:{file:"assets_env/fgbot_0.png"},fgBot1:{file:"assets_env/fgbot_1.png"},fgBot2:{file:"assets_env/fgbot_2.png"},fgBot3:{file:"assets_env/fgbot_3.png"},
+  fgBot4:{file:"assets_env/fgbot_4.png"},fgBot5:{file:"assets_env/fgbot_5.png"},fgBot6:{file:"assets_env/fgbot_6.png"},fgBot7:{file:"assets_env/fgbot_7.png"},
+  fgMid0:{file:"assets_env/fgmid_0.png"},fgMid1:{file:"assets_env/fgmid_1.png"},fgMid2:{file:"assets_env/fgmid_2.png"},fgMid3:{file:"assets_env/fgmid_3.png"},
+  fgMid4:{file:"assets_env/fgmid_4.png"},fgMid5:{file:"assets_env/fgmid_5.png"},fgMid6:{file:"assets_env/fgmid_6.png"},fgMid7:{file:"assets_env/fgmid_7.png"},
   gateSkin: { file: "assets_env/misc_20.png" },  // 單向門門體（紅色能量燈柱，垂直平鋪）
   gateArrow:{ file: "assets_env/misc_22.png" },  // 單向門方向箭頭
   keyDoor:  { file: "assets_env/tile_16.png" },  // 鑰匙門（完整門框＋紅色電子鎖）
@@ -5654,30 +5656,37 @@ function drawPickupToasts() {   // BA 風廣播橫幅：斜紋深藍條 + 滑入
   }
   ctx.textAlign = "left";
 }
+function fgSet(name) {
+  return [0,1,2,3,4,5,6,7].map(i => ENV[name + i]).filter(e => e && e.img && e.img.width);
+}
 function fgLayer(par, per, phase, blur, sc0, alpha, seedMul) {
   const camL = cam.x - VIEW_W / 2;
-  const kinds = [ENV.fgPlat, ENV.fgPipe, ENV.fgGirder, ENV.fgPod];
+  const topSet = cam.y < 1500 ? fgSet("fgTop") : fgSet("fgMid");
+  const botSet = cam.y > 2400 ? fgSet("fgBot") : fgSet("fgMid");
+  if (!topSet.length && !botSet.length) return;
   const base = Math.floor((camL * par) / per) * per;
   ctx.globalAlpha = alpha;
   for (let wx = base - per; wx < camL * par + VIEW_W + per * 1.5; wx += per) {
-    const seed = Math.abs(((wx / per) * seedMul) % 977) | 0;
-    const e2 = kinds[seed % 4];
-    if (!e2.img || !e2.img.width) continue;
+    const seed = Math.abs(((wx / per) * seedMul) % 4093) | 0;
+    const fromBottom = (seed & 4) !== 0;
+    const set = fromBottom ? botSet : topSet;
+    if (!set.length) continue;
+    const e2 = set[seed % set.length];
     const img = blurredTile(e2.img, blur);
-    const sc2 = sc0 + (seed % 4) * 0.5;
+    const sc2 = sc0 * (0.85 + (seed % 5) * 0.09);
     const w = e2.img.width * sc2, h = e2.img.height * sc2;
-    const sx = wx - camL * par + phase + (seed % 7) * 40;
-    const fromBottom = (seed % 2) === 1;
-    const sy = fromBottom ? 540 - h * (0.42 + (seed % 3) * 0.06) : -h * (0.42 + (seed % 3) * 0.06);
+    const sx = wx - camL * par + phase + (seed % 9) * 30;
+    const sy = fromBottom ? 540 - h * (0.6 + (seed % 3) * 0.05) : -h * (0.5 + (seed % 3) * 0.05);
     ctx.drawImage(img, sx, sy, w, h);
   }
   ctx.globalAlpha = 1;
 }
-function drawForeground() {   // 前景剪影：雙層視差框景（近層大＆散景糊、中層清晰）
+function drawForeground() {   // 前景剪影：三層視差框景（遠清晰小→近散景大），頂/底依樓層換件
   if (menuScreen || selectScreen) return;
   ctx.save();
-  fgLayer(1.28, 1500, 0, 2, 2.6, 0.9, 2654435761);      // 中層：稍遠、清晰、密度低
-  fgLayer(1.62, 1180, 60, 5, 4.4, 0.98, 40503421);      // 近層：大、重度散景糊、近全黑主導
+  fgLayer(1.18, 1700, 0,  1.5, 1.9, 0.82, 2654435761);
+  fgLayer(1.42, 1350, 90, 3,   2.9, 0.92, 40503421);
+  fgLayer(1.78, 1050, 40, 5.5, 4.2, 0.98, 1013904223);
   ctx.restore();
 }
 function drawHUD() {
