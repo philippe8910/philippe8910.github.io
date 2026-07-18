@@ -3603,6 +3603,7 @@ function layoutUI() {              // 視寬變動時重排右錨/置中 UI
   VBTN.fire.x = VIEW_W - 86;
   VBTN.jump.x = VIEW_W - 182;
   VBTN.reload.x = VIEW_W - 78;
+  VBTN.dash.x = VIEW_W - 160;   // 衝刺鈕同步右錨（曾漏掉：固定 800 會在非 16:9 視寬與其他鈕重疊）
   const off = (VIEW_W - 960) / 2;  // 選人畫面整組置中
   SELECT_OPTS[0].x = 96 + off;
   SELECT_OPTS[1].x = 374 + off;
