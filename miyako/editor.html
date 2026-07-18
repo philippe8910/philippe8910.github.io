@@ -165,8 +165,9 @@ function draw() {
   if (showSight) data.spawns.forEach(e => {
     const col = KC[e.kind] || "#fff";
     const circ = e.kind === "grenadier";
-    const [dh, dv] = SIGHT(e.kind);
+    const [dh, dv0] = SIGHT(e.kind);
     const sh = e.sight != null ? e.sight : dh * SIGHT_MUL;   // 覆寫＝所畫即所得；預設吃 1.8 交戰倍率
+    const dv = e.sightV != null ? e.sightV : dv0;            // 垂直偵測可覆寫
     ctx.fillStyle = col; ctx.globalAlpha = e === sel ? 0.12 : 0.045;
     if (circ) {
       const [cx, cy] = W2S(e.x, e.y);
@@ -540,7 +541,7 @@ function showProps() {
                   gates: sel.lock ? "鑰匙門 D" + data.gates.indexOf(sel) + "｜lock 必須和鑰匙道具的 id 相同" : "單向門 G" + data.gates.indexOf(sel) + "（side=可開啟側）",
                   items: "道具｜key鑰匙→填id並在電梯lock填同編號；char角色：7日鞠 8風華 9三千留",
                   camzones: "攝影機框 Z" + (data.camzones || []).indexOf(sel) + "｜玩家在框內時鏡頭鉗在框內（藏隱藏地圖用），進出時鏡頭飛行過渡",
-                  spawns: "敵人 " + sel.kind + data.spawns.indexOf(sel) + "｜sight=偵測距離 atk=開火距離（世界像素，0/留空=兵種預設）" }[kind];
+                  spawns: "敵人 " + sel.kind + data.spawns.indexOf(sel) + "｜sight=偵測水平距離 sightV=偵測垂直半高 atk=開火距離（世界像素，0/留空=兵種預設；range 超出平台會在邊緣折返不滯空）" }[kind];
   let h = `<h3>${title}</h3>`;
   const SELECTS = { kind: Object.keys(KC), axis: ["x", "y"], type: ["key", "char", "skin"], side: ["left", "right"],
                     card: Object.keys(CARD_NAMES), skin: Object.keys(SKIN_NAMES) };
@@ -549,6 +550,7 @@ function showProps() {
   if (kind === "breakables" && !("drop" in sel)) fields.push("drop");
   if (kind === "spawns") {                                               // 偵測/開火距離覆寫（0=用兵種預設）
     if (!("sight" in sel)) fields.push("sight");
+    if (!("sightV" in sel)) fields.push("sightV");
     if (!("atk" in sel)) fields.push("atk");
   }
   if (kind === "elevators" && !("lock" in sel)) fields.push("lock");     // 電梯鎖（空字串=無鎖）
@@ -574,7 +576,7 @@ function showProps() {
     pushUndo();
     const v = inp.type === "number" ? +inp.value : inp.value;
     if (v === "" || (inp.dataset.f === "lock" && !v) ||
-        ((inp.dataset.f === "sight" || inp.dataset.f === "atk") && !v)) delete sel[inp.dataset.f];
+        ((inp.dataset.f === "sight" || inp.dataset.f === "sightV" || inp.dataset.f === "atk") && !v)) delete sel[inp.dataset.f];
     else sel[inp.dataset.f] = inp.dataset.f === "card" ? +v : v;
     if (kind === "items" && inp.dataset.f === "type") { // 道具換類型 → 清掉不相干欄位再重建
       if (v !== "char") delete sel.card;

@@ -1890,7 +1890,7 @@ const BASE_ENEMY_SPAWNS = [
 const ENEMY_SPAWNS = (MAP?.spawns || BASE_ENEMY_SPAWNS).map(s => ({ ...s }));
 const enemies = ENEMY_SPAWNS.map(s => ({
   kind: s.kind, home: s.x, range: s.range,
-  sightO: s.sight, atkO: s.atk,   // 地圖可覆寫：偵測距離/開火距離（世界像素，不吃 ENEMY_FIRE_MUL）
+  sightO: s.sight, atkO: s.atk, sightVO: s.sightV,   // 地圖可覆寫：偵測水平/開火/偵測垂直距離（世界像素，不吃 ENEMY_FIRE_MUL）
   x: s.x, y: s.y,
   w: ENEMY_KINDS[s.kind].hitW || 40, h: ENEMY_KINDS[s.kind].hitH || 130,
   dir: 1, speed: 55,
@@ -1899,6 +1899,13 @@ const enemies = ENEMY_SPAWNS.map(s => ({
   state: ENEMY_KINDS[s.kind].grenade ? "idle" : ENEMY_KINDS[s.kind].stationary ? "shoot" : "run", t: 0, fireT: 0,
 }));
 
+function enemyFooting(x, y) {   // 該 x 腳下是否有地（頂面貼齊敵人腳線 y 的 SOLID；防滯空走路）
+  for (const s of SOLIDS) {
+    if (s.elevator || s.mover) continue;   // 電梯/移動平台不算敵人立足點（會開走留人懸空）
+    if (x >= s.x && x <= s.x + s.w && Math.abs(s.y - y) < 8) return true;
+  }
+  return false;
+}
 function updateEnemies(dt) {
   const vulnerable = player.invulnT <= 0 && player.deathT <= 0;
   const hh = player.crouching ? HITBOX_H_CROUCH : HITBOX_H;
@@ -1930,7 +1937,8 @@ function updateEnemies(dt) {
     const engaged = K.sightR
       ? Math.hypot(dist, player.y - e.y) < sightD &&
         !losBlocked(e.x, e.y - 100, player.x, player.y - 40)
-      : Math.abs(dist) < sightD && Math.abs(player.y - e.y) < (K.sightV || 60);
+      : Math.abs(dist) < sightD &&
+        Math.abs(player.y - e.y) < (e.sightVO != null ? e.sightVO : (K.sightV || 60));
     // 開火距離：spawn 覆寫時，進入偵測仍會警戒/進逼，但到此距離內才實際開火
     const inAtk = e.atkO == null ? true :
       (K.sightR ? Math.hypot(dist, player.y - e.y) : Math.abs(dist)) < e.atkO;
@@ -1971,8 +1979,9 @@ function updateEnemies(dt) {
       }
     } else if (engaged) {
       e.dir = Math.sign(dist) || 1;
-      if (atk.pushRange && Math.abs(dist) > (e.atkO != null ? e.atkO : atk.pushRange * ENEMY_FIRE_MUL)) {
-        // 進逼：跑向玩家到中距離（atkO 覆寫＝進逼到自訂開火距離）
+      const wantPush = atk.pushRange && Math.abs(dist) > (e.atkO != null ? e.atkO : atk.pushRange * ENEMY_FIRE_MUL);
+      if (wantPush && enemyFooting(e.x + e.dir * (e.w / 2 + atk.pushSpeed * dt), e.y)) {
+        // 進逼：跑向玩家到中距離（atkO 覆寫＝進逼到自訂開火距離）；平台邊緣煞停改站射
         if (e.state !== "run") { e.state = "run"; e.t = 0; }
         e.x += e.dir * atk.pushSpeed * dt;
       } else {                                // 站定開火
@@ -1994,7 +2003,9 @@ function updateEnemies(dt) {
       }
     } else {                                  // 巡邏（軟折返：追擊後可走回崗位）
       if (e.state !== "run") { e.state = "run"; e.t = 0; }
-      e.x += e.dir * e.speed * dt;
+      const nx = e.x + e.dir * e.speed * dt;
+      if (!enemyFooting(nx + e.dir * e.w / 2, e.y)) e.dir = -e.dir;   // 平台邊緣折返（巡邏範圍超出平台也不滯空）
+      else e.x = nx;
       if (e.x > e.home + e.range) e.dir = -1;
       if (e.x < e.home - e.range) e.dir = 1;
     }
