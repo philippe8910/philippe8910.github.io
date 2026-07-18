@@ -1,71 +1,453 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>網站目錄 | philippe8910.github.io</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap');
-        body { font-family: 'Noto Sans TC', sans-serif; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>philippe8910 — 目錄</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;600;900&family=IBM+Plex+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+    --paper: #121110;      /* 墨紙 */
+    --ink: #e9e4d8;        /* 骨白 */
+    --ink-soft: #8a8478;
+    --hair: #2c2a25;
+    --seal: #c8371e;
+    --seal-bright: #e04a2d;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { background: var(--paper); }
+
+body {
+    font-family: 'Noto Serif TC', serif;
+    color: var(--ink);
+    background: var(--paper);
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+}
+
+::selection { background: var(--seal); color: var(--paper); }
+
+.mono {
+    font-family: 'IBM Plex Mono', monospace;
+    letter-spacing: 0.12em;
+}
+
+.page {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 0 clamp(20px, 5vw, 64px);
+    position: relative;
+}
+
+/* ── 頂欄 ─────────────────────────── */
+.topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 28px 0 14px;
+    border-bottom: 1px solid var(--ink);
+    font-size: 11px;
+}
+.topbar .dim { color: var(--ink-soft); }
+
+/* ── 標題區 ───────────────────────── */
+.hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding: clamp(48px, 10vh, 110px) 0 clamp(36px, 7vh, 80px);
+    position: relative;
+}
+
+/* 巨大浮水印 */
+.hero .watermark {
+    position: absolute;
+    right: -4%;
+    top: 50%;
+    transform: translateY(-54%);
+    font-size: clamp(240px, 42vw, 460px);
+    font-weight: 900;
+    color: rgba(233, 228, 216, 0.028);
+    pointer-events: none;
+    user-select: none;
+    line-height: 1;
+}
+
+.hero h1 {
+    font-size: clamp(64px, 14vw, 150px);
+    font-weight: 900;
+    line-height: 0.95;
+    letter-spacing: 0.04em;
+}
+
+.hero .sub {
+    margin-top: 22px;
+    font-size: 12px;
+    color: var(--ink-soft);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+.hero .sub::before {
+    content: "";
+    display: block;
+    width: 48px;
+    height: 1px;
+    background: var(--ink);
+}
+
+/* 直排側註 + 印章 */
+.hero-side {
+    display: flex;
+    align-items: flex-end;
+    gap: 18px;
+    padding-bottom: 8px;
+}
+
+.tategaki {
+    writing-mode: vertical-rl;
+    font-size: 13px;
+    letter-spacing: 0.42em;
+    color: var(--ink-soft);
+    font-weight: 500;
+    height: 150px;
+}
+
+.seal {
+    width: 44px;
+    height: 44px;
+    background: var(--seal);
+    color: #f4f1ea;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: 900;
+    border-radius: 3px;
+    transform: rotate(-3deg);
+    box-shadow: 0 0 24px rgba(200, 55, 30, 0.25);
+    user-select: none;
+}
+
+/* ── 簡述 ─────────────────────────── */
+.about {
+    display: grid;
+    grid-template-columns: 72px 1fr;
+    gap: 24px;
+    padding: 26px 0;
+    border-top: 1px solid var(--ink);
+    margin-bottom: clamp(40px, 8vh, 88px);
+}
+
+.about .label {
+    font-size: 10px;
+    color: var(--ink-soft);
+    padding-top: 6px;
+}
+
+.about p {
+    font-size: clamp(16px, 2.2vw, 20px);
+    font-weight: 500;
+    line-height: 2;
+    max-width: 34em;
+}
+
+.about p b {
+    font-weight: 600;
+    border-bottom: 1px solid var(--seal);
+    padding-bottom: 1px;
+}
+
+/* ── 目錄列表 ─────────────────────── */
+.index-head {
+    display: grid;
+    grid-template-columns: 72px 1fr auto;
+    gap: 24px;
+    padding: 10px 0;
+    border-top: 1px solid var(--ink);
+    border-bottom: 1px solid var(--hair);
+    font-size: 10px;
+    color: var(--ink-soft);
+}
+
+.entry {
+    display: grid;
+    grid-template-columns: 72px 1fr auto;
+    gap: 24px;
+    align-items: baseline;
+    padding: 34px 0;
+    border-bottom: 1px solid var(--hair);
+    text-decoration: none;
+    color: var(--ink);
+    position: relative;
+    transition: padding-left 0.35s cubic-bezier(.22,1,.36,1);
+}
+.entry:last-of-type { border-bottom: 1px solid var(--ink); }
+
+.entry .no {
+    font-size: 12px;
+    color: var(--ink-soft);
+    transition: color 0.25s;
+}
+
+.entry .title {
+    display: block;
+    font-size: clamp(26px, 4.5vw, 42px);
+    font-weight: 600;
+    line-height: 1.15;
+    letter-spacing: 0.02em;
+    transition: color 0.25s;
+}
+
+.entry .title em {
+    font-style: normal;
+    font-size: 0.42em;
+    font-weight: 500;
+    color: var(--ink-soft);
+    margin-left: 16px;
+    letter-spacing: 0.14em;
+    white-space: nowrap;
+}
+
+.entry .desc {
+    display: block;
+    margin-top: 12px;
+    font-size: 13px;
+    line-height: 1.9;
+    color: var(--ink-soft);
+    max-width: 36em;
+    font-weight: 500;
+}
+
+.entry .meta {
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+}
+
+.entry .cat {
+    font-size: 11px;
+    color: var(--ink-soft);
+    transition: color 0.25s;
+}
+
+.entry .year {
+    font-size: 10px;
+    color: var(--hair);
+    transition: color 0.25s;
+}
+
+/* hover：左端浮出朱色豎線，編號染朱 */
+.entry::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 22%;
+    bottom: 22%;
+    width: 3px;
+    background: var(--seal-bright);
+    transform: scaleY(0);
+    transform-origin: top;
+    transition: transform 0.35s cubic-bezier(.22,1,.36,1);
+}
+
+.entry:hover { padding-left: 22px; }
+.entry:hover::before { transform: scaleY(1); }
+.entry:hover .no { color: var(--seal-bright); }
+.entry:hover .title { color: #fffbf0; }
+.entry:hover .cat { color: var(--ink); }
+.entry:hover .year { color: var(--ink-soft); }
+
+/* ── Colophon 版權頁 ──────────────── */
+.colophon {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 32px;
+    padding: 44px 0;
+    margin-top: clamp(48px, 10vh, 100px);
+    border-top: 1px solid var(--ink);
+}
+
+.colophon h3 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    color: var(--ink-soft);
+    margin-bottom: 16px;
+}
+
+.colophon p, .colophon a {
+    font-size: 13px;
+    line-height: 2;
+    color: var(--ink);
+    font-weight: 500;
+    text-decoration: none;
+}
+
+.colophon a {
+    display: block;
+    width: fit-content;
+    border-bottom: 1px solid var(--hair);
+    transition: border-color 0.25s, color 0.25s;
+}
+.colophon a:hover {
+    color: var(--seal-bright);
+    border-color: var(--seal-bright);
+}
+
+.colophon .swatches {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+.colophon .swatch {
+    width: 22px;
+    height: 22px;
+    border-radius: 2px;
+    border: 1px solid var(--hair);
+}
+
+/* ── 頁尾 ─────────────────────────── */
+footer {
+    display: flex;
+    justify-content: space-between;
+    padding: 22px 0 44px;
+    border-top: 1px solid var(--hair);
+    font-size: 10px;
+    color: var(--ink-soft);
+}
+
+/* ── 響應式 ───────────────────────── */
+@media (max-width: 640px) {
+    .hero-side { display: none; }
+    .hero .watermark { right: -12%; }
+    .about { grid-template-columns: 1fr; gap: 10px; }
+    .index-head { grid-template-columns: 48px 1fr auto; gap: 14px; }
+    .entry { grid-template-columns: 48px 1fr; gap: 14px; padding: 26px 0; }
+    .entry .meta { grid-column: 2; flex-direction: row; gap: 14px; margin-top: 8px; }
+    .entry .title em { display: block; margin: 8px 0 0; }
+    .entry:hover { padding-left: 14px; }
+    .colophon { grid-template-columns: 1fr; gap: 30px; }
+}
+</style>
 </head>
-<body class="bg-gray-100 min-h-screen py-12 px-4 text-gray-900">
+<body>
 
-    <div class="max-w-3xl mx-auto">
-        <header class="mb-12 text-center">
-            <h1 class="text-3xl md:text-4xl font-black tracking-tight">網站目錄</h1>
-            <p class="mt-3 text-gray-500 text-sm">選擇要前往的頁面</p>
-        </header>
+<div class="page">
 
-        <div class="grid gap-6 md:grid-cols-2">
-
-            <a href="./quiz/" class="block bg-white rounded-3xl shadow-lg overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all">
-                <div class="h-2 bg-gradient-to-r from-gray-700 via-gray-900 to-black"></div>
-                <div class="p-6">
-                    <h2 class="text-xl font-black">出國發展風險評估</h2>
-                    <p class="mt-2 text-sm text-gray-500 leading-relaxed">打工換宿／語言學校風險深度測驗，快速評估成長還是技能倒退。</p>
-                </div>
-            </a>
-
-            <a href="./game/" class="block bg-white rounded-3xl shadow-lg overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all">
-                <div class="h-2 bg-gradient-to-r from-indigo-500 via-purple-600 to-black"></div>
-                <div class="p-6">
-                    <h2 class="text-xl font-black">Hollow Slayer</h2>
-                    <p class="mt-2 text-sm text-gray-500 leading-relaxed">Abyssal Ruins — 2D 動作平台遊戲，支援手機操作。</p>
-                </div>
-            </a>
-
-            <a href="./miyako/" class="block bg-white rounded-3xl shadow-lg overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all">
-                <div class="h-2 bg-gradient-to-r from-sky-400 via-blue-600 to-black"></div>
-                <div class="p-6">
-                    <h2 class="text-xl font-black">Miyako — 像素橫向動作</h2>
-                    <p class="mt-2 text-sm text-gray-500 leading-relaxed">三層 Metroidvania 地圖、Boss 戰與召喚隊友、支援卡牌與手機觸控。Speedrun 計時挑戰。</p>
-                </div>
-            </a>
-
-            <a href="./profile/" class="block bg-white rounded-3xl shadow-lg overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all">
-                <div class="h-2 bg-gradient-to-r from-emerald-500 via-teal-600 to-black"></div>
-                <div class="p-6">
-                    <h2 class="text-xl font-black">ZHE's Terminal</h2>
-                    <p class="mt-2 text-sm text-gray-500 leading-relaxed">個人介紹頁面。</p>
-                </div>
-            </a>
-
-            <a href="./csharp/" class="block bg-white rounded-3xl shadow-lg overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all">
-                <div class="h-2 bg-gradient-to-r from-blue-500 via-sky-600 to-black"></div>
-                <div class="p-6">
-                    <h2 class="text-xl font-black">C# 面試 200 題</h2>
-                    <p class="mt-2 text-sm text-gray-500 leading-relaxed">C# 面試題庫測驗，手機完美版。</p>
-                </div>
-            </a>
-
-        </div>
-
-        <footer class="mt-12 text-center text-xs text-gray-400">
-            philippe8910.github.io
-        </footer>
+    <div class="topbar mono">
+        <span>PHILIPPE8910</span>
+        <span class="dim">INDEX&nbsp;/&nbsp;MMXXVI</span>
     </div>
+
+    <section class="hero">
+        <span class="watermark" aria-hidden="true">目</span>
+        <div>
+            <h1>目錄</h1>
+            <p class="sub mono">TABLE OF CONTENTS — 4 ENTRIES</p>
+        </div>
+        <div class="hero-side">
+            <p class="tategaki">網站索引・二〇二六</p>
+            <div class="seal">哲</div>
+        </div>
+    </section>
+
+    <section class="about">
+        <span class="label mono">ABOUT</span>
+        <p>
+            這裡收錄了幾件親手做的東西 —— 兩款<b>瀏覽器遊戲</b>、
+            一頁個人介紹，以及一套面試題庫。
+            全部以純網頁技術構成，開啟即玩，手機亦可。
+        </p>
+    </section>
+
+    <div class="index-head mono">
+        <span>NO.</span>
+        <span>TITLE</span>
+        <span>CATEGORY</span>
+    </div>
+
+    <a class="entry" href="./game/">
+        <span class="no mono">01</span>
+        <span>
+            <span class="title">Hollow Slayer<em>幽域斬擊</em></span>
+            <span class="desc">Abyssal Ruins —— 2D 動作平台遊戲。深淵遺跡中的斬擊與跳躍，支援手機觸控操作。</span>
+        </span>
+        <span class="meta">
+            <span class="cat mono">GAME</span>
+            <span class="year mono">MMXXVI</span>
+        </span>
+    </a>
+
+    <a class="entry" href="./miyako/">
+        <span class="no mono">02</span>
+        <span>
+            <span class="title">Miyako<em>像素橫向動作</em></span>
+            <span class="desc">三層 Metroidvania 地圖、Boss 戰、召喚隊友與卡牌系統。內建 Speedrun 計時，支援手機觸控。</span>
+        </span>
+        <span class="meta">
+            <span class="cat mono">GAME</span>
+            <span class="year mono">MMXXVI</span>
+        </span>
+    </a>
+
+    <a class="entry" href="./profile/">
+        <span class="no mono">03</span>
+        <span>
+            <span class="title">ZHE's Terminal<em>個人介紹</em></span>
+            <span class="desc">以終端機介面呈現的個人頁面。</span>
+        </span>
+        <span class="meta">
+            <span class="cat mono">PROFILE</span>
+            <span class="year mono">MMXXVI</span>
+        </span>
+    </a>
+
+    <a class="entry" href="./csharp/">
+        <span class="no mono">04</span>
+        <span>
+            <span class="title">C# 面試二百題<em>題庫測驗</em></span>
+            <span class="desc">兩百道 C# 面試題目的隨機測驗，即答即評，為行動裝置最佳化。</span>
+        </span>
+        <span class="meta">
+            <span class="cat mono">QUIZ</span>
+            <span class="year mono">MMXXVI</span>
+        </span>
+    </a>
+
+    <section class="colophon">
+        <div>
+            <h3>TYPOGRAPHY</h3>
+            <p>Noto Serif TC — 標題與內文<br>IBM Plex Mono — 編號與註記</p>
+        </div>
+        <div>
+            <h3>PALETTE</h3>
+            <p>墨紙・骨白・印朱</p>
+            <div class="swatches">
+                <span class="swatch" style="background:#121110"></span>
+                <span class="swatch" style="background:#e9e4d8"></span>
+                <span class="swatch" style="background:#c8371e"></span>
+            </div>
+        </div>
+        <div>
+            <h3>CONTACT</h3>
+            <a href="https://github.com/philippe8910" target="_blank" rel="noopener">GitHub — philippe8910</a>
+        </div>
+    </section>
+
+    <footer class="mono">
+        <span>© MMXXVI PHILIPPE8910</span>
+        <span>philippe8910.github.io</span>
+    </footer>
+
+</div>
 
 </body>
 </html>
