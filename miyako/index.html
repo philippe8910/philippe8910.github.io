@@ -829,6 +829,7 @@ let dashLastAfterX = 0, dashAfterCount = 0;   // 沙德威斯坦拖尾：等距�
 // 完美閃避子彈時間（沙德威斯坦）：dash 主動幀穿過敵彈 → 世界慢動作 1 秒，玩家較快
 let bulletTimeT = 0;
 const BULLET_TIME_DUR = 1.0, BULLET_TIME_SCALE = 0.25, BULLET_TIME_PLAYER_SCALE = 1;   // 玩家速度不變、只有敵人變慢
+const BT_EASE = 0.25;   // 尾段淡出：最後 0.25s 世界時間緩回 1、視覺覆蓋層同步淡出（避免硬切）
 const PERFECT_WINDOW = 0.1;   // 完美閃避判定窗口：僅 dash 起始 0.1 秒穿過敵彈才算（後段不算）
 function triggerPerfectDodge() {
   if (bulletTimeT > 0) return;                 // 已在子彈時間內不重複觸發
@@ -1565,6 +1566,7 @@ function throwEnemyGrenade(e, K) {
 }
 
 function fireEnemyShot(e, K) {
+  sfxEnemyGun();
   const scale = K.drawH / K.fh, dw = K.fw * scale;
   const mx = e.x + e.dir * (K.muzzle.fx - K.anchor) * dw;
   const my = e.y - (K.feet - K.muzzle.fy) * K.drawH;
@@ -1822,6 +1824,7 @@ function updateEnemies(dt) {
 function hurtPlayer(dir, dmg = 1) {
   if (godMode) return;
   if (player.invulnT > 0 || player.deathT > 0) return;   // 無敵幀
+  sfxHurt();
   if (supportEquipped(8)) dmg *= 0.7;                     // 風華被動：防禦力 +30%
   if (currentSkin === "mika") dmg *= 0.5;                 // 彌香被動：受傷減半
   if (player.shieldHp > 0) {         // 護盾先吸收（被動盾也吸；全吸收時不硬直不擊退）
@@ -2839,6 +2842,49 @@ function sfxPerfectDodge() {        // 完美閃避子彈時間啟動：下滑�
   const g2 = audioCtx.createGain(); g2.gain.setValueAtTime(0.11, t); g2.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
   o2.connect(g2); g2.connect(masterGain); o2.start(t); o2.stop(t + 0.3);
 }
+// ── 程序化音效庫：共用輔助（噪聲爆點 / 音調），各動作合成專屬短音 ──
+function sfxOn() { return audioCtx && masterGain && volume > 0; }
+function noiseBuf(dur) {                          // 白噪 buffer（快取免重建）
+  const key = "_nb" + Math.round(dur * 1000);
+  if (!noiseBuf[key]) {
+    const n = Math.max(1, (audioCtx.sampleRate * dur) | 0);
+    const b = audioCtx.createBuffer(1, n, audioCtx.sampleRate), d = b.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    noiseBuf[key] = b;
+  }
+  return noiseBuf[key];
+}
+function noiseHit(dur, gain, type, f0, f1, atk) {  // 噪聲爆點：帶通/低通掃頻
+  const t = audioCtx.currentTime;
+  const s = audioCtx.createBufferSource(); s.buffer = noiseBuf(dur);
+  const bp = audioCtx.createBiquadFilter(); bp.type = type || "bandpass";
+  bp.frequency.setValueAtTime(f0, t); if (f1) bp.frequency.exponentialRampToValueAtTime(f1, t + dur);
+  bp.Q.value = 0.9;
+  const g = audioCtx.createGain(); g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(gain, t + (atk || 0.004));
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  s.connect(bp); bp.connect(g); g.connect(masterGain); s.start(t); s.stop(t + dur + 0.02);
+}
+function tone(type, f0, f1, dur, gain, dl) {      // 音調：掃頻正弦/方波
+  const t = audioCtx.currentTime + (dl || 0);
+  const o = audioCtx.createOscillator(); o.type = type;
+  o.frequency.setValueAtTime(f0, t); if (f1) o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+  const g = audioCtx.createGain(); g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(gain, t + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g); g.connect(masterGain); o.start(t); o.stop(t + dur + 0.02);
+}
+function sfxJump()  { if (sfxOn()) tone("square", 300, 720, 0.14, 0.10); }
+function sfxLand()  { if (sfxOn()) { tone("sine", 180, 70, 0.12, 0.12); noiseHit(0.09, 0.06, "lowpass", 500, 160); } }
+function sfxDash()  { if (sfxOn()) { noiseHit(0.28, 0.14, "bandpass", 320, 2600, 0.02); tone("sawtooth", 620, 240, 0.22, 0.05); } }
+function sfxHurt()  { if (sfxOn()) { tone("sawtooth", 420, 90, 0.18, 0.16); noiseHit(0.12, 0.08, "bandpass", 900, 300); } }
+function sfxReload(){ if (sfxOn()) { noiseHit(0.05, 0.09, "bandpass", 2600, 1400); noiseHit(0.05, 0.09, "bandpass", 2000, 3000); setTimeout(() => { if (sfxOn()) noiseHit(0.05, 0.11, "bandpass", 1600, 2600); }, 150); } }
+function sfxEnemyGun(){ if (sfxOn()) noiseHit(0.08, 0.05, "lowpass", 1400, 500, 0.003); }   // 較悶較輕，與玩家槍聲區隔
+function sfxHit()   { if (sfxOn()) noiseHit(0.05, 0.07, "bandpass", 3200, 1600); }           // 子彈命中敵人
+function sfxKill()  { if (sfxOn()) { tone("triangle", 520, 160, 0.22, 0.12); noiseHit(0.16, 0.09, "lowpass", 1800, 300); } }
+function sfxCard()  { if (sfxOn()) { tone("triangle", 520, 1040, 0.2, 0.09); tone("sine", 1300, 2100, 0.18, 0.05, 0.05); } }
+function sfxPickup(){ if (sfxOn()) { tone("sine", 700, 900, 0.1, 0.12); tone("sine", 1050, 1350, 0.12, 0.11, 0.09); } }
+function sfxCostFull(){ if (sfxOn()) { tone("sine", 880, 1320, 0.16, 0.1); tone("sine", 1320, 1760, 0.16, 0.08, 0.08); } }
 function setVolume(v) {
   volume = Math.max(0, Math.min(1, v));
   try { localStorage.setItem("miyako_vol", volume); } catch (e) {}
@@ -3568,6 +3614,7 @@ function pickTarget(wx, wy, maxDist) {
 function castCard(i, wx, wy) {
   const c = CARDS[i];
   if (cost < cardCost(c) || player.deathT > 0) return false;
+  sfxCard();
   if (c.skill === "heal") {          // 粉髮：附近隨機位置生成血包（觸碰回復 1/3 最大生命）
     cost -= cardCost(c); c.flashT = 0.3;
     const hx = Math.max(40, Math.min(WORLD.w - 40, player.x + (Math.random() * 240 - 120)));
@@ -3779,10 +3826,12 @@ function damageEnemy(e, dmg, crit) {
   pushDmgPop(e.x, e.y - e.h - 8, dmg, crit);
   e.hp -= dmg;
   e.flashT = 0.08;
+  sfxHit();
   if (crit) hitstopT = Math.max(hitstopT, 0.04);
   if (e.hp <= 0) {
     e.state = "death"; e.t = 0; e.deadT = 6;
     hitstopT = Math.max(hitstopT, 0.06);
+    sfxKill();
     const cr = CREDIT_VALUE[e.kind] || 10;        // 信用點數（Cost 改由命中累積）
     gainCredits(cr);
     stats.kills++;
@@ -4310,6 +4359,7 @@ function physics(dt) {
     spawnDust(player.x, player.y, 6, 30);
     shakeT = Math.max(shakeT, 0.08);
     dashLastAfterX = player.x; dashAfterCount = 0;   // 拖尾起點
+    sfxDash();
   }
 
   // reload: R to reload manually, auto when firing on empty; blocks shooting
@@ -4320,6 +4370,7 @@ function physics(dt) {
   if (!hurting && player.reloadT <= 0 &&
       (((keys.KeyR || vpad.reload) && player.ammo < MAG_SIZE) || (fireKey && player.ammo <= 0))) {
     player.reloadT = RELOAD_TIME;
+    sfxReload();
   }
   const reloading = player.reloadT > 0;
 
@@ -4347,6 +4398,7 @@ function physics(dt) {
     player.onGround = false;
     setState("rise");
     spawnDust(player.x, player.y, 4, 26);
+    sfxJump();
   }
 
   if (player.dashT > 0) {              // 衝刺中：高速平移、抵銷重力、留殘影
@@ -4403,7 +4455,7 @@ function physics(dt) {
   } else if (shooting) {
     setState(moveInput ? "run_shoot" : "shoot");
   } else {
-    if (!wasOnGround) { setState(moveInput ? "run" : "land"); spawnDust(player.x, player.y, 5, 30); }
+    if (!wasOnGround) { setState(moveInput ? "run" : "land"); spawnDust(player.x, player.y, 5, 30); sfxLand(); }
     else if (player.state === "land") {
       if (moveInput) setState("run");
       else if (animDone(ANIMS.land, player.t)) setState("idle");
@@ -4875,15 +4927,16 @@ function draw() {
   // 完美閃避沙德威斯坦：冷青暗角 + 掃描線 + 觸發青白閃 + 電影黑邊
   if (bulletTimeT > 0) {
     const e = bulletTimeT / BULLET_TIME_DUR;                 // 1→0
+    const fade = Math.min(1, bulletTimeT / BT_EASE);         // 尾段淡出係數（與世界時間緩回同步）
     const rg = ctx.createRadialGradient(VIEW_W / 2, 264, 120, VIEW_W / 2, 264, 580);
     rg.addColorStop(0, "rgba(0,210,255,0)");
-    rg.addColorStop(1, "rgba(0,170,255,0.30)");
+    rg.addColorStop(1, `rgba(0,170,255,${0.30 * fade})`);
     ctx.fillStyle = rg; ctx.fillRect(0, 0, VIEW_W, 540);
-    ctx.fillStyle = "rgba(140,245,255,0.045)";              // 掃描線
+    ctx.fillStyle = `rgba(140,245,255,${0.045 * fade})`;    // 掃描線
     for (let y = (uiTime * 220) % 4; y < 540; y += 4) ctx.fillRect(0, y, VIEW_W, 1);
     const flash = Math.max(0, (bulletTimeT - (BULLET_TIME_DUR - 0.16)) / 0.16);  // 觸發瞬間青白閃
     if (flash > 0) { ctx.fillStyle = `rgba(190,250,255,${flash * 0.55})`; ctx.fillRect(0, 0, VIEW_W, 540); }
-    ctx.fillStyle = `rgba(6,12,18,${0.42 + 0.1 * e})`;       // 電影黑邊
+    ctx.fillStyle = `rgba(6,12,18,${(0.42 + 0.1 * e) * fade})`;   // 電影黑邊
     ctx.fillRect(0, 0, VIEW_W, 24); ctx.fillRect(0, 516, VIEW_W, 24);
     ctx.textAlign = "center"; ctx.font = `bold 13px ${UI_FONT}`;
     ctx.fillStyle = `rgba(180,250,255,${0.5 * e})`;
@@ -6745,8 +6798,9 @@ function loop(ts) {
   if (btA) player.invulnT = Math.max(player.invulnT, 0.2);   // 子彈時間全程無敵（維持 invulnT，各傷害判定自動生效）
   // 玩家自身時間：瞄準時 0.25；完美閃避子彈時間時 0.6（比世界快＝沙德威斯坦穿梭感）
   const dt = rawDt * (targeting ? TARGETING_TIMESCALE : (btA ? BULLET_TIME_PLAYER_SCALE : 1));
-  // 世界（敵人/子彈）時間：完美閃避時慢到 0.25
-  const wdt = rawDt * (targeting ? TARGETING_TIMESCALE : (btA ? BULLET_TIME_SCALE : 1));
+  // 世界（敵人/子彈）時間：完美閃避時慢到 0.25，尾段 BT_EASE 緩回 1
+  const btFade = btA ? Math.min(1, bulletTimeT / BT_EASE) : 0;
+  const wdt = rawDt * (targeting ? TARGETING_TIMESCALE : (1 - (1 - BULLET_TIME_SCALE) * btFade));
   player.t += dt;
   physics(dt);
   if (player.y > WORLD.h + 200) {           // safety respawn
