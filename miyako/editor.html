@@ -40,7 +40,8 @@ data.gates = data.gates || (INITIAL.gates ? JSON.parse(JSON.stringify(INITIAL.ga
 data.breakables = data.breakables || [];
 data.ghosts = data.ghosts || [];
 let showSight = true;
-const SIGHT = k => k === "rocket" ? [1000, 170] : [480, 60];   // 交戰偵測（水平/垂直）
+const SIGHT = k => k === "rocket" ? [1000, 170] : k === "grenadier" ? [700, 0] : [480, 60];   // 交戰偵測（水平/垂直；手雷兵=圓形半徑）
+const SIGHT_MUL = 1.8;   // 遊戲內交戰倍率 ENEMY_FIRE_MUL（spawn 覆寫值不吃倍率，所畫即所得）
 const ITEM_COL = { char: "#ffcf4a", skin: "#ff8ac2", key: "#ffa14a" };
 const CARD_NAMES = { 7: "日鞠", 8: "風華", 9: "三千留" };
 const SKIN_NAMES = { swim: "泳裝" };
@@ -160,13 +161,34 @@ function draw() {
     ctx.beginPath(); ctx.moveTo(sx, sy - 22); ctx.lineTo(sx + 13, sy - 17); ctx.lineTo(sx, sy - 12); ctx.fill();
     ctx.fillText("CP" + i, sx - 10, sy + 12);
   });
-  // 敵人感應範圍（半透明框：水平 ±sight、垂直 ±sightV）
+  // 敵人偵測/開火範圍（sight/atk 可被 spawn 覆寫；手雷兵=圓形，其餘=水平框 ±sight、垂直 ±sightV）
   if (showSight) data.spawns.forEach(e => {
-    const [sh, sv] = SIGHT(e.kind);
-    const [x0, y0] = W2S(e.x - sh, e.y - sv), [x1, y1] = W2S(e.x + sh, e.y + sv);
-    ctx.fillStyle = KC[e.kind] || "#fff"; ctx.globalAlpha = e === sel ? 0.12 : 0.045;
-    ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
-    if (e === sel) { ctx.globalAlpha = 0.5; ctx.strokeStyle = KC[e.kind]; ctx.strokeRect(x0, y0, x1 - x0, y1 - y0); }
+    const col = KC[e.kind] || "#fff";
+    const circ = e.kind === "grenadier";
+    const [dh, dv] = SIGHT(e.kind);
+    const sh = e.sight != null ? e.sight : dh * SIGHT_MUL;   // 覆寫＝所畫即所得；預設吃 1.8 交戰倍率
+    ctx.fillStyle = col; ctx.globalAlpha = e === sel ? 0.12 : 0.045;
+    if (circ) {
+      const [cx, cy] = W2S(e.x, e.y);
+      ctx.beginPath(); ctx.arc(cx, cy, sh * scale, 0, 7); ctx.fill();
+      if (e === sel) { ctx.globalAlpha = 0.5; ctx.strokeStyle = col; ctx.stroke(); }
+    } else {
+      const [x0, y0] = W2S(e.x - sh, e.y - dv), [x1, y1] = W2S(e.x + sh, e.y + dv);
+      ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+      if (e === sel) { ctx.globalAlpha = 0.5; ctx.strokeStyle = col; ctx.strokeRect(x0, y0, x1 - x0, y1 - y0); }
+    }
+    if (e.atk) {   // 自訂開火距離：橙色虛線
+      ctx.globalAlpha = e === sel ? 0.9 : 0.35;
+      ctx.strokeStyle = "#ff9d4d"; ctx.setLineDash([6, 5]);
+      if (circ) {
+        const [cx, cy] = W2S(e.x, e.y);
+        ctx.beginPath(); ctx.arc(cx, cy, e.atk * scale, 0, 7); ctx.stroke();
+      } else {
+        const [ax0, ay0] = W2S(e.x - e.atk, e.y - dv), [ax1, ay1] = W2S(e.x + e.atk, e.y + dv);
+        ctx.strokeRect(ax0, ay0, ax1 - ax0, ay1 - ay0);
+      }
+      ctx.setLineDash([]);
+    }
     ctx.globalAlpha = 1;
   });
   // 移動平台（青色 + 來回路徑）
@@ -518,13 +540,17 @@ function showProps() {
                   gates: sel.lock ? "鑰匙門 D" + data.gates.indexOf(sel) + "｜lock 必須和鑰匙道具的 id 相同" : "單向門 G" + data.gates.indexOf(sel) + "（side=可開啟側）",
                   items: "道具｜key鑰匙→填id並在電梯lock填同編號；char角色：7日鞠 8風華 9三千留",
                   camzones: "攝影機框 Z" + (data.camzones || []).indexOf(sel) + "｜玩家在框內時鏡頭鉗在框內（藏隱藏地圖用），進出時鏡頭飛行過渡",
-                  spawns: "敵人 " + sel.kind + data.spawns.indexOf(sel) }[kind];
+                  spawns: "敵人 " + sel.kind + data.spawns.indexOf(sel) + "｜sight=偵測距離 atk=開火距離（世界像素，0/留空=兵種預設）" }[kind];
   let h = `<h3>${title}</h3>`;
   const SELECTS = { kind: Object.keys(KC), axis: ["x", "y"], type: ["key", "char", "skin"], side: ["left", "right"],
                     card: Object.keys(CARD_NAMES), skin: Object.keys(SKIN_NAMES) };
   const OPT_LABEL = { card: v => v + " " + CARD_NAMES[v], skin: v => v + "（" + SKIN_NAMES[v] + "）" };
   let fields = Object.keys(sel).filter(f => f !== "c");
   if (kind === "breakables" && !("drop" in sel)) fields.push("drop");
+  if (kind === "spawns") {                                               // 偵測/開火距離覆寫（0=用兵種預設）
+    if (!("sight" in sel)) fields.push("sight");
+    if (!("atk" in sel)) fields.push("atk");
+  }
   if (kind === "elevators" && !("lock" in sel)) fields.push("lock");     // 電梯鎖（空字串=無鎖）
   if (kind === "camzones" && !("secret" in sel)) fields.push("secret");   // secret=1：永久不顯示在小地圖
   if (kind === "items") {
@@ -547,7 +573,8 @@ function showProps() {
   p.querySelectorAll("input,select").forEach(inp => inp.onchange = () => {
     pushUndo();
     const v = inp.type === "number" ? +inp.value : inp.value;
-    if (v === "" || (inp.dataset.f === "lock" && !v)) delete sel[inp.dataset.f];
+    if (v === "" || (inp.dataset.f === "lock" && !v) ||
+        ((inp.dataset.f === "sight" || inp.dataset.f === "atk") && !v)) delete sel[inp.dataset.f];
     else sel[inp.dataset.f] = inp.dataset.f === "card" ? +v : v;
     if (kind === "items" && inp.dataset.f === "type") { // 道具換類型 → 清掉不相干欄位再重建
       if (v !== "char") delete sel.card;

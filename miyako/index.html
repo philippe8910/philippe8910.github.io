@@ -1887,6 +1887,7 @@ const BASE_ENEMY_SPAWNS = [
 const ENEMY_SPAWNS = (MAP?.spawns || BASE_ENEMY_SPAWNS).map(s => ({ ...s }));
 const enemies = ENEMY_SPAWNS.map(s => ({
   kind: s.kind, home: s.x, range: s.range,
+  sightO: s.sight, atkO: s.atk,   // 地圖可覆寫：偵測距離/開火距離（世界像素，不吃 ENEMY_FIRE_MUL）
   x: s.x, y: s.y,
   w: ENEMY_KINDS[s.kind].hitW || 40, h: ENEMY_KINDS[s.kind].hitH || 130,
   dir: 1, speed: 55,
@@ -1921,10 +1922,15 @@ function updateEnemies(dt) {
 
     const dist = player.x - e.x;
     const atk = K.attack;
+    // 偵測距離：spawn 覆寫優先（editor 所畫即所得），否則兵種預設 ×1.8 交戰倍率
+    const sightD = e.sightO != null ? e.sightO : (K.sightR || K.sight || 480) * ENEMY_FIRE_MUL;
     const engaged = K.sightR
-      ? Math.hypot(dist, player.y - e.y) < K.sightR * ENEMY_FIRE_MUL &&
+      ? Math.hypot(dist, player.y - e.y) < sightD &&
         !losBlocked(e.x, e.y - 100, player.x, player.y - 40)
-      : Math.abs(dist) < (K.sight || 480) * ENEMY_FIRE_MUL && Math.abs(player.y - e.y) < (K.sightV || 60);
+      : Math.abs(dist) < sightD && Math.abs(player.y - e.y) < (K.sightV || 60);
+    // 開火距離：spawn 覆寫時，進入偵測仍會警戒/進逼，但到此距離內才實際開火
+    const inAtk = e.atkO == null ? true :
+      (K.sightR ? Math.hypot(dist, player.y - e.y) : Math.abs(dist)) < e.atkO;
     // 瞄準射擊：玩家在射線上持續蹲下 >1.2s → 直線彈敵人壓低槍口（火箭/霰彈/手雷本就反蹲，不參與）
     if (engaged && player.crouching && !K.rocket && !K.shotgun && !K.grenade) {
       e.aimT = (e.aimT || 0) + dt;
@@ -1938,7 +1944,7 @@ function updateEnemies(dt) {
         if (e.releaseT <= 0) throwEnemyGrenade(e, K);
       }
       if (e.state === "shoot" && animDone(K.anims.shoot, e.t)) { e.state = "idle"; e.t = 0; }
-      if (engaged) {
+      if (engaged && inAtk) {
         e.fireT -= dt;
         if (e.fireT <= 0) {
           e.state = "shoot"; e.t = 0;
@@ -1951,7 +1957,7 @@ function updateEnemies(dt) {
     } else if (K.stationary) {                // 砲台：不移動，交戰時朝玩家定速射擊
       e.dir = Math.sign(dist) || e.dir;
       if (e.state !== "shoot") { e.state = "shoot"; e.t = 0; e.fireT = atk.first; }
-      if (engaged) {
+      if (engaged && inAtk) {
         e.fireT -= dt;
         if (e.fireT <= 0) {
           fireEnemyShot(e, K);
@@ -1962,8 +1968,8 @@ function updateEnemies(dt) {
       }
     } else if (engaged) {
       e.dir = Math.sign(dist) || 1;
-      if (atk.pushRange && Math.abs(dist) > atk.pushRange * ENEMY_FIRE_MUL) {
-        // 進逼：跑向玩家到中距離
+      if (atk.pushRange && Math.abs(dist) > (e.atkO != null ? e.atkO : atk.pushRange * ENEMY_FIRE_MUL)) {
+        // 進逼：跑向玩家到中距離（atkO 覆寫＝進逼到自訂開火距離）
         if (e.state !== "run") { e.state = "run"; e.t = 0; }
         e.x += e.dir * atk.pushSpeed * dt;
       } else {                                // 站定開火
@@ -1972,7 +1978,7 @@ function updateEnemies(dt) {
           e.fireT = atk.first; e.burst = atk.count || 1;
         }
         e.fireT -= dt;
-        if (e.fireT <= 0) {
+        if (e.fireT <= 0 && inAtk) {
           fireEnemyShot(e, K);
           if (atk.type === "burst") {
             e.burst--;
