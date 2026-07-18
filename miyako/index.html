@@ -2952,6 +2952,7 @@ try { const l = localStorage.getItem("miyako_lang"); if (l) LANG = l; } catch (e
 let volume = 0.8;
 try { const v = localStorage.getItem("miyako_vol"); if (v !== null) volume = Math.max(0, Math.min(1, +v)); } catch (e) {}
 let audioCtx = null, masterGain = null;    // BGM/SFX 之後接上 masterGain 即受音量控制
+let bgmPrimed = false;
 function ensureAudio() {
   if (typeof AudioContext === "undefined") return;
   if (!audioCtx) {
@@ -2962,7 +2963,23 @@ function ensureAudio() {
       masterGain.connect(audioCtx.destination);
     } catch (e) {}
   }
+  // 關鍵：suspended/interrupted 的 ctx 會讓所有 SFX「排程了但無聲」（sfxOn 檢查全過）——手勢內喚醒
+  if (audioCtx && audioCtx.state !== "running") { try { audioCtx.resume().catch(() => {}); } catch (e) {} }
   initBGM(); loadSfx();   // 首次手勢一併備妥 BGM/音效（新遊戲 reload 路徑先前漏掉：不碰音量就整場無聲）
+  if (!bgmPrimed && BGM.normal) {   // iOS：HTMLMedia 需在手勢內 play 過一次才解鎖；音量為 0 無聲
+    bgmPrimed = true;
+    for (const a of [BGM.normal, BGM.boss]) {
+      try { a.play().then(() => { if (a !== BGM.cur) a.pause(); }).catch(() => {}); } catch (e) {}
+    }
+  }
+}
+// 切出分頁/手機接電話後 ctx 可能停在 suspended——回前景時喚醒
+if (typeof document !== "undefined" && document.addEventListener) {
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && audioCtx && audioCtx.state !== "running") {
+      try { audioCtx.resume().catch(() => {}); } catch (e) {}
+    }
+  });
 }
 // ---- BGM：一般場景 kitsunebi / Boss 房 Fall into the rabbit hole ----
 // 音檔請自行合法取得後放入 assets_audio/（bgm_normal.mp3 / bgm_boss.mp3）；缺檔則靜音無錯
@@ -2995,7 +3012,13 @@ function bgmPlay(which) {          // which: "normal" | "boss" | null
   const want = which ? BGM[which] : null;
   if (BGM.cur === want) return;
   BGM.cur = want;
-  if (want) { try { want.currentTime = which === "boss" ? want.currentTime : 0; want.play().catch(() => {}); } catch (e) {} }
+  if (want) {
+    try {
+      want.currentTime = which === "boss" ? want.currentTime : 0;
+      // play() 被 autoplay 政策拒絕時清 cur → 下一幀重試（先前設了 cur 不重試＝該軌整場無聲）
+      want.play().catch(() => { if (BGM.cur === want) BGM.cur = null; });
+    } catch (e) { BGM.cur = null; }
+  }
 }
 function updateBGM(dt) {           // 逐幀淡入目標軌、淡出其餘軌（目標音量＝設定音量×0.6）
   if (!BGM.normal) return;
