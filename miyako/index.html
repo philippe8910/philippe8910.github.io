@@ -6583,8 +6583,23 @@ function drawHUD() {
     slantPath(cx2, cy2, cw2, ch2, 3);
     ctx.strokeStyle = "rgba(43,58,85,.35)"; ctx.stroke();        // 格框
   }
-  if (player.shieldHp > 0) {   // 護盾條（血格下方青色細條；縮短讓出右側 DASH 位）
-    capsuleBar(24, 70, 140, 5, [[Math.min(1, player.shieldHp / (player.maxHp / 2)), "#59d5f2"]]);
+  if (player.shieldHp > 0) {   // 護盾格（與血格同單位：1 格=1 點；青色細排，寬度自動收縮避開 DASH）
+    const scap = Math.min(player.shieldHp, player.maxHp / 2);
+    const sn = Math.max(1, Math.ceil(scap - 1e-6));
+    const sgap = 3, scw = Math.min(cw2, (140 - sgap * (sn - 1)) / sn), sch = 5;
+    for (let si = 0; si < sn; si++) {
+      const sx2 = 24 + si * (scw + sgap), sy2 = 70;
+      slantPath(sx2, sy2, scw, sch, 2);
+      ctx.fillStyle = "rgba(43,58,85,.18)"; ctx.fill();
+      const sfrac = Math.max(0, Math.min(1, scap - si));
+      if (sfrac > 0) {
+        ctx.save(); slantPath(sx2, sy2, scw, sch, 2); ctx.clip();
+        ctx.fillStyle = "#59d5f2"; ctx.fillRect(sx2 - 2, sy2, (scw + 4) * sfrac, sch);
+        ctx.restore();
+      }
+      slantPath(sx2, sy2, scw, sch, 2);
+      ctx.strokeStyle = "rgba(43,58,85,.3)"; ctx.stroke();
+    }
   }
   {   // 衝刺冷卻小條（血格下方靠右、行內標籤；就緒＝亮青滿格，冷卻中由左往右填）
     const dwx = 200, dwy = 70, dww = 62;
