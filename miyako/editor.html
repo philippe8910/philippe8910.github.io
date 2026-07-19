@@ -155,6 +155,12 @@ function draw() {
     ctx.fillStyle = "#e0b558";
     ctx.fillRect(x0, py - 3, x1 - x0, 5);
     ctx.fillText("E" + (i + 1) + (e.lock ? "🔒" + e.lock : "") + (e.speed ? " " + e.speed + "px/s" : ""), (x0 + x1) / 2 - 7, y0 - 4);
+    if (e === sel && pvOn) {   // 幽靈預覽：從 start 端以實際速度駛向另一端再返回
+      const { p, dir } = pvPos(e.bottom - e.top, e.speed || 230);
+      const gy = e.start === "top" ? e.top + p : e.bottom - p;
+      const dirScr = e.start === "top" ? dir : -dir;   // 世界 y 向下為正
+      drawGhostPlat(x0, W2S(e.x, gy)[1], x1 - x0, dirScr, "y");
+    }
   });
   // 玩家起點（綠色小人＋START）
   if (data.playerStart) {
@@ -237,6 +243,14 @@ function draw() {
       ctx.closePath(); ctx.fill();
       ctx.fillStyle = "#ffd75e";
       ctx.fillText("拖曳終點", tx + sw / 2 - 24, ty - 10);
+      if (pvOn) {   // 幽靈預覽：沿軌道以實際速度來回
+        const { p, dir } = pvPos(Math.abs(m.dist), m.speed || 120);
+        const sgn = Math.sign(m.dist) || 1;
+        const gx = m.axis === "x" ? m.x + sgn * p : m.x;
+        const gy = m.axis === "y" ? m.y + sgn * p : m.y;
+        const [gsx, gsy] = W2S(gx, gy);
+        drawGhostPlat(gsx, gsy, sw, dir * sgn, m.axis);
+      }
     }
   });
   // 門：單向門（紫色）或需要指定鑰匙的鑰匙門（金色）
@@ -310,6 +324,45 @@ function draw() {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
 }
 
+// ---- 速度幽靈預覽：選取電梯/移動平台時，半透明平台以實際速度沿軌道來回跑 ----
+let pvT = 0, pvLast = 0, pvOn = false, pvSel = null;
+function pvTick(ts) {
+  if (!pvOn) return;
+  const dt = Math.min(0.05, (ts - pvLast) / 1000 || 0.016);
+  pvLast = ts; pvT += dt;
+  draw();
+  requestAnimationFrame(pvTick);
+}
+function updatePreview() {
+  const want = sel && (data.elevators.includes(sel) || data.movers.includes(sel));
+  if (sel !== pvSel) { pvT = 0; pvSel = sel; }   // 換選取重頭跑
+  if (want && !pvOn) { pvOn = true; pvLast = performance.now(); requestAnimationFrame(pvTick); }
+  else if (!want) pvOn = false;
+}
+function pvPos(len, speed) {   // 0→len 停 0.6s →0 停 0.6s 循環；回傳 {p, dir}
+  const T = len / Math.max(1, speed), P = 0.6, cyc = 2 * T + 2 * P;
+  let t = pvT % cyc;
+  if (t < T) return { p: t / T * len, dir: 1 };
+  t -= T; if (t < P) return { p: len, dir: 0 };
+  t -= P; if (t < T) return { p: len - t / T * len, dir: -1 };
+  return { p: 0, dir: 0 };
+}
+function drawGhostPlat(sx, sy, sw, dir, axis) {   // 半透明青色平台＋行進箭頭（螢幕座標）
+  ctx.globalAlpha = 0.75;
+  ctx.fillStyle = "#7fe7ff";
+  ctx.fillRect(sx, sy - 2, sw, 5);
+  if (dir) {
+    const cx = sx + sw / 2, cy = sy;
+    ctx.beginPath();
+    if (axis === "y") {   // 上下行進箭頭
+      ctx.moveTo(cx, cy + dir * 16); ctx.lineTo(cx - 8, cy + dir * 4); ctx.lineTo(cx + 8, cy + dir * 4);
+    } else {              // 左右行進箭頭
+      ctx.moveTo(cx + dir * 16, cy); ctx.lineTo(cx + dir * 4, cy - 8); ctx.lineTo(cx + dir * 4, cy + 8);
+    }
+    ctx.closePath(); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
 function rectOf(o) {   // 可拖拉調整大小的物件矩形（電梯用 top/bottom；移動平台僅寬度）
   if (!o) return null;
   if (data.elevators.includes(o)) return { x: o.x, y: o.top, w: o.w, h: o.bottom - o.top, elev: true };
@@ -550,6 +603,7 @@ function listOf(o) {
 }
 
 function showProps() {
+  updatePreview();   // 選取電梯/移動平台時啟動速度幽靈預覽
   const p = document.getElementById("props");
   if (!sel) { p.style.display = "none"; return; }
   const [kind, list] = listOf(sel);
