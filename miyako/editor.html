@@ -319,17 +319,18 @@ function resizeHandleAt(o, wx, wy) {
 function drawHandles() {   // 選取物件的 8 向把手（螢幕固定 7px 方塊）
   const r = rectOf(sel);
   if (!r) return;
-  const hs = 7 / scale;
+  const hs = 7;   // 螢幕像素（draw() 全程螢幕座標——先前誤用世界座標畫，手柄全隱形）
   const pts = r.mover
     ? [[r.x, r.y + r.h / 2], [r.x + r.w, r.y + r.h / 2]]
     : [[r.x, r.y], [r.x + r.w / 2, r.y], [r.x + r.w, r.y],
        [r.x, r.y + r.h / 2], [r.x + r.w, r.y + r.h / 2],
        [r.x, r.y + r.h], [r.x + r.w / 2, r.y + r.h], [r.x + r.w, r.y + r.h]];
   for (const [px, py] of pts) {
+    const [sx, sy] = W2S(px, py);
     ctx.fillStyle = "#ffd75e";
-    ctx.fillRect(px - hs / 2, py - hs / 2, hs, hs);
+    ctx.fillRect(sx - hs / 2, sy - hs / 2, hs, hs);
     ctx.strokeStyle = "#1a2233";
-    ctx.strokeRect(px - hs / 2, py - hs / 2, hs, hs);
+    ctx.strokeRect(sx - hs / 2, sy - hs / 2, hs, hs);
   }
 }
 
