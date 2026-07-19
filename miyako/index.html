@@ -1241,10 +1241,10 @@ const TUTORIALS = {
   boss: { pages: [
     { img: null,
       title: { zh: "首領戰", en: "Boss Fight", ja: "ボス戦", ko: "보스전" },
-      lines: { zh: ["首領有三階段，血量越低越兇猛", "宮子的自走小車能暈眩首領 3 秒", "不同支援技能剋制不同敵人，善用地形"],
-               en: ["Three phases — the lower the HP, the fiercer", "Miyako's rover can stun the boss for 3s", "Skills counter different foes — use the terrain"],
-               ja: ["ボスは3段階、HPが減るほど凶暴に", "ミヤコのローバーはボスを3秒スタン", "スキルで相性を突き、地形を活かせ"],
-               ko: ["보스는 3단계, 체력이 낮을수록 흉포", "미야코의 로버는 보스를 3초 기절", "스킬 상성과 지형을 활용하라"] } },
+      lines: { zh: ["首領有三階段，血量越低越兇猛", "宮子的自走小車能暈眩首領 3.6 秒", "不同支援技能剋制不同敵人，善用地形"],
+               en: ["Three phases — the lower the HP, the fiercer", "Miyako's rover can stun the boss for 3.6s", "Skills counter different foes — use the terrain"],
+               ja: ["ボスは3段階、HPが減るほど凶暴に", "ミヤコのローバーはボスを3.6秒スタン", "スキルで相性を突き、地形を活かせ"],
+               ko: ["보스는 3단계, 체력이 낮을수록 흉포", "미야코의 로버는 보스를 3.6초 기절", "스킬 상성과 지형을 활용하라"] } },
   ] },
 };
 const TUT_BTN_TXT = {
@@ -1933,6 +1933,7 @@ function updateEnemies(dt) {
     e.t += dt;
     e.flashT = Math.max(0, e.flashT - dt);
     e.blockT = Math.max(0, (e.blockT || 0) - dt);
+    e.telegraphT = 99;   // 攻擊預警倒數（各開火路徑覆寫；99=非備射狀態不發光）
 
     const dist = player.x - e.x;
     const atk = K.attack;
@@ -1961,6 +1962,7 @@ function updateEnemies(dt) {
       if (e.state === "shoot" && animDone(K.anims.shoot, e.t)) { e.state = "idle"; e.t = 0; }
       if (engaged && inAtk) {
         e.fireT -= dt;
+        e.telegraphT = e.fireT;
         if (e.fireT <= 0) {
           e.state = "shoot"; e.t = 0;
           e.releaseT = 0.3;               // 出手幀（投擲動畫第 4 幀）
@@ -1974,6 +1976,7 @@ function updateEnemies(dt) {
       if (e.state !== "shoot") { e.state = "shoot"; e.t = 0; e.fireT = atk.first; }
       if (engaged && inAtk) {
         e.fireT -= dt;
+        e.telegraphT = e.fireT;
         if (e.fireT <= 0) {
           fireEnemyShot(e, K);
           e.fireT = atk.interval;
@@ -1994,6 +1997,7 @@ function updateEnemies(dt) {
           e.fireT = atk.first; e.burst = atk.count || 1;
         }
         e.fireT -= dt;
+        e.telegraphT = e.fireT;
         if (e.fireT <= 0 && inAtk) {
           fireEnemyShot(e, K);
           if (atk.type === "burst") {
@@ -2114,6 +2118,18 @@ function drawEnemies() {
       ctx.restore();
     }
     if (e.state === "death" && animDone(K.anims.death, e.t) && e.deadT < 4.2) continue;  // 淡出完才消失
+    // 攻擊預警（終焉莉莉式紅光）：開火前 0.38s 敵人背後亮起紅色脈動光暈，越接近開火越亮
+    if ((e.telegraphT ?? 99) < 0.38 && e.state !== "death" && e.stunT <= 0) {
+      const p = 1 - e.telegraphT / 0.38;
+      const gy = e.y - e.h * 0.55;
+      const gr = Math.max(dw, dh) * (0.52 + 0.1 * Math.sin(uiTime * 26));
+      const rg = ctx.createRadialGradient(e.x, gy, 4, e.x, gy, gr);
+      rg.addColorStop(0, `rgba(255,72,50,${0.34 + 0.3 * p})`);
+      rg.addColorStop(0.55, `rgba(255,60,40,${0.16 + 0.16 * p})`);
+      rg.addColorStop(1, "rgba(255,60,40,0)");
+      ctx.fillStyle = rg;
+      ctx.fillRect(e.x - gr, gy - gr, gr * 2, gr * 2);
+    }
     const a = K.anims[e.state] || K.anims.shoot || K.anims.run || K.anims.idle || K.anims.death;
     if (!a) continue;
     const fi = frameIndex(a, e.t);
@@ -4006,8 +4022,8 @@ function castCard(i, wx, wy) {
   return true;
 }
 
-function roverStun(target, isBoss) {   // 小車命中：暈眩 + 電花（克制鏈：Boss 吃 3 秒）
-  if (isBoss) boss.stunT = Math.max(boss.stunT, 3); else target.stunT = 1;
+function roverStun(target, isBoss) {   // 小車命中：暈眩 + 電花（2026-07-19 大幅加強：一律 3.6 秒）
+  if (isBoss) boss.stunT = Math.max(boss.stunT, 3.6); else target.stunT = 3.6;
   const tx = isBoss ? boss.x : target.x, ty = isBoss ? boss.y : target.y;
   const th = isBoss ? boss.hitH : target.h;
   for (let k = 0; k < 6; k++) {
@@ -6139,6 +6155,16 @@ function drawMinimap() {
     if (inUnvisitedZone(cp.x, cp.y - 30)) continue;
     ctx.fillStyle = cp.active ? "#59d5f2" : "#8a93a8";
     ctx.fillRect(x0 + (cp.x - WORLD.x0) / MM_SC - 1, y0 + cp.y / MM_SC - 2, 3, 3);
+  }
+  for (let i = 0; i < ITEM_SPAWNS.length; i++) {   // 鑰匙道具（未拾取；迷霧區隱藏）：金色菱形
+    const it = ITEM_SPAWNS[i];
+    if (it.type !== "key" || collectedItems.includes(i)) continue;
+    if (inUnvisitedZone(it.x, it.y - 20)) continue;
+    const kx = x0 + (it.x - WORLD.x0) / MM_SC, ky = y0 + it.y / MM_SC - 2;
+    ctx.fillStyle = "#ffd75e";
+    ctx.beginPath();
+    ctx.moveTo(kx, ky - 3); ctx.lineTo(kx + 2.6, ky); ctx.lineTo(kx, ky + 3); ctx.lineTo(kx - 2.6, ky);
+    ctx.closePath(); ctx.fill();
   }
   ctx.fillStyle = "#e8544a";               // Boss
   ctx.fillRect(x0 + (BOSS_ROOM.homeX - WORLD.x0) / MM_SC - 2, y0 + L4_Y / MM_SC - 3, 4, 4);
