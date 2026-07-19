@@ -1,9 +1,9 @@
 globalThis.OFFICIAL_MAP = {
  "solids": [
   {
-   "x": -530,
+   "x": -4130,
    "y": 3000,
-   "w": 16500,
+   "w": 20100,
    "h": 160,
    "c": "L0 地板"
   },
@@ -114,9 +114,9 @@ globalThis.OFFICIAL_MAP = {
   },
   {
    "x": 400,
-   "y": 100,
+   "y": -160,
    "w": 40,
-   "h": 500,
+   "h": 760,
    "c": "Boss 房左牆"
   },
   {
@@ -974,9 +974,9 @@ globalThis.OFFICIAL_MAP = {
    "h": 60
   },
   {
-   "x": 15380,
+   "x": 15670,
    "y": 620,
-   "w": 400,
+   "w": 110,
    "h": 90
   },
   {
@@ -1035,9 +1035,9 @@ globalThis.OFFICIAL_MAP = {
   },
   {
    "x": 9030,
-   "y": 2470,
+   "y": 2490,
    "w": 400,
-   "h": 90
+   "h": 70
   },
   {
    "x": 10670,
@@ -1059,19 +1059,19 @@ globalThis.OFFICIAL_MAP = {
   },
   {
    "x": 10330,
-   "y": 1140,
+   "y": 1110,
    "w": 400,
    "h": 90
   },
   {
-   "x": 10520,
-   "y": 660,
+   "x": 10530,
+   "y": 690,
    "w": 400,
    "h": 90
   },
   {
    "x": 11310,
-   "y": 1170,
+   "y": 1110,
    "w": 400,
    "h": 90
   },
@@ -1103,13 +1103,13 @@ globalThis.OFFICIAL_MAP = {
    "x": -460,
    "y": 2500,
    "w": 40,
-   "h": 500
+   "h": 50
   },
   {
    "x": -460,
-   "y": 160,
+   "y": -160,
    "w": 40,
-   "h": 2090
+   "h": 2410
   },
   {
    "x": -3110,
@@ -1132,13 +1132,13 @@ globalThis.OFFICIAL_MAP = {
   {
    "x": -3070,
    "y": 470,
-   "w": 410,
+   "w": 300,
    "h": 90
   },
   {
-   "x": -2520,
+   "x": -2390,
    "y": 470,
-   "w": 400,
+   "w": 270,
    "h": 90
   },
   {
@@ -1241,42 +1241,48 @@ globalThis.OFFICIAL_MAP = {
    "x": -4130,
    "y": -110,
    "w": 40,
-   "h": 500
+   "h": 3110
   },
   {
    "x": 2760,
    "y": -190,
    "w": 40,
    "h": 500
+  },
+  {
+   "x": -4090,
+   "y": 780,
+   "w": 210,
+   "h": 90
   }
  ],
  "elevators": [
   {
-   "x": 5760,
-   "w": 140,
+   "x": 5750,
+   "w": 150,
    "top": 2400,
    "bottom": 3000,
    "lock": "E1",
    "c": "E1 起始平原 → 下水道"
   },
   {
-   "x": 11360,
-   "w": 140,
+   "x": 11340,
+   "w": 160,
    "top": 1800,
    "bottom": 2400,
    "c": "E2 下水道東 → 東迴廊"
   },
   {
-   "x": 660,
-   "w": 140,
+   "x": 650,
+   "w": 150,
    "top": 1200,
    "bottom": 1800,
    "lock": "K1",
    "c": "E3 西洞窟 → 西高地"
   },
   {
-   "x": 12560,
-   "w": 140,
+   "x": 12540,
+   "w": 160,
    "top": 600,
    "bottom": 1200,
    "c": "E4 東塔 → 天頂迴廊",
@@ -1290,15 +1296,16 @@ globalThis.OFFICIAL_MAP = {
    "lock": "E5"
   },
   {
-   "x": -2660,
-   "w": 140,
+   "x": -2770,
+   "w": 380,
    "top": 470,
-   "bottom": 2500
+   "bottom": 2500,
+   "speed": 30
   }
  ],
  "checkpoints": [
   {
-   "x": 5500,
+   "x": 5620,
    "y": 3000,
    "c": "L0 起始平原・電梯前"
   },
@@ -1327,8 +1334,11 @@ globalThis.OFFICIAL_MAP = {
   {
    "x": 700,
    "y": 3000,
-   "range": 130,
-   "kind": "pmc"
+   "range": 200,
+   "kind": "pmc",
+   "sight": 600,
+   "atk": 400,
+   "sightV": 120
   },
   {
    "x": 1450,
@@ -1353,12 +1363,6 @@ globalThis.OFFICIAL_MAP = {
    "y": 3000,
    "range": 90,
    "kind": "sgtrooper"
-  },
-  {
-   "x": 5200,
-   "y": 3000,
-   "range": 110,
-   "kind": "pmc"
   },
   {
    "x": 2290,
@@ -1412,7 +1416,9 @@ globalThis.OFFICIAL_MAP = {
    "x": 1200,
    "y": 2400,
    "range": 0,
-   "kind": "turret"
+   "kind": "turret",
+   "sight": 180,
+   "atk": 80
   },
   {
    "x": 2500,
@@ -1421,13 +1427,13 @@ globalThis.OFFICIAL_MAP = {
    "kind": "pmc2"
   },
   {
-   "x": 3800,
+   "x": 3200,
    "y": 2400,
    "range": 80,
    "kind": "shield"
   },
   {
-   "x": 5100,
+   "x": 5580,
    "y": 2400,
    "range": 90,
    "kind": "sgtrooper"
@@ -1499,13 +1505,13 @@ globalThis.OFFICIAL_MAP = {
    "kind": "turret"
   },
   {
-   "x": 6250,
+   "x": 5980,
    "y": 1800,
    "range": 120,
    "kind": "pmc"
   },
   {
-   "x": 7970,
+   "x": 8380,
    "y": 1800,
    "range": 370,
    "kind": "sgtrooper"
@@ -1998,9 +2004,12 @@ globalThis.OFFICIAL_MAP = {
   },
   {
    "x": -2170,
-   "y": 470,
+   "y": 440,
    "range": 90,
-   "kind": "grenadier"
+   "kind": "grenadier",
+   "atk": 460,
+   "sightV": 240,
+   "sight": 670
   },
   {
    "x": 14390,
@@ -2019,6 +2028,18 @@ globalThis.OFFICIAL_MAP = {
    "y": 1200,
    "range": 90,
    "kind": "pmc"
+  },
+  {
+   "x": -2420,
+   "y": 3000,
+   "range": 90,
+   "kind": "pmc"
+  },
+  {
+   "x": -1190,
+   "y": 3000,
+   "range": 90,
+   "kind": "pmc2"
   }
  ],
  "movers": [
@@ -2042,7 +2063,7 @@ globalThis.OFFICIAL_MAP = {
    "x": -70,
    "y": 1940,
    "w": 180,
-   "dist": -1900,
+   "dist": -1770,
    "speed": 60,
    "axis": "y"
   },
@@ -2069,6 +2090,15 @@ globalThis.OFFICIAL_MAP = {
    "axis": "y",
    "dist": -670,
    "speed": 110
+  },
+  {
+   "x": -3430,
+   "y": 2970,
+   "w": 180,
+   "axis": "y",
+   "dist": -2160,
+   "speed": 20,
+   "start": "top"
   }
  ],
  "items": [
@@ -2094,7 +2124,7 @@ globalThis.OFFICIAL_MAP = {
    "c": "三千留：L3 西端短板"
   },
   {
-   "x": 15580,
+   "x": 15730,
    "y": 600,
    "type": "skin",
    "skin": "swim"
@@ -2124,11 +2154,10 @@ globalThis.OFFICIAL_MAP = {
    "id": "E4"
   },
   {
-   "x": 6320,
-   "y": 210,
+   "x": -3980,
+   "y": 790,
    "type": "skin",
-   "skin": "shiroko",
-   "c": "白子造型：L4 上層平台鏈頂（火箭兵看守）"
+   "skin": "shiroko"
   }
  ],
  "gates": [
@@ -2137,6 +2166,13 @@ globalThis.OFFICIAL_MAP = {
    "y": 2170,
    "w": 40,
    "h": 230,
+   "side": "left"
+  },
+  {
+   "x": -460,
+   "y": 2550,
+   "w": 40,
+   "h": 450,
    "side": "left"
   }
  ],
@@ -2150,9 +2186,9 @@ globalThis.OFFICIAL_MAP = {
   },
   {
    "x": -3110,
-   "y": 120,
+   "y": -110,
    "w": 40,
-   "h": 250
+   "h": 480
   }
  ],
  "camzones": [
@@ -2162,5 +2198,9 @@ globalThis.OFFICIAL_MAP = {
    "w": 20190,
    "h": 3400
   }
- ]
+ ],
+ "playerStart": {
+  "x": -3960,
+  "y": 3000
+ }
 };
