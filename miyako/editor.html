@@ -151,7 +151,10 @@ function draw() {
     ctx.strokeRect(x0, y0, x1 - x0, y1 - y0); ctx.setLineDash([]);
     ctx.fillStyle = e === sel ? "#ffd75e" : "#e05a5a";
     ctx.beginPath(); ctx.moveTo((x0 + x1) / 2, y1 - 10); ctx.lineTo(x0 + 2, y1 - 1); ctx.lineTo(x1 - 2, y1 - 1); ctx.fill();
-    ctx.fillText("E" + (i + 1) + (e.lock ? "🔒" + e.lock : ""), (x0 + x1) / 2 - 7, y0 - 4);
+    const py = e.start === "top" ? y0 : y1;   // 初始停靠端：琥珀色平台條
+    ctx.fillStyle = "#e0b558";
+    ctx.fillRect(x0, py - 3, x1 - x0, 5);
+    ctx.fillText("E" + (i + 1) + (e.lock ? "🔒" + e.lock : "") + (e.speed ? " " + e.speed + "px/s" : ""), (x0 + x1) / 2 - 7, y0 - 4);
   });
   // 玩家起點（綠色小人＋START）
   if (data.playerStart) {
@@ -551,7 +554,7 @@ function showProps() {
   if (!sel) { p.style.display = "none"; return; }
   const [kind, list] = listOf(sel);
   const title = { solids: sel.h <= 30 ? "跳台 P" + data.solids.filter(s => s.h <= 30).indexOf(sel) : "樓板/牆",
-                  elevators: "電梯 E" + (data.elevators.indexOf(sel) + 1),
+                  elevators: "電梯 E" + (data.elevators.indexOf(sel) + 1) + "｜speed=速度px/s(空=230) start=初始停靠端（載人駛向另一端，閒置2秒返回）",
                   checkpoints: "存檔點 CP" + data.checkpoints.indexOf(sel),
                   movers: "移動平台 M" + data.movers.indexOf(sel),
                   breakables: sel.type === "crate" ? "可破壞箱｜drop 可填 credit:100、key:K1、skin:swim、card:7、heal；留空不掉落" : "可破壞牆｜使用 tile_10 裂紋牆素材；drop 留空即不掉落",
@@ -563,7 +566,7 @@ function showProps() {
                   spawns: "敵人 " + sel.kind + data.spawns.indexOf(sel) + "｜sight=偵測水平距離 sightV=偵測垂直半高 atk=開火距離（世界像素，0/留空=兵種預設；range 超出平台會在邊緣折返不滯空）" }[kind];
   let h = `<h3>${title}</h3>`;
   const SELECTS = { kind: Object.keys(KC), axis: ["x", "y"], type: ["key", "char", "skin"], side: ["left", "right"],
-                    card: Object.keys(CARD_NAMES), skin: Object.keys(SKIN_NAMES) };
+                    start: ["bottom", "top"], card: Object.keys(CARD_NAMES), skin: Object.keys(SKIN_NAMES) };
   const OPT_LABEL = { card: v => v + " " + CARD_NAMES[v], skin: v => v + "（" + SKIN_NAMES[v] + "）" };
   let fields = Object.keys(sel).filter(f => f !== "c");
   if (kind === "breakables" && !("drop" in sel)) fields.push("drop");
@@ -572,7 +575,11 @@ function showProps() {
     if (!("sightV" in sel)) fields.push("sightV");
     if (!("atk" in sel)) fields.push("atk");
   }
-  if (kind === "elevators" && !("lock" in sel)) fields.push("lock");     // 電梯鎖（空字串=無鎖）
+  if (kind === "elevators") {
+    if (!("lock" in sel)) fields.push("lock");     // 電梯鎖（空字串=無鎖）
+    if (!("speed" in sel)) fields.push("speed");   // 速度 px/s（0/留空=預設 230）
+    if (!("start" in sel)) fields.push("start");   // 初始停靠端兼待機返回端（缺省 bottom）
+  }
   if (kind === "camzones" && !("secret" in sel)) fields.push("secret");   // secret=1：永久不顯示在小地圖
   if (kind === "items") {
     if (sel.type === "char" && !("card" in sel)) fields.push("card");    // 7=日鞠 8=風華 9=三千留
@@ -595,6 +602,7 @@ function showProps() {
     pushUndo();
     const v = inp.type === "number" ? +inp.value : inp.value;
     if (v === "" || (inp.dataset.f === "lock" && !v) ||
+        (inp.dataset.f === "speed" && kind === "elevators" && !v) ||   // 電梯 speed 0=回預設 230（movers 的 speed 不可刪）
         ((inp.dataset.f === "sight" || inp.dataset.f === "sightV" || inp.dataset.f === "atk") && !v)) delete sel[inp.dataset.f];
     else sel[inp.dataset.f] = inp.dataset.f === "card" ? +v : v;
     if (kind === "items" && inp.dataset.f === "type") { // 道具換類型 → 清掉不相干欄位再重建

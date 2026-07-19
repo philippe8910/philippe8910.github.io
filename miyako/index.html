@@ -507,7 +507,8 @@ const BASE_ELEVATORS = [
   { x: 12560, w: 140, top: L4_Y, bottom: L3_Y, y: L3_Y, idleT: 0 },   // E4 東塔 → 天頂迴廊
   { x: 15790, w: 150, top: 620, bottom: L0_Y, y: L0_Y, lock: "E5", idleT: 0 },
 ];
-const ELEVATORS = (MAP?.elevators || BASE_ELEVATORS).map(e => ({ ...e, y: e.bottom, idleT: 0 }));
+// start:"top"|"bottom"（缺省 bottom）＝初始停靠端兼待機返回端；speed 缺省 230 px/s
+const ELEVATORS = (MAP?.elevators || BASE_ELEVATORS).map(e => ({ ...e, y: e.start === "top" ? e.top : e.bottom, idleT: 0 }));
 for (const el of ELEVATORS) {
   el.solid = { x: el.x, y: el.y, w: el.w, h: 14, elevator: true };
   SOLIDS.push(el.solid);
@@ -764,16 +765,19 @@ function updateElevators(dt) {
       if (standing) announceMissingLock(el.lock, "電梯");
       continue;
     }
+    const spd = el.speed || 230;                            // 編輯器可自訂速度
+    const restY = el.start === "top" ? el.top : el.bottom;  // 待機端（初始位置）
+    const workY = el.start === "top" ? el.bottom : el.top;  // 載人駛向的另一端
     let dy = 0;
-    if (standing && el.y > el.top) { dy = -230 * dt; el.idleT = 0; }
-    else if (!standing && el.y < el.bottom) {
+    if (standing && el.y !== workY) { dy = Math.sign(workY - el.y) * spd * dt; el.idleT = 0; }
+    else if (!standing && el.y !== restY) {
       el.idleT += dt;
-      if (el.idleT > 2) dy = 230 * dt;
+      if (el.idleT > 2) dy = Math.sign(restY - el.y) * spd * dt;
     }
     if (dy !== 0) {
       el.y = Math.max(el.top, Math.min(el.bottom, el.y + dy));
       el.solid.y = el.y;
-      if (standing) player.y = el.y;   // 載著玩家移動
+      if (standing) player.y = el.y;   // 載著玩家移動（上行/下行皆同步）
     }
   }
 }
