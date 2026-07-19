@@ -520,7 +520,7 @@ function addAt(wx, wy) {
   else if (mode === "crate") { const fy = nearestFloorOrPlat(y); o = { x: x - 70, y: fy - 110, w: 140, h: 110, type: "crate", hp: 3, drop: "" }; data.breakables.push(o); }
   else if (mode === "elev") {
     const bot = nearestFloor(y); const ti = FLOORS.indexOf(bot);
-    o = { x: x - 70, w: 140, top: FLOORS[Math.min(ti + 1, FLOORS.length - 1)], bottom: bot };
+    o = { x: x - 70, w: 140, top: FLOORS[Math.min(ti + 1, FLOORS.length - 1)], bottom: bot, speed: 230, start: "bottom" };
     data.elevators.push(o);
   }
   else if (mode === "cp") { o = { x, y: nearestFloorOrPlat(y) }; data.checkpoints.push(o); }
@@ -593,7 +593,8 @@ function showProps() {
     } else if (typeof sel[f] === "string" || f === "lock" || f === "id" || f === "skin") {
       h += `<label>${f} <input type="text" data-f="${f}" value="${sel[f] ?? ""}"></label>`;
     } else {
-      h += `<label><span class="scrub" data-f="${f}" title="左右拖曳調值">${f} ⇔</span> <input type="number" step="10" data-f="${f}" value="${sel[f] ?? 0}"></label>`;
+      const dv = sel[f] ?? (f === "speed" && kind === "elevators" ? 230 : 0);   // 電梯速度：空欄顯示實際生效的預設 230
+      h += `<label><span class="scrub" data-f="${f}" title="左右拖曳調值">${f} ⇔</span> <input type="number" step="10" data-f="${f}" value="${dv}"></label>`;
     }
   }
   h += `<button class="del">刪除 (Del)</button>`;
