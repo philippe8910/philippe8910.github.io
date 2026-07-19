@@ -2122,6 +2122,13 @@ globalThis.OFFICIAL_MAP = {
    "y": 810,
    "type": "key",
    "id": "E4"
+  },
+  {
+   "x": 6320,
+   "y": 210,
+   "type": "skin",
+   "skin": "shiroko",
+   "c": "白子造型：L4 上層平台鏈頂（火箭兵看守）"
   }
  ],
  "gates": [
