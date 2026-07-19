@@ -8,6 +8,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-fullscreen">
 <meta name="theme-color" content="#0a1224">
 <meta name="mobile-web-app-capable" content="yes">
+<link rel="icon" type="image/png" sizes="32x32" href="assets_env/icon-32.png">
+<link rel="icon" type="image/png" sizes="512x512" href="assets_env/icon-512.png">
+<link rel="apple-touch-icon" href="assets_env/icon-180.png">
 <title>卡班諾的兔子 We Were RABBITs!</title>
 <style>
   @font-face { font-family: "PixelCJK"; src: url("assets_env/fpf-latin.woff2") format("woff2"); unicode-range: U+0020-00FF, U+2000-206F; }
@@ -6302,8 +6305,8 @@ function applyCheat(raw) {
     alert("?");
   }
 }
-const GEAR_BTN = { x: 14, y: 84, s: 30 };   // 玩家面板(14,12,262,64)正下方
-const BAG_BTN = { x: 50, y: 84, s: 30 };    // 設定旁的只讀包包
+const GEAR_BTN = { x: 14, y: 108, s: 30 };   // 玩家面板(14,12,278,88)正下方
+const BAG_BTN = { x: 50, y: 108, s: 30 };    // 設定旁的只讀包包
 function drawGearBtn() {
   if (selectScreen || panel.open) return;
   const g = GEAR_BTN;
@@ -6529,7 +6532,7 @@ function drawHUD() {
   drawBagBtn();
   ctx.save();
   // ---- 玩家面板（左上：武器名牌 + 彈藥 + 血條）----
-  uiPanel(14, 12, 262, 64, 12);
+  uiPanel(14, 12, 278, 88, 12);   // 加大面板：三行分層（武器/彈藥・血格・護盾+DASH），留白加倍
   slantPath(24, 22, 106, 32, 7);          // 武器展示芯片：淡藍底 + 細框（透明武器圖直接疊上）
   ctx.fillStyle = "rgba(43,167,240,.10)";
   ctx.fill();
@@ -6563,9 +6566,9 @@ function drawHUD() {
   const pct = player.hp / player.maxHp;
   const hpCol = pct > 0.5 ? "#4fd688" : pct > 0.25 ? UI_YELLOW : UI_RED;
   const cells = Math.max(1, Math.round(player.maxHp));
-  const cgap = 3, cw2 = Math.min(20, (238 - cgap * (cells - 1)) / cells), ch2 = 10;
+  const cgap = 3, cw2 = Math.min(21, (254 - cgap * (cells - 1)) / cells), ch2 = 13;
   for (let ci = 0; ci < cells; ci++) {
-    const cx2 = 24 + ci * (cw2 + cgap), cy2 = 56;
+    const cx2 = 24 + ci * (cw2 + cgap), cy2 = 61;
     slantPath(cx2, cy2, cw2, ch2, 3);
     ctx.fillStyle = "rgba(43,58,85,.18)"; ctx.fill();            // 底（空格）
     const gfrac = Math.max(0, Math.min(1, player.hpGhost - ci)); // 受擊殘影（橘）
@@ -6586,9 +6589,9 @@ function drawHUD() {
   if (player.shieldHp > 0) {   // 護盾格（與血格同單位：1 格=1 點；青色細排，寬度自動收縮避開 DASH）
     const scap = Math.min(player.shieldHp, player.maxHp / 2);
     const sn = Math.max(1, Math.ceil(scap - 1e-6));
-    const sgap = 3, scw = Math.min(cw2, (140 - sgap * (sn - 1)) / sn), sch = 5;
+    const sgap = 3, scw = Math.min(cw2, (150 - sgap * (sn - 1)) / sn), sch = 6;
     for (let si = 0; si < sn; si++) {
-      const sx2 = 24 + si * (scw + sgap), sy2 = 70;
+      const sx2 = 24 + si * (scw + sgap), sy2 = 82;
       slantPath(sx2, sy2, scw, sch, 2);
       ctx.fillStyle = "rgba(43,58,85,.18)"; ctx.fill();
       const sfrac = Math.max(0, Math.min(1, scap - si));
@@ -6602,7 +6605,7 @@ function drawHUD() {
     }
   }
   {   // 衝刺冷卻小條（血格下方靠右、行內標籤；就緒＝亮青滿格，冷卻中由左往右填）
-    const dwx = 200, dwy = 70, dww = 62;
+    const dwx = 216, dwy = 82, dww = 62;
     const rdy = player.dashCd > 0 ? 1 - player.dashCd / DASH_CD : 1;
     ctx.textAlign = "right";
     ctx.font = `bold 8px ${UI_FONT}`;
@@ -6610,9 +6613,9 @@ function drawHUD() {
     ctx.fillText("DASH", dwx - 6, dwy + 5);
     ctx.textAlign = "left";
     ctx.fillStyle = "rgba(43,58,85,.18)";
-    ctx.fillRect(dwx, dwy, dww, 5);
+    ctx.fillRect(dwx, dwy, dww, 6);
     ctx.fillStyle = rdy >= 1 ? "#5ad5f2" : "rgba(90,213,242,.6)";
-    ctx.fillRect(dwx, dwy, dww * rdy, 5);
+    ctx.fillRect(dwx, dwy, dww * rdy, 6);
   }
   // Speedrun 計時器（右上角；通關後定格金色 + 最佳紀錄）
   ctx.textAlign = "right";
