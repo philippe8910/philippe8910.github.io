@@ -1158,6 +1158,27 @@ addEventListener("resize", fitCanvas);
 addEventListener("beforeunload", () => { try { saveGame(); } catch (e) {} });   // 關頁前搶救進度
 
 const keys = {};
+// ---- 自訂按鍵（localStorage miyako_keys 持久化；設定→按鍵設定 重綁）----
+const KEY_DEFAULTS = {
+  left: ["ArrowLeft", "KeyA"], right: ["ArrowRight", "KeyD"],
+  jump: ["Space", "KeyW", "ArrowUp"], crouch: ["KeyS", "ArrowDown"],
+  shoot: ["KeyJ"], reload: ["KeyR"], dash: ["ShiftLeft", "ShiftRight", "KeyK"],
+  interact: ["KeyE"], card1: ["Digit1"], card2: ["Digit2"], card3: ["Digit3"],
+};
+let keymap = JSON.parse(JSON.stringify(KEY_DEFAULTS));
+try {
+  const s = JSON.parse(localStorage.getItem("miyako_keys") || "null");
+  if (s) for (const k in KEY_DEFAULTS) if (Array.isArray(s[k]) && s[k].length) keymap[k] = s[k];
+} catch (e) {}
+function saveKeymap() { try { localStorage.setItem("miyako_keys", JSON.stringify(keymap)); } catch (e) {} }
+const kd = a => keymap[a].some(c => keys[c]);          // 該動作任一綁定鍵按住中
+const isAct = (code, a) => keymap[a].includes(code);   // 該鍵碼屬於該動作
+let rebindTarget = null;                               // 重綁中的動作 id
+function keyLabel(c) {
+  return { Space: "SPACE", ArrowLeft: "←", ArrowRight: "→", ArrowUp: "↑", ArrowDown: "↓",
+           ShiftLeft: "L-SHIFT", ShiftRight: "R-SHIFT", ControlLeft: "L-CTRL", Enter: "ENTER" }[c]
+         || c.replace(/^Key|^Digit/, "");
+}
 // ---- 手機虛擬控制（首次觸控啟用；搖桿=左半屏浮動，下拉=蹲）----
 const vpad = { on: false, joyId: null, joyBaseX: 0, joyBaseY: 0, joyDx: 0, joyDy: 0,
                fire: false, jump: false, reload: false, dash: false, btnIds: {} };
@@ -1377,10 +1398,23 @@ addEventListener("keydown", e => {
     else tutAdvance(1);
     e.preventDefault(); return;
   }
+  if (rebindTarget) {   // 按鍵重綁：捕捉下一鍵（Esc=取消）；同鍵自動從其他動作解除
+    e.preventDefault();
+    if (e.code !== "Escape") {
+      for (const a in keymap) keymap[a] = keymap[a].filter(c => c !== e.code);
+      keymap[rebindTarget] = [e.code];
+      saveKeymap();
+    }
+    rebindTarget = null;
+    return;
+  }
   keys[e.code] = true;
   if (["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.code)) e.preventDefault();
   if (menuScreen) {
-    if (e.code === "Escape" && (menuScreen === "settings" || menuScreen === "gallery")) menuScreen = "main";
+    if (e.code === "Escape") {
+      if (menuScreen === "keys") menuScreen = "settings";
+      else if (menuScreen === "settings" || menuScreen === "gallery") menuScreen = "main";
+    }
     return;
   }
   if (bagOpen) {
@@ -1388,26 +1422,27 @@ addEventListener("keydown", e => {
     return;
   }
   if (dialogue) {
-    if (["Space", "Enter", "KeyJ", "KeyE"].includes(e.code)) advanceDialogue();
+    if (["Space", "Enter"].includes(e.code) || isAct(e.code, "shoot") || isAct(e.code, "interact")) advanceDialogue();
     return;
   }
   if (e.code === "KeyF") {
     if (document.fullscreenElement) document.exitFullscreen();
     else document.documentElement.requestFullscreen().catch(() => {});
   }
-  if (e.code.startsWith("Digit")) {
+  if (selectScreen && e.code.startsWith("Digit")) {   // 開局選擇畫面：1/2/3 聚焦（彈起），Enter 確認
     const n = +e.code.slice(5);
-    if (selectScreen) {                       // 開局選擇畫面：1/2/3 聚焦（彈起），Enter 確認
-      if (n >= 1 && n <= 3) selectFocus = n - 1;
-    } else if (n >= 1 && n <= HAND_SIZE) {
-      if (targeting && targeting.slot === n - 1) cancelTargeting();   // 同鍵再按 = 取消
-      else startTargeting(n - 1);
+    if (n >= 1 && n <= 3) selectFocus = n - 1;
+  } else if (!selectScreen) {                          // 支援卡：走自訂綁定
+    const ci = ["card1", "card2", "card3"].findIndex(a => isAct(e.code, a));
+    if (ci >= 0 && ci < HAND_SIZE) {
+      if (targeting && targeting.slot === ci) cancelTargeting();   // 同鍵再按 = 取消
+      else startTargeting(ci);
     }
   }
   if (selectScreen && (e.code === "Enter" || e.code === "Space") && selectFocus !== null) {
     chooseSupport(selectFocus);
   }
-  if (e.code === "KeyE") {                            // 存檔點互動
+  if (isAct(e.code, "interact")) {                    // 存檔點互動
     if (panel.open) closePanel();
     else if (!selectScreen && nearCheckpoint()) openPanel();
   }
@@ -1419,7 +1454,7 @@ addEventListener("keydown", e => {
   }
   if (e.code === "KeyB" && !selectScreen && !panel.open) { bagOpen = true; return; }
   if (e.code === "KeyM") minimapOn = !minimapOn;      // 小地圖切換
-  if (e.code === "KeyJ" && targeting) quickCast();   // 快速施法：攻擊鍵直接放
+  if (isAct(e.code, "shoot") && targeting) quickCast();   // 快速施法：攻擊鍵直接放
   if (e.code === "Escape") {
     if (targeting) cancelTargeting();
     else if (!selectScreen && !panel.open) { menuFrom = "game"; menuScreen = "settings"; }
@@ -3161,6 +3196,7 @@ const I18N = {
         settings: "設定", gallery: "圖鑑", back: "返回", volume: "音量", language: "語言 Language",
         confirmNew: "清除本地進度並開始新遊戲？（速通紀錄保留）",
         pasteOpt: "貼上存檔碼（留空＝使用本機存檔）：", noSave: "沒有本機存檔，請先貼上存檔碼", loadSave: "讀檔", progress: "進度", cheat: "作弊碼", cheatPrompt: "輸入作弊碼：", cpRest: "休息・補給",
+        keyCfg: "按鍵設定", keyPrompt: "按下新按鍵…（Esc 取消）", keyReset: "恢復預設", keyHint: "點擊項目後按下想綁定的按鍵；同鍵會自動從其他動作解除", kLeft: "向左移動", kRight: "向右移動", kJump: "跳躍", kCrouch: "蹲下", kShoot: "射擊", kReload: "換彈", kDash: "衝刺", kInteract: "互動", kCard: "支援卡",
         hintDefault: "隱藏道具解鎖", hintConv: "商店累計消費 200C 解鎖", hintMomoi: "12分鐘內通關解鎖", hintMika: "通關一次解鎖", hintShiroko: "在地圖中尋找隱藏道具解鎖", recruitMystery: "在地圖中尋找發光道具解鎖", descFireline: "呼叫直升機對目標區投放多枚燃燒飛彈，觸地爆炸並引燃地面", descStun: "放出自走式無人機直線突進，命中敵人閃光引爆造成暈眩", descArea: "請求支援砲擊！閃光彈砸向瞄準點，範圍傷害並暈眩敵人", descSnipe: "觀測並標記目標，狙擊手延遲擊發；交替使用時傷害翻倍", sup4: "被動：每30秒回復1/4生命", sup5: "被動：每30秒獲得1/3護盾", sup6: "被動：每30秒+1/5護盾(15s)", sup7: "被動：Cost獲得×1.8", sup8: "被動：防禦力+30%", sup9: "被動：Cost+10%・全卡-1費",
         discTitle: "免責聲明", start: "！開始任務！",
         disc: "本作品為《蔚藍檔案 Blue Archive》之非官方粉絲二次創作，與 NEXON、Nexon Games、Yostar 無任何關聯；角色與世界觀之著作權皆屬原權利人所有。本專案內容由生成式 AI 工具產生或協助製作，範圍包括但不限於美術資產與程式資產。本作僅供學習交流之非商業用途。背景音樂：一般場景「Digital Lemonade」、Boss 戰「Five Armies」，皆為 Kevin MacLeod（incompetech.com）創作，採用 Creative Commons BY 4.0 授權（https://creativecommons.org/licenses/by/4.0/）。槍聲與爆炸音效來自 OpenGameArt（CC0 公共領域）。",
@@ -3182,6 +3218,7 @@ const I18N = {
         settings: "Settings", gallery: "Gallery", back: "Back", volume: "Volume", language: "Language",
         confirmNew: "Clear local progress and start a new game? (speedrun record kept)",
         pasteOpt: "Paste save code (leave empty to use local save):", noSave: "No local save. Paste a save code first.", loadSave: "Load", progress: "Progress", cheat: "Cheat Code", cheatPrompt: "Enter cheat code:", cpRest: "Rest & Resupply",
+        keyCfg: "Key Bindings", keyPrompt: "Press a key... (Esc to cancel)", keyReset: "Reset Defaults", keyHint: "Click a row, then press the key to bind; the key is unbound from other actions", kLeft: "Move Left", kRight: "Move Right", kJump: "Jump", kCrouch: "Crouch", kShoot: "Shoot", kReload: "Reload", kDash: "Dash", kInteract: "Interact", kCard: "Card",
         hintDefault: "Unlock via hidden item", hintConv: "Spend 200C total at the shop", hintMomoi: "Clear the game within 12 minutes", hintMika: "Clear the game once", hintShiroko: "Find the hidden item somewhere in the map", recruitMystery: "Find the glowing item somewhere in the map", descFireline: "Calls a helicopter to drop incendiary missiles that explode on impact and ignite the ground", descStun: "Deploys a drone that charges forward and stuns enemies with a flash on impact", descArea: "Support fire! A flashbang hits the aim point, dealing area damage and stunning", descSnipe: "Marks the target for a delayed sniper shot; damage doubles on alternating uses", sup4: "Passive: heal 1/4 HP every 30s", sup5: "Passive: gain 1/3 shield every 30s", sup6: "Passive: +1/5 shield every 30s (15s)", sup7: "Passive: Cost gain x1.8", sup8: "Passive: +30% defense", sup9: "Passive: Cost +10% & all cards -1",
         discTitle: "Disclaimer", start: "! MISSION START !",
         disc: "This is an unofficial fan work of Blue Archive, unaffiliated with NEXON, Nexon Games, or Yostar; all character and IP rights belong to their owners. Content of this project was produced or assisted by generative AI tools, including but not limited to art assets and program code. Non-commercial, for learning purposes only. Music: 'Digital Lemonade' (field) and 'Five Armies' (boss battle) by Kevin MacLeod (incompetech.com), licensed under Creative Commons BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Gunshot and explosion SFX from OpenGameArt (CC0 public domain).",
@@ -3203,6 +3240,7 @@ const I18N = {
         settings: "設定", gallery: "図鑑", back: "戻る", volume: "音量", language: "言語 Language",
         confirmNew: "ローカルの進行データを消去して新しく始めますか？（タイム記録は保持）",
         pasteOpt: "セーブコードを貼り付け（空欄＝ローカルセーブ使用）：", noSave: "ローカルセーブがありません。", loadSave: "ロード", progress: "進行度", cheat: "チートコード", cheatPrompt: "チートコードを入力：", cpRest: "休憩・補給",
+        keyCfg: "キー設定", keyPrompt: "キーを押してください…（Escでキャンセル）", keyReset: "初期設定に戻す", keyHint: "項目をクリックして割り当てたいキーを押す；同じキーは他の操作から解除", kLeft: "左移動", kRight: "右移動", kJump: "ジャンプ", kCrouch: "しゃがむ", kShoot: "射撃", kReload: "リロード", kDash: "ダッシュ", kInteract: "調べる", kCard: "カード",
         hintDefault: "隠しアイテムで解放", hintConv: "ショップで累計200C消費で解放", hintMomoi: "12分以内クリアで解放", hintMika: "1回クリアで解放", hintShiroko: "マップのどこかの隠しアイテムで解放", recruitMystery: "マップのどこかで光るアイテムを探して解放", descFireline: "ヘリを要請し目標区域へ焼夷ミサイルを投下、着弾で爆発し地面を燃やす", descStun: "自走式ドローンが直進し、命中すると閃光で敵をスタンさせる", descArea: "支援射撃要請！閃光弾が着弾点で爆発、範囲ダメージとスタンを与える", descSnipe: "目標を観測・マーキングして狙撃手が遅延射撃；交互使用でダメージ2倍", sup4: "パッシブ：30秒毎にHP1/4回復", sup5: "パッシブ：30秒毎にシールド1/3獲得", sup6: "パッシブ：30秒毎に+1/5シールド(15秒)", sup7: "パッシブ：コスト獲得×1.8", sup8: "パッシブ：防御力+30%", sup9: "パッシブ：コスト+10%・全カード-1",
         discTitle: "免責事項", start: "！作戦開始！",
         disc: "本作は『ブルーアーカイブ』の非公式ファン二次創作であり、NEXON・Nexon Games・Yostar とは一切関係ありません。キャラクター及び世界観の著作権は原権利者に帰属します。本作のコンテンツは生成AIツールにより制作・補助されており、その範囲はアート素材やプログラムコードを含みますがこれらに限りません。非営利・学習目的のみ。BGM：フィールド「Digital Lemonade」、ボス戦「Five Armies」（作曲：Kevin MacLeod / incompetech.com）。Creative Commons BY 4.0 ライセンス（https://creativecommons.org/licenses/by/4.0/）。銃声・爆発効果音は OpenGameArt（CC0 パブリックドメイン）。",
@@ -3224,6 +3262,7 @@ const I18N = {
         settings: "설정", gallery: "도감", back: "뒤로", volume: "볼륨", language: "언어 Language",
         confirmNew: "로컬 진행 데이터를 삭제하고 새로 시작할까요? (스피드런 기록 유지)",
         pasteOpt: "세이브 코드 붙여넣기 (비워두면 로컬 세이브 사용):", noSave: "로컬 세이브가 없습니다.", loadSave: "로드", progress: "진행도", cheat: "치트 코드", cheatPrompt: "치트 코드 입력:", cpRest: "휴식・보급",
+        keyCfg: "키 설정", keyPrompt: "키를 눌러주세요… (Esc 취소)", keyReset: "기본값 복원", keyHint: "항목을 클릭한 뒤 바인딩할 키를 누르세요; 같은 키는 다른 동작에서 해제됩니다", kLeft: "왼쪽 이동", kRight: "오른쪽 이동", kJump: "점프", kCrouch: "앉기", kShoot: "사격", kReload: "재장전", kDash: "대시", kInteract: "상호작용", kCard: "카드",
         hintDefault: "숨겨진 아이템으로 해금", hintConv: "상점에서 누적 200C 소비 시 해금", hintMomoi: "12분 이내 클리어 시 해금", hintMika: "클리어 1회 시 해금", hintShiroko: "맵 어딘가의 숨겨진 아이템으로 해금", recruitMystery: "맵 어딘가의 빛나는 아이템을 찾아 해금", descFireline: "헬기를 요청해 목표 지역에 소이 미사일 투하, 착탄 시 폭발하고 지면을 불태운다", descStun: "자주식 드론이 직진 돌격, 명중 시 섬광 폭발로 적을 기절시킨다", descArea: "지원 사격 요청! 섬광탄이 조준점에 떨어져 범위 피해와 기절을 준다", descSnipe: "목표를 관측·마킹해 저격수가 지연 사격; 교대로 사용 시 피해 2배", sup4: "패시브: 30초마다 HP 1/4 회복", sup5: "패시브: 30초마다 실드 1/3 획득", sup6: "패시브: 30초마다 +1/5 실드(15초)", sup7: "패시브: 코스트 획득 x1.8", sup8: "패시브: 방어력 +30%", sup9: "패시브: 코스트 +10%·모든 카드 -1",
         discTitle: "면책 조항", start: "! 작전 개시 !",
         disc: "본 작품은 <블루 아카이브>의 비공식 팬 2차 창작물로, NEXON, Nexon Games, Yostar와 무관합니다. 캐릭터 및 세계관의 저작권은 원권리자에게 있습니다. 본 프로젝트의 콘텐츠는 생성형 AI 도구로 제작되거나 보조되었으며, 그 범위는 아트 에셋과 프로그램 코드를 포함하되 이에 국한되지 않습니다. 비상업적 학습 목적 전용. 배경음악: 필드 'Digital Lemonade', 보스전 'Five Armies' (작곡: Kevin MacLeod / incompetech.com). Creative Commons BY 4.0 라이선스 (https://creativecommons.org/licenses/by/4.0/). 총성·폭발 효과음: OpenGameArt (CC0 퍼블릭 도메인).",
@@ -3567,9 +3606,57 @@ function drawMenu() {
     ctx.fillStyle = "rgba(43,58,85,.75)";
     const dl = wrapText(T("disc"), 470);
     for (let i = 0; i < dl.length && i < 9; i++) ctx.fillText(dl[i], vx, 260 + i * 19);
-    menuBtn(cx - 250, 452, 150, 44, T("loadSave"), () => { importSave(); });
-    menuBtn(cx - 80, 452, 150, 44, T("cheat"), () => { const s = prompt(T("cheatPrompt")); if (s) applyCheat(s); });
-    menuBtn(cx + 90, 452, 150, 44, T("back"), () => { menuScreen = menuFrom === "game" ? null : "main"; });
+    menuBtn(cx - 335, 452, 150, 44, T("loadSave"), () => { importSave(); });
+    menuBtn(cx - 165, 452, 150, 44, T("keyCfg"), () => { menuScreen = "keys"; });
+    menuBtn(cx + 5, 452, 150, 44, T("cheat"), () => { const s = prompt(T("cheatPrompt")); if (s) applyCheat(s); });
+    menuBtn(cx + 175, 452, 150, 44, T("back"), () => { menuScreen = menuFrom === "game" ? null : "main"; });
+  } else if (menuScreen === "keys") {
+    ctx.textAlign = "center";
+    ctx.font = `italic 900 28px ${UI_FONT}`;
+    ctx.fillStyle = "#2b3a55";
+    ctx.fillText(T("keyCfg"), cx, 62);
+    const ACTS = [["left", "kLeft"], ["right", "kRight"], ["jump", "kJump"], ["crouch", "kCrouch"],
+                  ["shoot", "kShoot"], ["reload", "kReload"], ["dash", "kDash"], ["interact", "kInteract"],
+                  ["card1", null], ["card2", null], ["card3", null]];
+    for (let i = 0; i < ACTS.length; i++) {
+      const [act, lk] = ACTS[i];
+      const col = i < 6 ? 0 : 1;
+      const rx = cx - 350 + col * 360, ry = 92 + (i % 6) * 58;   // 兩欄各 340 寬，總跨距 700（4:3 視寬也放得下）
+      const binding = rebindTarget === act;
+      slantPath(rx, ry, 340, 46, 8);
+      ctx.fillStyle = binding ? "rgba(255,210,62,.35)" : "rgba(53,195,240,.10)";
+      ctx.fill();
+      slantPath(rx, ry, 340, 46, 8);
+      ctx.strokeStyle = binding ? "#e0a92e" : "rgba(83,150,199,.4)"; ctx.stroke();
+      ctx.textAlign = "left";
+      ctx.font = `italic 900 15px ${UI_FONT}`; ctx.fillStyle = "#2b3a55";
+      ctx.fillText(lk ? T(lk) : T("kCard") + " " + act.slice(4), rx + 18, ry + 29);
+      ctx.textAlign = "right";
+      if (binding) {
+        ctx.font = `bold 13px ${UI_FONT}`; ctx.fillStyle = "#a3690a";
+        ctx.fillText(T("keyPrompt"), rx + 322, ry + 29);
+      } else {   // 目前綁定：鍵帽膠囊由右往左排
+        let kx = rx + 322;
+        ctx.font = `700 13px ${UI_FONT}`;
+        for (let j = keymap[act].length - 1; j >= 0; j--) {
+          const lbl = keyLabel(keymap[act][j]);
+          const tw2 = ctx.measureText(lbl).width, bw2 = Math.max(30, tw2 + 16);
+          slantPath(kx - bw2, ry + 10, bw2, 26, 5);
+          ctx.fillStyle = "#2f77d4"; ctx.fill();
+          ctx.fillStyle = "#fff"; ctx.textAlign = "center";
+          ctx.fillText(lbl, kx - bw2 / 2 + 2, ry + 28);
+          ctx.textAlign = "right";
+          kx -= bw2 + 8;
+        }
+      }
+      ctx.textAlign = "left";
+      menuBtns.push({ x: rx, y: ry, w: 340, h: 46, fn: (a => () => { rebindTarget = rebindTarget === a ? null : a; })(act) });
+    }
+    ctx.textAlign = "center";
+    ctx.font = `bold 13px ${UI_FONT}`; ctx.fillStyle = "rgba(43,58,85,.55)";
+    ctx.fillText(T("keyHint"), cx, 462);
+    menuBtn(cx - 165, 476, 150, 40, T("keyReset"), () => { keymap = JSON.parse(JSON.stringify(KEY_DEFAULTS)); saveKeymap(); rebindTarget = null; });
+    menuBtn(cx + 15, 476, 150, 40, T("back"), () => { rebindTarget = null; menuScreen = "settings"; });
   } else if (menuScreen === "gallery") {
     if (!galList) galList = buildGallery();
     const N = galList.length;
@@ -4667,12 +4754,12 @@ function physics(dt) {
   updateItems(dt);
   updateGates();
   updateSpecialObjects(dt);
-  const left = keys.ArrowLeft || keys.KeyA || vpad.joyDx < -0.35;
-  const right = keys.ArrowRight || keys.KeyD || vpad.joyDx > 0.35;
-  const jumpKey = keys.Space || keys.KeyW || keys.ArrowUp || vpad.jump;
-  const crouchKey = keys.KeyS || keys.ArrowDown || vpad.joyDy > 0.5;
-  const fireKey = keys.KeyJ || vpad.fire;
-  const dashKey = keys.ShiftLeft || keys.ShiftRight || keys.KeyK || vpad.dash;
+  const left = kd("left") || vpad.joyDx < -0.35;
+  const right = kd("right") || vpad.joyDx > 0.35;
+  const jumpKey = kd("jump") || vpad.jump;
+  const crouchKey = kd("crouch") || vpad.joyDy > 0.5;
+  const fireKey = kd("shoot") || vpad.fire;
+  const dashKey = kd("dash") || vpad.dash;
   player.dashCd = Math.max(0, player.dashCd - dt);
   if (player.dashT > 0) player.dashT -= dt;
   if (player.onGround) player.airDashUsed = false;   // 落地重置空中衝刺
@@ -4699,7 +4786,7 @@ function physics(dt) {
     if (player.reloadT <= 0) { player.reloadT = 0; player.ammo = MAG_SIZE; }
   }
   if (!hurting && player.reloadT <= 0 &&
-      (((keys.KeyR || vpad.reload) && player.ammo < MAG_SIZE) || (fireKey && player.ammo <= 0))) {
+      (((kd("reload") || vpad.reload) && player.ammo < MAG_SIZE) || (fireKey && player.ammo <= 0))) {
     player.reloadT = RELOAD_TIME;
     sfxReload();
   }
