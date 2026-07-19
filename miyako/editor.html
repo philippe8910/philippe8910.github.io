@@ -231,6 +231,12 @@ function draw() {
     ctx.fillStyle = active ? "#ffd75e" : "#5fe2e2";
     ctx.fillRect(tx, ty - 2, sw, 7);
     ctx.restore();
+    {   // 起始端琥珀條（start 指名絕對端點；缺省=放置點）
+      const far = m.start ? (m.axis === "y" ? m.start === "bottom" : m.start === "right") === (m.dist > 0) : false;
+      const [bx2, by2] = far ? [tx, ty] : [sx, sy];
+      ctx.fillStyle = "#e0b558";
+      ctx.fillRect(bx2, by2 - 3, sw, 4);
+    }
     ctx.fillText("M" + i + (m.axis === "x" ? "↔" : "↕"), sx, sy - 5);
     if (active) {
       ctx.strokeStyle = "#ffd75e";
@@ -243,13 +249,15 @@ function draw() {
       ctx.closePath(); ctx.fill();
       ctx.fillStyle = "#ffd75e";
       ctx.fillText("拖曳終點", tx + sw / 2 - 24, ty - 10);
-      if (pvOn) {   // 幽靈預覽：沿軌道以實際速度來回
+      if (pvOn) {   // 幽靈預覽：從 start 端以實際速度沿軌道來回
         const { p, dir } = pvPos(Math.abs(m.dist), m.speed || 120);
         const sgn = Math.sign(m.dist) || 1;
-        const gx = m.axis === "x" ? m.x + sgn * p : m.x;
-        const gy = m.axis === "y" ? m.y + sgn * p : m.y;
+        const far = m.start ? (m.axis === "y" ? m.start === "bottom" : m.start === "right") === (m.dist > 0) : false;
+        const pp = far ? Math.abs(m.dist) - p : p;
+        const gx = m.axis === "x" ? m.x + sgn * pp : m.x;
+        const gy = m.axis === "y" ? m.y + sgn * pp : m.y;
         const [gsx, gsy] = W2S(gx, gy);
-        drawGhostPlat(gsx, gsy, sw, dir * sgn, m.axis);
+        drawGhostPlat(gsx, gsy, sw, dir * sgn * (far ? -1 : 1), m.axis);
       }
     }
   });
@@ -577,8 +585,8 @@ function addAt(wx, wy) {
     data.elevators.push(o);
   }
   else if (mode === "cp") { o = { x, y: nearestFloorOrPlat(y) }; data.checkpoints.push(o); }
-  else if (mode === "moverh") { o = { x: x - 90, y, w: 180, axis: "x", dist: 260, speed: 120 }; data.movers.push(o); }
-  else if (mode === "moverv") { o = { x: x - 90, y, w: 180, axis: "y", dist: -220, speed: 110 }; data.movers.push(o); }
+  else if (mode === "moverh") { o = { x: x - 90, y, w: 180, axis: "x", dist: 260, speed: 120, start: "left" }; data.movers.push(o); }
+  else if (mode === "moverv") { o = { x: x - 90, y, w: 180, axis: "y", dist: -220, speed: 110, start: "bottom" }; data.movers.push(o); }
   else if (mode === "item") { o = { x, y: nearestFloorOrPlat(y), type: "key", id: "K1" }; data.items.push(o); }
   else if (mode === "gate") { const fy2 = nearestFloor(y); o = { x, y: fy2 - 230, w: 40, h: 230, side: "left" }; data.gates.push(o); }
   else if (mode === "keydoor") { const fy2 = nearestFloor(y); o = { x, y: fy2 - 230, w: 60, h: 230, lock: "K1" }; data.gates.push(o); }
@@ -610,7 +618,7 @@ function showProps() {
   const title = { solids: sel.h <= 30 ? "跳台 P" + data.solids.filter(s => s.h <= 30).indexOf(sel) : "樓板/牆",
                   elevators: "電梯 E" + (data.elevators.indexOf(sel) + 1) + "｜speed=速度px/s(空=230) start=初始停靠端（載人駛向另一端，閒置2秒返回）",
                   checkpoints: "存檔點 CP" + data.checkpoints.indexOf(sel),
-                  movers: "移動平台 M" + data.movers.indexOf(sel),
+                  movers: "移動平台 M" + data.movers.indexOf(sel) + "｜start=起始端（絕對方位：垂直台上/下、水平台左/右）",
                   breakables: sel.type === "crate" ? "可破壞箱｜drop 可填 credit:100、key:K1、skin:swim、card:7、heal；留空不掉落" : "可破壞牆｜使用 tile_10 裂紋牆素材；drop 留空即不掉落",
                   ghosts: "幽靈牆｜外觀與普通牆相同，無碰撞；玩家進入後淡出消失",
                   gates: sel.lock ? "鑰匙門 D" + data.gates.indexOf(sel) + "｜lock 必須和鑰匙道具的 id 相同" : "單向門 G" + data.gates.indexOf(sel) + "（side=可開啟側）",
@@ -634,6 +642,7 @@ function showProps() {
     if (!("speed" in sel)) fields.push("speed");   // 速度 px/s（0/留空=預設 230）
     if (!("start" in sel)) fields.push("start");   // 初始停靠端兼待機返回端（缺省 bottom）
   }
+  if (kind === "movers" && !("start" in sel)) fields.push("start");   // 起始端（絕對方位；缺省=放置點）
   if (kind === "camzones" && !("secret" in sel)) fields.push("secret");   // secret=1：永久不顯示在小地圖
   if (kind === "items") {
     if (sel.type === "char" && !("card" in sel)) fields.push("card");    // 7=日鞠 8=風華 9=三千留
@@ -641,7 +650,9 @@ function showProps() {
     if (sel.type === "key" && !("id" in sel)) fields.push("id");
   }
   for (const f of fields) {
-    const choices = kind === "breakables" && f === "type" ? ["wall", "crate"] : SELECTS[f];
+    const choices = kind === "breakables" && f === "type" ? ["wall", "crate"]
+                  : kind === "movers" && f === "start" ? (sel.axis === "y" ? ["bottom", "top"] : ["left", "right"])
+                  : SELECTS[f];
     if (choices) {
       h += `<label>${f} <select data-f="${f}">${choices.map(k => `<option value="${k}" ${String(k) === String(sel[f]) ? "selected" : ""}>${OPT_LABEL[f] ? OPT_LABEL[f](k) : k}</option>`).join("")}</select></label>`;
     } else if (typeof sel[f] === "string" || f === "lock" || f === "id" || f === "skin") {

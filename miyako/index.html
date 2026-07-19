@@ -521,16 +521,22 @@ const BASE_MOVERS = [
   { x: -390, y: 1680, w: 180, axis: "x", dist: 730, speed: 120 },
 ];
 const MOVERS = (MAP?.movers || BASE_MOVERS).map(m => ({ ...m }));
+function moverStartFar(m) {   // start 指名絕對端點（y 軸 top/bottom、x 軸 left/right）；指到 origin+dist 端＝相位偏移半週期
+  if (!m.start) return false;
+  return (m.axis === "y" ? m.start === "bottom" : m.start === "right") === (m.dist > 0);
+}
 for (const m of MOVERS) {
   m.t = 0;
-  m.solid = { x: m.x, y: m.y, w: m.w, h: 14, mover: true };
+  m.startFar = moverStartFar(m);
+  m.solid = { x: m.axis === "x" && m.startFar ? m.x + m.dist : m.x,
+              y: m.axis === "y" && m.startFar ? m.y + m.dist : m.y, w: m.w, h: 14, mover: true };
   SOLIDS.push(m.solid);
 }
 function updateMovers(dt) {
   for (const m of MOVERS) {
     m.t += dt;
     const period = (2 * Math.abs(m.dist)) / m.speed;   // dist 可為負（向上/向左）
-    const ph = (m.t % period) / period;
+    const ph = ((m.t + (m.startFar ? period / 2 : 0)) % period) / period;   // startFar＝從 dist 端出發
     const off = (ph < 0.5 ? ph * 2 : 2 - ph * 2) * m.dist;
     const nx = m.axis === "x" ? m.x + off : m.x;
     const ny = m.axis === "y" ? m.y + off : m.y;
