@@ -6563,9 +6563,9 @@ function drawHUD() {
   const pct = player.hp / player.maxHp;
   const hpCol = pct > 0.5 ? "#4fd688" : pct > 0.25 ? UI_YELLOW : UI_RED;
   const cells = Math.max(1, Math.round(player.maxHp));
-  const cgap = 3, cw2 = Math.min(20, (238 - cgap * (cells - 1)) / cells), ch2 = 12;
+  const cgap = 3, cw2 = Math.min(20, (238 - cgap * (cells - 1)) / cells), ch2 = 10;
   for (let ci = 0; ci < cells; ci++) {
-    const cx2 = 24 + ci * (cw2 + cgap), cy2 = 58;
+    const cx2 = 24 + ci * (cw2 + cgap), cy2 = 56;
     slantPath(cx2, cy2, cw2, ch2, 3);
     ctx.fillStyle = "rgba(43,58,85,.18)"; ctx.fill();            // 底（空格）
     const gfrac = Math.max(0, Math.min(1, player.hpGhost - ci)); // 受擊殘影（橘）
@@ -6583,24 +6583,21 @@ function drawHUD() {
     slantPath(cx2, cy2, cw2, ch2, 3);
     ctx.strokeStyle = "rgba(43,58,85,.35)"; ctx.stroke();        // 格框
   }
-  if (player.shieldHp > 0) {   // 護盾條（血條下方青色細條；被動盾也顯示）
-    capsuleBar(24, 74, 238, 6, [[Math.min(1, player.shieldHp / (player.maxHp / 2)), "#59d5f2"]]);
+  if (player.shieldHp > 0) {   // 護盾條（血格下方青色細條；縮短讓出右側 DASH 位）
+    capsuleBar(24, 70, 140, 5, [[Math.min(1, player.shieldHp / (player.maxHp / 2)), "#59d5f2"]]);
   }
-  {   // 衝刺冷卻小條（血條右端；就緒＝亮青滿格，冷卻中由左往右填）
-    const dwx = 200, dwy = 77, dww = 62;
+  {   // 衝刺冷卻小條（血格下方靠右、行內標籤；就緒＝亮青滿格，冷卻中由左往右填）
+    const dwx = 200, dwy = 70, dww = 62;
     const rdy = player.dashCd > 0 ? 1 - player.dashCd / DASH_CD : 1;
-    ctx.fillStyle = "rgba(43,58,85,.18)";
-    ctx.fillRect(dwx, dwy, dww, 4);
-    ctx.fillStyle = rdy >= 1 ? "#5ad5f2" : "rgba(90,213,242,.6)";
-    ctx.fillRect(dwx, dwy, dww * rdy, 4);
-    ctx.textAlign = "left";
+    ctx.textAlign = "right";
     ctx.font = `bold 8px ${UI_FONT}`;
     ctx.fillStyle = rdy >= 1 ? "#5ad5f2" : "rgba(43,58,85,.4)";
-    ctx.fillText("DASH", dwx, dwy - 3);
-    ctx.textAlign = "right";
-    ctx.fillStyle = "rgba(43,58,85,.4)";
-    ctx.fillText(rdy >= 1 ? "READY" : "", dwx + dww, dwy - 3);
+    ctx.fillText("DASH", dwx - 6, dwy + 5);
     ctx.textAlign = "left";
+    ctx.fillStyle = "rgba(43,58,85,.18)";
+    ctx.fillRect(dwx, dwy, dww, 5);
+    ctx.fillStyle = rdy >= 1 ? "#5ad5f2" : "rgba(90,213,242,.6)";
+    ctx.fillRect(dwx, dwy, dww * rdy, 5);
   }
   // Speedrun 計時器（右上角；通關後定格金色 + 最佳紀錄）
   ctx.textAlign = "right";
