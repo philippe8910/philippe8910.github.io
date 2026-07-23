@@ -2321,13 +2321,13 @@ const ALLY_KINDS = {
     muzzle: { fx: 0.9809, fy: 0.3157 },
     hp: 7, hitW: 40, hitH: 130, fightAnim: "shoot",
   },
-  shield: {
+  shield: {   // 胡桃（FOX 小隊・防彈盾）
     anims: {
-      guard: { file: "assets_ally2/guard.png", count: 12, fps: 10, loop: true },
+      guard: { file: "assets_ally2/guard.png", count: 22, fps: 10, loop: true },   // 乒乓循環：盯盾→回頭→轉回
       dizzy: { file: "assets_ally2/dizzy.png", count: 12, fps: 7,  loop: true },
       run:   { file: "assets_ally2/run.png",   count: 12, fps: 14, loop: true },
     },
-    fw: 240, fh: 319, feet: 0.9905, anchor: 0.5844, drawH: 150,
+    fw: 240, fh: 319, feet: 0.9905, anchor: 0.5841, drawH: 150,
     hp: 22, hitW: 64, hitH: 140, fightAnim: "guard",
   },
   sniper: {   // 場外狙擊手：不上場，只有畫面邊緣的大頭肖像；只能被玩家狙擊卡反制
@@ -3436,7 +3436,7 @@ let galIdx = 0, galState = 0, galList = null;
 function buildGallery() {   // 蒐集全角色（分類）：造型 / 支援 / 敵方 / 首領
   const list = [];
   for (const id in SKINS) if (SKINS[id].anims) list.push({ cat: "造型", skinId: id, label: SKINS[id].label, anims: SKINS[id].anims, fw: SKINS[id].fw, fh: SKINS[id].fh });
-  const allyNames = { gunner: "妮可（霰彈）", shield: "盾兵" };
+  const allyNames = { gunner: "妮可（霰彈）", shield: "胡桃（防彈盾）" };
   for (const k in ALLY_KINDS) if (ALLY_KINDS[k].anims && Object.keys(ALLY_KINDS[k].anims).length) list.push({ cat: "支援", label: allyNames[k] || k, anims: ALLY_KINDS[k].anims, fw: ALLY_KINDS[k].fw, fh: ALLY_KINDS[k].fh });
   const enemyNames = { pmc: "PMC 傭兵", pmc2: "PMC 精銳", sgtrooper: "霰彈兵", shield: "盾牌兵", turret: "自動砲台", rocket: "火箭兵", grenadier: "手雷兵" };
   for (const k in ENEMY_KINDS) if (ENEMY_KINDS[k].anims && Object.keys(ENEMY_KINDS[k].anims).length) list.push({ cat: "敵方", label: enemyNames[k] || k, anims: ENEMY_KINDS[k].anims, fw: ENEMY_KINDS[k].fw, fh: ENEMY_KINDS[k].fh });
