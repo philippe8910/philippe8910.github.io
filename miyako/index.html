@@ -1280,14 +1280,14 @@ const TUTORIALS = {
   map: { pages: [
     { img: "tutMap",
       title: { zh: "地圖", en: "Map", ja: "マップ", ko: "지도" },
-      lines: { zh: ["點擊右上角小地圖，開啟全域大地圖", "大地圖顯示存檔點、鑰匙、電梯與移動平台位置", "M 鍵開關小地圖；Esc 或再點一下關閉大地圖"],
-               en: ["Click the top-right minimap to open the full map", "It shows checkpoints, keys, elevators and platforms", "M toggles the minimap; Esc or click again to close"],
-               ja: ["右上のミニマップをクリックで全体マップ", "セーブポイント・鍵・エレベーター・足場を表示", "Mでミニマップ切替；Escか再クリックで閉じる"],
-               ko: ["오른쪽 위 미니맵을 클릭하면 전체 지도", "세이브 포인트・열쇠・엘리베이터・발판 표시", "M 키로 미니맵 전환; Esc 또는 다시 클릭으로 닫기"] },
-      linesM: { zh: ["點擊右上角小地圖，開啟全域大地圖", "大地圖顯示存檔點、鑰匙、電梯與移動平台位置", "點擊任意處關閉大地圖"],
-                en: ["Tap the top-right minimap to open the full map", "It shows checkpoints, keys, elevators and platforms", "Tap anywhere to close"],
-                ja: ["右上のミニマップをタップで全体マップ", "セーブポイント・鍵・エレベーター・足場を表示", "どこかをタップで閉じる"],
-                ko: ["오른쪽 위 미니맵을 탭하면 전체 지도", "세이브 포인트・열쇠・엘리베이터・발판 표시", "아무 곳이나 탭하면 닫기"] } },
+      lines: { zh: ["點擊右上角小地圖，開啟全域大地圖", "可拖曳平移、滾輪縮放；標註各區域與設施", "M 鍵開關小地圖；× / Esc 關閉大地圖"],
+               en: ["Click the top-right minimap to open the world map", "Drag to pan, wheel to zoom; areas are labeled", "M toggles the minimap; × / Esc closes the map"],
+               ja: ["右上のミニマップをクリックで全体マップ", "ドラッグで移動・ホイールで拡縮；各エリアを表示", "Mでミニマップ切替；× / Esc で閉じる"],
+               ko: ["오른쪽 위 미니맵을 클릭하면 전체 지도", "드래그 이동・휠 확대/축소; 각 지역 표기", "M 키로 미니맵 전환; × / Esc 로 닫기"] },
+      linesM: { zh: ["點擊右上角小地圖，開啟全域大地圖", "拖曳可平移地圖；標註各區域與設施", "點 × 關閉大地圖"],
+                en: ["Tap the top-right minimap to open the world map", "Drag to pan; areas are labeled", "Tap × to close"],
+                ja: ["右上のミニマップをタップで全体マップ", "ドラッグで移動；各エリアを表示", "× をタップで閉じる"],
+                ko: ["오른쪽 위 미니맵을 탭하면 전체 지도", "드래그로 이동; 각 지역 표기", "× 를 탭하면 닫기"] } },
   ] },
   card: { pages: [
     { img: null,
@@ -1529,8 +1529,13 @@ if (cv.addEventListener) {
       if (sb) setVolume((mouse.sx - sb.volSlider.x) / sb.volSlider.w);
     }
     if (vpadEdit && vpadDragKey) vpadEditMove(mouse.sx, mouse.sy);   // 桌機也可拖（測試用）
+    if (bigMapOn && bmDrag) {                                        // 大地圖拖曳平移
+      bmPanX = bmDrag.px + (mouse.sx - bmDrag.x);
+      bmPanY = bmDrag.py + (mouse.sy - bmDrag.y);
+      bmClamp();
+    }
   });
-  addEventListener("mouseup", () => { volDrag = false; vpadDragKey = null; });
+  addEventListener("mouseup", () => { volDrag = false; vpadDragKey = null; bmDrag = null; });
   function selectClickAt(px, py) {    // 開局選擇：點卡片彈起聚焦，點確認鈕才定案
     const b = CONFIRM_BTN;
     if (selectFocus !== null && px > b.x && px < b.x + b.w && py > b.y && py < b.y + b.h) {
@@ -1558,7 +1563,10 @@ if (cv.addEventListener) {
     return false;
   }
   cv.addEventListener("wheel", e => {          // 補給站面板 / 圖鑑清單：滾輪捲動
-    if (panel.open) {
+    if (bigMapOn) {   // 大地圖：滾輪以游標為中心縮放
+      bmZoomAt(mouse.sx, mouse.sy, e.deltaY < 0 ? 1.15 : 1 / 1.15);
+      e.preventDefault();
+    } else if (panel.open) {
       panel.scroll = Math.max(0, Math.min((panel.scroll || 0) + e.deltaY * 0.6, panel.maxScroll || 0));
       e.preventDefault();
     } else if (menuScreen === "gallery") {
@@ -1582,10 +1590,14 @@ if (cv.addEventListener) {
       if (bagHit(mouse.sx, mouse.sy) || bagCloseHit(mouse.sx, mouse.sy)) bagOpen = false;
       return;
     }
-    if (bigMapOn) { bigMapOn = false; return; }   // 大地圖開啟中：點任意處關閉
+    if (bigMapOn) {   // 大地圖：× 關閉，其餘按下開始拖曳平移
+      if (Math.hypot(mouse.sx - BM_CLOSE.x - 19, mouse.sy - BM_CLOSE.y - 19) < 23) { bigMapOn = false; return; }
+      bmDrag = { x: mouse.sx, y: mouse.sy, px: bmPanX, py: bmPanY };
+      return;
+    }
     if (!panel.open && bagHit(mouse.sx, mouse.sy)) { bagOpen = true; return; }
     if (!panel.open && gearHit(mouse.sx, mouse.sy)) { menuFrom = "game"; menuScreen = "settings"; return; }
-    if (!panel.open && mmapHit(mouse.sx, mouse.sy)) { bigMapOn = true; return; }   // 點小地圖 → 大地圖
+    if (!panel.open && mmapHit(mouse.sx, mouse.sy)) { openBigMap(); return; }   // 點小地圖 → 大地圖
     if (panel.open) { panelClickAt(mouse.sx, mouse.sy); return; }
     if (cardTapAt(mouse.sx, mouse.sy)) return;
     if (targeting) confirmTargeting();   // 滑鼠只用於卡片瞄準（射擊改 J 鍵/虛擬按鈕）
@@ -1644,10 +1656,14 @@ if (cv.addEventListener) {
         if (bagHit(p.x, p.y) || bagCloseHit(p.x, p.y)) bagOpen = false;
         continue;
       }
-      if (bigMapOn) { bigMapOn = false; continue; }   // 大地圖開啟中：點任意處關閉
+      if (bigMapOn) {   // 大地圖：× 關閉，其餘手指開始拖曳平移
+        if (Math.hypot(p.x - BM_CLOSE.x - 19, p.y - BM_CLOSE.y - 19) < 26) { bigMapOn = false; continue; }
+        bmDrag = { id: t.identifier, x: p.x, y: p.y, px: bmPanX, py: bmPanY };
+        continue;
+      }
       if (!panel.open && bagHit(p.x, p.y)) { bagOpen = true; continue; }
       if (!panel.open && gearHit(p.x, p.y)) { menuFrom = "game"; menuScreen = "settings"; continue; }
-      if (!panel.open && mmapHit(p.x, p.y)) { bigMapOn = true; continue; }   // 點小地圖 → 大地圖
+      if (!panel.open && mmapHit(p.x, p.y)) { openBigMap(); continue; }   // 點小地圖 → 大地圖
       if (panel.open) { panelClickAt(p.x, p.y); continue; }
       const wcx = p.x + cam.x - VIEW_W / 2, wcy = p.y + cam.y - 270;   // 點擊存檔點柱互動
       const ncp = nearCheckpoint();
@@ -1678,6 +1694,17 @@ if (cv.addEventListener) {
       for (const t of e.changedTouches) { const p = touchPos(t); vpadEditMove(p.x, p.y); }
       return;
     }
+    if (bigMapOn) {   // 大地圖拖曳平移（跟第一根手指）
+      for (const t of e.changedTouches) {
+        if (bmDrag && t.identifier === bmDrag.id) {
+          const p = touchPos(t);
+          bmPanX = bmDrag.px + (p.x - bmDrag.x);
+          bmPanY = bmDrag.py + (p.y - bmDrag.y);
+          bmClamp();
+        }
+      }
+      return;
+    }
     for (const t of e.changedTouches) {
       const p = touchPos(t);
       if (panel.open) {
@@ -1705,6 +1732,7 @@ if (cv.addEventListener) {
   function touchEnd(e) {
     e.preventDefault();
     if (vpadEdit) { vpadDragKey = null; return; }
+    if (bigMapOn) { bmDrag = null; return; }
     panelDragY = null;
     for (const t of e.changedTouches) {
       if (t.identifier === vpad.joyId) {
@@ -3288,7 +3316,7 @@ const I18N = {
         op1: "……作戰區域確認完畢，這裡就是目標設施。",
         op2: "通訊狀態良好——那麼，開始突入！",
         clearTitle: "任務完成", clearTimeLb: "通關時間", clearCont: "繼續", clearNew: "新紀錄！", clearContHint: "傳送回起始重生點，可再次挑戰首領",
-        mapTitle: "全域地圖", mapClose: "點擊任意處或按 M / Esc 關閉", narrator: "旁白" },
+        mapTitle: "全域地圖", mapClose: "拖曳平移・滾輪縮放・× / M / Esc 關閉", legCp: "存檔點", legKey: "鑰匙", legElev: "電梯", legMov: "移動平台", legBoss: "首領", legYou: "目前位置", narrator: "旁白" },
   en: { title: "We Were RABBITs!", sub: "A Blue Archive fan pixel action game", newGame: "New Game", cont: "Continue",
         settings: "Settings", gallery: "Asset Gallery", back: "Back", volume: "Volume", language: "Language",
         confirmNew: "Clear local progress and start a new game? (speedrun record kept)",
@@ -3302,7 +3330,7 @@ const I18N = {
         op1: "...Operation area confirmed. This is the target facility.",
         op2: "Comms are green — commencing insertion!",
         clearTitle: "MISSION COMPLETE", clearTimeLb: "Clear Time", clearCont: "Continue", clearNew: "New Record!", clearContHint: "Teleport to the first checkpoint and challenge the boss again",
-        mapTitle: "WORLD MAP", mapClose: "Click anywhere or press M / Esc to close", narrator: "Narrator" },
+        mapTitle: "WORLD MAP", mapClose: "Drag to pan · wheel to zoom · × / M / Esc to close", legCp: "Checkpoint", legKey: "Key", legElev: "Elevator", legMov: "Platform", legBoss: "Boss", legYou: "You", narrator: "Narrator" },
   ja: { title: "We Were RABBITs!", sub: "ブルーアーカイブ二次創作ピクセルアクション", newGame: "ニューゲーム", cont: "つづきから",
         settings: "設定", gallery: "素材図鑑", back: "戻る", volume: "音量", language: "言語 Language",
         confirmNew: "ローカルの進行データを消去して新しく始めますか？（タイム記録は保持）",
@@ -3316,7 +3344,7 @@ const I18N = {
         op1: "……作戦区域、確認完了。ここが目標施設ね。",
         op2: "通信状態良好——それじゃ、突入開始！",
         clearTitle: "任務完了", clearTimeLb: "クリアタイム", clearCont: "つづける", clearNew: "新記録！", clearContHint: "最初のセーブポイントへ戻り、ボスに再挑戦できます",
-        mapTitle: "全体マップ", mapClose: "どこかクリックか M / Esc で閉じる", narrator: "ナレーション" },
+        mapTitle: "全体マップ", mapClose: "ドラッグで移動・ホイールで拡縮・× / M / Esc で閉じる", legCp: "セーブ", legKey: "鍵", legElev: "エレベーター", legMov: "移動足場", legBoss: "ボス", legYou: "現在地", narrator: "ナレーション" },
   ko: { title: "We Were RABBITs!", sub: "블루 아카이브 팬 픽셀 액션", newGame: "새 게임", cont: "이어하기",
         settings: "설정", gallery: "소재 도감", back: "뒤로", volume: "볼륨", language: "언어 Language",
         confirmNew: "로컬 진행 데이터를 삭제하고 새로 시작할까요? (스피드런 기록 유지)",
@@ -3330,7 +3358,7 @@ const I18N = {
         op1: "...작전 구역 확인 완료. 여기가 목표 시설이야.",
         op2: "통신 상태 양호—— 그럼, 돌입 개시!",
         clearTitle: "임무 완료", clearTimeLb: "클리어 타임", clearCont: "계속", clearNew: "신기록!", clearContHint: "첫 세이브 포인트로 이동해 보스에 재도전할 수 있습니다",
-        mapTitle: "전체 지도", mapClose: "아무 곳이나 클릭 또는 M / Esc 로 닫기", narrator: "내레이션" },
+        mapTitle: "전체 지도", mapClose: "드래그 이동・휠 확대/축소・× / M / Esc 닫기", legCp: "세이브", legKey: "열쇠", legElev: "엘리베이터", legMov: "이동 발판", legBoss: "보스", legYou: "현재 위치", narrator: "내레이션" },
 };
 function T(k) { return (I18N[LANG] && I18N[LANG][k]) || I18N.zh[k] || k; }
 function setLang(l) {
@@ -6376,62 +6404,179 @@ function mmapHit(px, py) {
          px >= MMAP_RECT.x - 4 && px <= MMAP_RECT.x + MMAP_RECT.w + 4 &&
          py >= MMAP_RECT.y - 4 && py <= MMAP_RECT.y + MMAP_RECT.h + 4;
 }
-function drawBigMap() {   // 全域大地圖：烘焙底圖放大＋實時標記放大版
-  ctx.fillStyle = "rgba(8,12,22,.86)"; ctx.fillRect(0, 0, VIEW_W, 540);
-  const mw = minimapCv.width, mh = minimapCv.height;
-  const sc = Math.min((VIEW_W - 80) / mw, 400 / mh);
-  const bx = Math.round((VIEW_W - mw * sc) / 2), by = 86;
-  ctx.textAlign = "center";
-  ctx.font = `italic 900 24px ${UI_FONT}`; ctx.fillStyle = "#fff";
-  ctx.fillText(T("mapTitle"), VIEW_W / 2, 46);
-  ctx.fillStyle = "#ffd23e"; ctx.fillRect(VIEW_W / 2 - 36, 56, 72, 4);
+// ---- 空洞騎士式互動大地圖：高解析烘焙 + 拖曳平移 + 滾輪縮放 + 區域標註 + 圖例 ----
+let bigMapCv = null;
+const BM_SC = 12;                                // 1 地圖px = 12 世界px（比小地圖細 5.3 倍）
+let bmZoom = 1.6, bmPanX = 0, bmPanY = 0, bmDrag = null;
+const BM_CLOSE = { x: 0, y: 0, s: 38 };
+const AREA_LABELS = [                            // 區域標註（世界座標；四語）
+  { x: 2600,  y: 2900, t: { zh: "起始平原", en: "STARTING PLAINS", ja: "始まりの平原", ko: "시작의 평원" } },
+  { x: 7200,  y: 2300, t: { zh: "下水道",   en: "SEWERS",          ja: "下水道",       ko: "하수도" } },
+  { x: 7100,  y: 1700, t: { zh: "中央大廳", en: "CENTRAL HALL",    ja: "中央ホール",   ko: "중앙 홀" } },
+  { x: 12800, y: 1700, t: { zh: "東迴廊",   en: "EAST CORRIDOR",   ja: "東回廊",       ko: "동쪽 회랑" } },
+  { x: 3200,  y: 1100, t: { zh: "西高地",   en: "WEST HIGHLANDS",  ja: "西高地",       ko: "서쪽 고지" } },
+  { x: 10300, y: 1100, t: { zh: "東塔",     en: "EAST TOWER",      ja: "東塔",         ko: "동쪽 타워" } },
+  { x: 6300,  y: 500,  t: { zh: "天頂迴廊", en: "ZENITH CORRIDOR", ja: "天頂回廊",     ko: "천정 회랑" } },
+  { x: 1600,  y: 150,  t: { zh: "首領房",   en: "BOSS ROOM",       ja: "ボス部屋",     ko: "보스 룸" } },
+  { x: -2400, y: 2850, t: { zh: "西部禁區", en: "WEST ZONE",       ja: "西部エリア",   ko: "서쪽 구역" } },
+];
+function buildBigMap() {   // 高解析烘焙：地形分厚牆/薄平台、電梯軌、平台路徑、門
+  bigMapCv = document.createElement("canvas");
+  bigMapCv.width = Math.ceil((WORLD.w - WORLD.x0) / BM_SC);
+  bigMapCv.height = Math.ceil(WORLD.h / BM_SC);
+  const g = bigMapCv.getContext("2d");
+  g.fillStyle = "#0e1726"; g.fillRect(0, 0, bigMapCv.width, bigMapCv.height);
+  g.strokeStyle = "rgba(70,95,130,.14)";          // 淡網格（空洞騎士圖紙感）
+  for (let gx = 0; gx < bigMapCv.width; gx += 500 / BM_SC) {
+    g.beginPath(); g.moveTo(gx, 0); g.lineTo(gx, bigMapCv.height); g.stroke();
+  }
+  for (let gy = 0; gy < bigMapCv.height; gy += 500 / BM_SC) {
+    g.beginPath(); g.moveTo(0, gy); g.lineTo(bigMapCv.width, gy); g.stroke();
+  }
+  for (const s of SOLIDS) {
+    if (s.elevator || s.mover) continue;          // 動態面不烘焙
+    if (inUnvisitedZone(s.x + s.w / 2, s.y + s.h / 2)) continue;
+    const px2 = (s.x - WORLD.x0) / BM_SC, py2 = s.y / BM_SC;
+    const pw2 = Math.max(1.5, s.w / BM_SC), ph2 = Math.max(1.5, s.h / BM_SC);
+    if (s.h <= 20) {                              // 薄跳台：亮線
+      g.fillStyle = "#9fb3d0"; g.fillRect(px2, py2, pw2, 1.6);
+    } else {                                      // 厚牆/樓板：填色+頂緣亮線
+      g.fillStyle = "#39485f"; g.fillRect(px2, py2, pw2, ph2);
+      g.fillStyle = "#7d93b5"; g.fillRect(px2, py2, pw2, Math.min(1.6, ph2));
+    }
+  }
+  for (const el of ELEVATORS) {                   // 電梯軌
+    if (inUnvisitedZone(el.x + el.w / 2, (el.top + el.bottom) / 2)) continue;
+    g.fillStyle = "rgba(201,161,59,.8)";
+    g.fillRect((el.x + el.w / 2 - WORLD.x0) / BM_SC - 1, el.top / BM_SC, 2.4, (el.bottom - el.top) / BM_SC);
+  }
+  for (const m of MOVERS) {                       // 平台路徑（青虛線感：細半透明）
+    if (inUnvisitedZone(m.x + m.w / 2, m.y - 10)) continue;
+    const ex = m.axis === "x" ? m.x + m.dist : m.x, ey = m.axis === "y" ? m.y + m.dist : m.y;
+    g.fillStyle = "rgba(62,200,200,.5)";
+    if (m.axis === "x") g.fillRect((Math.min(m.x, ex) - WORLD.x0) / BM_SC, m.y / BM_SC - .8, (Math.abs(m.dist) + m.w) / BM_SC, 1.6);
+    else g.fillRect((m.x + m.w / 2 - WORLD.x0) / BM_SC - .8, Math.min(m.y, ey) / BM_SC, 1.6, Math.abs(m.dist) / BM_SC);
+  }
+  for (const gt of GATES) {                       // 門：鑰匙門金 / 單向門紫
+    if (inUnvisitedZone(gt.x + gt.w / 2, gt.y + gt.h / 2)) continue;
+    g.fillStyle = gt.lock ? "#d6a93d" : "#8a6ab5";
+    g.fillRect((gt.x - WORLD.x0) / BM_SC, gt.y / BM_SC, Math.max(2, gt.w / BM_SC), Math.max(2, gt.h / BM_SC));
+  }
+}
+function openBigMap() {
+  buildBigMap();                                  // 每次開啟重烘（反映迷霧/門狀態）
+  bmZoom = 1.6; bmDrag = null;
+  bmPanX = VIEW_W / 2 - (player.x - WORLD.x0) / BM_SC * bmZoom;   // 以玩家置中
+  bmPanY = 280 - player.y / BM_SC * bmZoom;
+  bigMapOn = true;
+}
+function bmClamp() {   // 平移範圍：至少留 120px 地圖在畫面內
+  const w = bigMapCv.width * bmZoom, h = bigMapCv.height * bmZoom;
+  bmPanX = Math.max(120 - w, Math.min(VIEW_W - 120, bmPanX));
+  bmPanY = Math.max(120 - h, Math.min(480, bmPanY));
+}
+function bmZoomAt(px, py, f) {   // 以指定螢幕點為中心縮放
+  const z2 = Math.max(0.7, Math.min(4, bmZoom * f));
+  bmPanX = px - (px - bmPanX) * (z2 / bmZoom);
+  bmPanY = py - (py - bmPanY) * (z2 / bmZoom);
+  bmZoom = z2; bmClamp();
+}
+function drawBigMap() {
+  ctx.fillStyle = "rgba(6,10,18,.94)"; ctx.fillRect(0, 0, VIEW_W, 540);
+  const W2B = (wx, wy) => [bmPanX + (wx - WORLD.x0) / BM_SC * bmZoom, bmPanY + wy / BM_SC * bmZoom];
+  ctx.save();
+  ctx.beginPath(); ctx.rect(0, 56, VIEW_W, 440); ctx.clip();   // 地圖視窗（標題/圖例外緣裁切）
   ctx.imageSmoothingEnabled = false;
-  ctx.drawImage(minimapCv, bx, by, mw * sc, mh * sc);
-  ctx.strokeStyle = "rgba(120,150,190,.6)";
-  ctx.strokeRect(bx - .5, by - .5, mw * sc + 1, mh * sc + 1);
-  const WM = (wx, wy) => [bx + (wx - WORLD.x0) / MM_SC * sc, by + wy / MM_SC * sc];
+  ctx.drawImage(bigMapCv, bmPanX, bmPanY, bigMapCv.width * bmZoom, bigMapCv.height * bmZoom);
+  ctx.imageSmoothingEnabled = false;
+  const lf = Math.max(11, Math.min(20, 9 * bmZoom));           // 區域標註（描邊字）
+  ctx.textAlign = "center";
+  ctx.font = `italic 900 ${lf}px ${UI_FONT}`;
+  for (const a of AREA_LABELS) {
+    if (inUnvisitedZone(a.x, a.y)) continue;
+    const [lx, ly] = W2B(a.x, a.y);
+    ctx.strokeStyle = "rgba(8,12,20,.9)"; ctx.lineWidth = 3;
+    const txt = a.t[LANG] || a.t.zh;
+    ctx.strokeText(txt, lx, ly);
+    ctx.fillStyle = "rgba(190,210,235,.9)"; ctx.fillText(txt, lx, ly);
+  }
+  ctx.lineWidth = 1;
   for (const cp of CHECKPOINTS) {                // 存檔點
     if (inUnvisitedZone(cp.x, cp.y - 30)) continue;
-    const [px2, py2] = WM(cp.x, cp.y);
+    const [px2, py2] = W2B(cp.x, cp.y);
     ctx.fillStyle = cp.active ? "#59d5f2" : "#8a93a8";
-    ctx.fillRect(px2 - 2.5, py2 - 5, 5, 5);
+    ctx.fillRect(px2 - 3, py2 - 8, 6, 8);
+    ctx.fillStyle = cp.active ? "rgba(89,213,242,.4)" : "rgba(138,147,168,.3)";
+    ctx.beginPath(); ctx.arc(px2, py2 - 10, 4.5, 0, Math.PI * 2); ctx.fill();
   }
   for (const m of MOVERS) {                      // 移動平台實時位置
     if (inUnvisitedZone(m.solid.x + m.solid.w / 2, m.solid.y - 10)) continue;
-    const [px2, py2] = WM(m.solid.x, m.solid.y);
-    ctx.fillStyle = "#0a2830"; ctx.fillRect(px2 - 1, py2 - 3, Math.max(6, m.solid.w / MM_SC * sc) + 2, 6);
-    ctx.fillStyle = "#7ff0f0"; ctx.fillRect(px2, py2 - 2, Math.max(6, m.solid.w / MM_SC * sc), 4);
+    const [px2, py2] = W2B(m.solid.x, m.solid.y);
+    const pw2 = Math.max(7, m.solid.w / BM_SC * bmZoom);
+    ctx.fillStyle = "#0a2830"; ctx.fillRect(px2 - 1, py2 - 3, pw2 + 2, 6);
+    ctx.fillStyle = "#7ff0f0"; ctx.fillRect(px2, py2 - 2, pw2, 4);
   }
   for (const el of ELEVATORS) {                  // 電梯廂實時位置
     if (inUnvisitedZone(el.x + el.w / 2, el.y - 10)) continue;
-    const [px2, py2] = WM(el.x, el.y);
-    ctx.fillStyle = "#332508"; ctx.fillRect(px2 - 4, py2 - 3, 8, 6);
-    ctx.fillStyle = "#ffe08a"; ctx.fillRect(px2 - 3, py2 - 2, 6, 4);
+    const [px2, py2] = W2B(el.x + el.w / 2, el.y);
+    ctx.fillStyle = "#332508"; ctx.fillRect(px2 - 5, py2 - 3, 10, 6);
+    ctx.fillStyle = "#ffe08a"; ctx.fillRect(px2 - 4, py2 - 2, 8, 4);
   }
   for (let i = 0; i < ITEM_SPAWNS.length; i++) { // 鑰匙
     const it = ITEM_SPAWNS[i];
     if (it.type !== "key" || collectedItems.includes(i)) continue;
     if (inUnvisitedZone(it.x, it.y - 20)) continue;
-    const [kx, ky] = WM(it.x, it.y - 10);
+    const [kx, ky] = W2B(it.x, it.y - 12);
     ctx.fillStyle = "#ffd75e";
     ctx.beginPath();
-    ctx.moveTo(kx, ky - 5); ctx.lineTo(kx + 4.5, ky); ctx.lineTo(kx, ky + 5); ctx.lineTo(kx - 4.5, ky);
+    ctx.moveTo(kx, ky - 6); ctx.lineTo(kx + 5, ky); ctx.lineTo(kx, ky + 6); ctx.lineTo(kx - 5, ky);
     ctx.closePath(); ctx.fill();
+    ctx.font = `900 8px ${UI_FONT}`; ctx.fillStyle = "#1a1408";
+    ctx.fillText(it.id || "", kx, ky + 3);
   }
   {                                              // Boss
-    const [px2, py2] = WM(BOSS_ROOM.homeX, L4_Y);
-    ctx.fillStyle = "#e8544a"; ctx.fillRect(px2 - 3.5, py2 - 7, 7, 7);
+    const [px2, py2] = W2B(BOSS_ROOM.homeX, L4_Y);
+    ctx.fillStyle = "#e8544a";
+    ctx.beginPath();
+    ctx.moveTo(px2, py2 - 12); ctx.lineTo(px2 + 6, py2 - 2); ctx.lineTo(px2 - 6, py2 - 2);
+    ctx.closePath(); ctx.fill();
   }
   {                                              // 玩家（脈動）
-    const [px2, py2] = WM(player.x, player.y);
-    const pr = 3 + Math.sin(uiTime * 6) * 1.2;
+    const [px2, py2] = W2B(player.x, player.y);
+    const pr = 3.5 + Math.sin(uiTime * 6) * 1.3;
     ctx.fillStyle = "#fff";
-    ctx.beginPath(); ctx.arc(px2, py2 - 2, pr, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(px2, py2 - 3, pr, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = "rgba(255,255,255,.5)";
-    ctx.beginPath(); ctx.arc(px2, py2 - 2, pr + 4, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(px2, py2 - 3, pr + 5, 0, Math.PI * 2); ctx.stroke();
   }
-  ctx.font = `bold 12px ${UI_FONT}`; ctx.fillStyle = "rgba(220,235,250,.7)";
-  ctx.fillText(T("mapClose"), VIEW_W / 2, 528);
+  ctx.restore();
+  ctx.textAlign = "center";                      // 標題
+  ctx.font = `italic 900 24px ${UI_FONT}`; ctx.fillStyle = "#fff";
+  ctx.fillText(T("mapTitle"), VIEW_W / 2, 38);
+  ctx.fillStyle = "#ffd23e"; ctx.fillRect(VIEW_W / 2 - 36, 46, 72, 4);
+  BM_CLOSE.x = VIEW_W - 54; BM_CLOSE.y = 14;     // × 關閉鈕
+  ctx.fillStyle = "rgba(255,255,255,.12)";
+  ctx.beginPath(); ctx.arc(BM_CLOSE.x + 19, BM_CLOSE.y + 19, 19, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = "rgba(255,255,255,.6)";
+  ctx.beginPath(); ctx.arc(BM_CLOSE.x + 19, BM_CLOSE.y + 19, 19, 0, Math.PI * 2); ctx.stroke();
+  ctx.font = `900 20px ${UI_FONT}`; ctx.fillStyle = "#fff";
+  ctx.fillText("×", BM_CLOSE.x + 19, BM_CLOSE.y + 26);
+  // 圖例列（底部）
+  const LEG = [["#59d5f2", "legCp"], ["#ffd75e", "legKey"], ["#ffe08a", "legElev"], ["#7ff0f0", "legMov"], ["#e8544a", "legBoss"], ["#fff", "legYou"]];
+  ctx.font = `bold 11px ${UI_FONT}`;
+  let lw = 0;
+  const parts = LEG.map(([c, k]) => ({ c, s: T(k), w: 16 + ctx.measureText(T(k)).width + 16 }));
+  for (const p of parts) lw += p.w;
+  let lx2 = (VIEW_W - lw) / 2;
+  for (const p of parts) {
+    ctx.fillStyle = p.c; ctx.fillRect(lx2, 512, 9, 9);
+    ctx.textAlign = "left"; ctx.fillStyle = "rgba(220,235,250,.8)";
+    ctx.fillText(p.s, lx2 + 13, 521);
+    lx2 += p.w;
+  }
+  ctx.textAlign = "center";
+  ctx.font = `bold 11px ${UI_FONT}`; ctx.fillStyle = "rgba(160,180,205,.6)";
+  ctx.fillText(T("mapClose"), VIEW_W / 2, 537);
   ctx.textAlign = "left";
 }
 const MM_SC = 64;   // 1 小地圖 px = 64 世界 px
@@ -6858,9 +7003,10 @@ function drawHUD() {
   const pct = player.hp / player.maxHp;
   const hpCol = pct > 0.5 ? "#4fd688" : pct > 0.25 ? UI_YELLOW : UI_RED;
   const cells = Math.max(1, Math.round(player.maxHp));
-  const cgap = 3, cw2 = Math.min(21, (254 - cgap * (cells - 1)) / cells), ch2 = 13;
+  // 整數格寬+置中起點：非整數座標會半像素渲染 → 格子忽胖忽瘦「歪歪的」
+  const cgap = 3, cw2 = Math.max(6, Math.min(21, Math.floor((254 - cgap * (cells - 1)) / cells))), ch2 = 13;
   for (let ci = 0; ci < cells; ci++) {
-    const cx2 = 24 + ci * (cw2 + cgap), cy2 = 61;
+    const cx2 = 24 + ci * (cw2 + cgap), cy2 = 61;   // 左對齊 x=24（與護盾格同起點），整數座標防半像素模糊
     slantPath(cx2, cy2, cw2, ch2, 3);
     ctx.fillStyle = "rgba(43,58,85,.18)"; ctx.fill();            // 底（空格）
     const gfrac = Math.max(0, Math.min(1, player.hpGhost - ci)); // 受擊殘影（橘）
@@ -6881,18 +7027,18 @@ function drawHUD() {
   if (player.shieldHp > 0) {   // 護盾格（與血格同單位：1 格=1 點；青色細排，寬度自動收縮避開 DASH）
     const scap = Math.min(player.shieldHp, player.maxHp / 2);
     const sn = Math.max(1, Math.ceil(scap - 1e-6));
-    const sgap = 3, scw = Math.min(cw2, (150 - sgap * (sn - 1)) / sn), sch = 6;
+    const sgap = 3, scw = Math.max(5, Math.min(cw2, Math.floor((150 - sgap * (sn - 1)) / sn))), sch = 6;
     for (let si = 0; si < sn; si++) {
-      const sx2 = 24 + si * (scw + sgap), sy2 = 82;
-      slantPath(sx2, sy2, scw, sch, 2);
+      const sx2 = 24 + si * (scw + sgap), sy2 = 82;   // 護盾格與血格同起點 x=24、整數寬
+      slantPath(sx2, sy2, scw, sch, 1.5);
       ctx.fillStyle = "rgba(43,58,85,.18)"; ctx.fill();
       const sfrac = Math.max(0, Math.min(1, scap - si));
       if (sfrac > 0) {
-        ctx.save(); slantPath(sx2, sy2, scw, sch, 2); ctx.clip();
+        ctx.save(); slantPath(sx2, sy2, scw, sch, 1.5); ctx.clip();
         ctx.fillStyle = "#59d5f2"; ctx.fillRect(sx2 - 2, sy2, (scw + 4) * sfrac, sch);
         ctx.restore();
       }
-      slantPath(sx2, sy2, scw, sch, 2);
+      slantPath(sx2, sy2, scw, sch, 1.5);
       ctx.strokeStyle = "rgba(43,58,85,.3)"; ctx.stroke();
     }
   }
