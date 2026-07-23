@@ -2191,14 +2191,7 @@ globalThis.OFFICIAL_MAP = {
    "h": 480
   }
  ],
- "camzones": [
-  {
-   "x": -4150,
-   "y": -160,
-   "w": 20190,
-   "h": 3400
-  }
- ],
+ "camzones": [],
  "playerStart": {
   "x": -3960,
   "y": 3000
